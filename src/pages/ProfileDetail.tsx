@@ -2,13 +2,12 @@
 import { useParams, Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
-import { ArrowLeft, MapPin, Briefcase, GraduationCap, AlertTriangle, Copy, Check } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, MapPin, Briefcase, GraduationCap, AlertTriangle } from 'lucide-react';
+import { Download } from 'lucide-react';
 
 export default function ProfileDetail() {
   const { id } = useParams();
   const profile = useLiveQuery(() => db.profiles.get(Number(id)), [id]);
-  const [copied, setCopied] = useState(false);
 
   if (!profile) return <div className="p-8 text-center">Loading Profile...</div>;
 
@@ -31,11 +30,23 @@ export default function ProfileDetail() {
   const photos = displayData.photos || [];
   const overall = displayData.overall_analysis || {};
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(JSON.stringify(profile, null, 2));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const handleDownload = () => {
+      // Create a blob from the JSON data
+      const jsonString = JSON.stringify(profile, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      
+      // Create a temporary link and click it
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${basics.name || "profile"}_aura_data.json`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    };
 
   return (
     <div className="pb-24 bg-white min-h-screen">
@@ -115,11 +126,11 @@ export default function ProfileDetail() {
             <div className="flex justify-between items-center p-3 border-b border-slate-800">
                 <span className="text-slate-400 font-mono text-sm">🔧 Database Entry</span>
                 <button 
-                  onClick={handleCopy}
-                  className="text-xs bg-slate-800 text-white px-3 py-1 rounded flex items-center hover:bg-slate-700"
+                  onClick={handleDownload}
+                  className="text-xs bg-blue-600 text-white px-3 py-1 rounded flex items-center hover:bg-blue-500 font-bold"
                 >
-                  {copied ? <Check size={14} className="mr-1" /> : <Copy size={14} className="mr-1" />}
-                  {copied ? "Copied!" : "Copy JSON"}
+                  <Download size={14} className="mr-1" />
+                  Download JSON
                 </button>
             </div>
             <pre className="p-4 text-xs text-green-400 overflow-x-auto whitespace-pre-wrap font-mono h-48">

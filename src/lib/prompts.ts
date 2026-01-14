@@ -12,7 +12,7 @@ Please return a JSON object with the following structure:
 {
   "meta": {
     "app_name": "Hinge" | "Tinder" | "Bumble" | "Unknown",
-    "best_photo_index": "number (0-based index of the clearest, most attractive photo frame to use as a thumbnail)"
+    "best_photo_index": "number. CRITICAL: This MUST be the index of a frame showing a clear FACE/HEADSHOT. Do NOT select a frame that is mostly text or prompts. I need a cover photo."
   },
   "basics": {
     "name": "string",
