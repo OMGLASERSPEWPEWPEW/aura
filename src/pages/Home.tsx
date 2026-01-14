@@ -34,9 +34,10 @@ export default function Home() {
           </h1>
           <p className="text-slate-500 text-sm">Your dating intelligence</p>
         </div>
-        <div className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center shadow-sm">
-            <User className="text-slate-400" size={20} />
-        </div>
+        {/* Updated: Now a Link to the Mirror page */}
+        <Link to="/mirror" className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center shadow-sm hover:border-indigo-300 transition-colors">
+            <User className="text-slate-400 hover:text-indigo-500" size={20} />
+        </Link>
       </div>
 
       <div className="max-w-md mx-auto">
