@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Upload from './pages/Upload';
 import ProfileDetail from './pages/ProfileDetail'; // Import new page
+import Mirror from './pages/Mirror';
 
 function App() {
   return (
@@ -11,7 +12,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/upload" element={<Upload />} />
-          <Route path="/profile/:id" element={<ProfileDetail />} /> {/* New Route */}
+          <Route path="/profile/:id" element={<ProfileDetail />} />
+          <Route path="/mirror" element={<Mirror />} /> {/* Add the route */}
         </Routes>
       </div>
     </BrowserRouter>
