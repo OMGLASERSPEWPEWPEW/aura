@@ -4,17 +4,23 @@ import { useCallback, useState } from 'react';
 import { clsx } from 'clsx';
 
 interface VideoUploaderProps {
-  onFileSelect: (file: File) => void;
+  onFileSelect?: (file: File) => void;
+  onAnalysisComplete?: (frames: string[]) => void;
 }
 
-export default function VideoUploader({ onFileSelect }: VideoUploaderProps) {
+export default function VideoUploader({ onFileSelect, onAnalysisComplete }: VideoUploaderProps) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
   const handleFile = useCallback((file: File) => {
     if (file && file.type.startsWith('video/')) {
       setSelectedFileName(file.name);
-      onFileSelect(file);
+      
+      // ONLY call this if it exists
+      if (onFileSelect) {
+        onFileSelect(file);
+      }
+      
     } else {
       alert("Please upload a video file");
     }

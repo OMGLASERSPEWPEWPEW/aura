@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Upload from './pages/Upload';
 import ProfileDetail from './pages/ProfileDetail'; // Import new page
 import Mirror from './pages/Mirror';
+import UserBackstory from './pages/UserBackstory';
 
 function App() {
   return (
@@ -13,7 +14,9 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/profile/:id" element={<ProfileDetail />} />
-          <Route path="/mirror" element={<Mirror />} /> {/* Add the route */}
+          {/* <Route path="/mirror" element={<Mirror />} /> Add the route */}
+          {/* UPDATED ROUTE */}
+          <Route path="/mirror" element={<UserBackstory />} />
         </Routes>
       </div>
     </BrowserRouter>

@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
-import { Plus, User, Trash2, Flame } from 'lucide-react';
+import { Plus, User, Trash2, Flame, Brain } from 'lucide-react';
 
 export default function Home() {
   const profiles = useLiveQuery(() => db.profiles.orderBy('timestamp').reverse().toArray());
@@ -37,6 +37,14 @@ export default function Home() {
         {/* Updated: Now a Link to the Mirror page */}
         <Link to="/mirror" className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center shadow-sm hover:border-indigo-300 transition-colors">
             <User className="text-slate-400 hover:text-indigo-500" size={20} />
+        </Link>
+
+        {/* NEW: The "Know Thyself" Button */}
+        <Link 
+          to="/mirror" 
+          className="p-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
+        >
+          <Brain size={24} />
         </Link>
       </div>
 
