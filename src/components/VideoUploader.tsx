@@ -5,10 +5,9 @@ import { clsx } from 'clsx';
 
 interface VideoUploaderProps {
   onFileSelect?: (file: File) => void;
-  onAnalysisComplete?: (frames: string[]) => void;
 }
 
-export default function VideoUploader({ onFileSelect, onAnalysisComplete }: VideoUploaderProps) {
+export default function VideoUploader({ onFileSelect }: VideoUploaderProps) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 

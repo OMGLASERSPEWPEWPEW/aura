@@ -34,17 +34,13 @@ export default function Home() {
           </h1>
           <p className="text-slate-500 text-sm">Your dating intelligence</p>
         </div>
-        {/* Updated: Now a Link to the Mirror page */}
-        <Link to="/mirror" className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center shadow-sm hover:border-indigo-300 transition-colors">
-            <User className="text-slate-400 hover:text-indigo-500" size={20} />
-        </Link>
-
-        {/* NEW: The "Know Thyself" Button */}
-        <Link 
-          to="/mirror" 
-          className="p-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
+        {/* My Profile Button */}
+        <Link
+          to="/my-profile"
+          className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
         >
-          <Brain size={24} />
+          <Brain size={20} />
+          <span className="text-sm font-medium hidden sm:inline">My Profile</span>
         </Link>
       </div>
 
