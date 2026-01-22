@@ -1,11 +1,13 @@
 // src/pages/Upload.tsx
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Added useNavigate
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import VideoUploader from '../components/VideoUploader';
 import { extractFramesFromVideo } from '../lib/frameExtraction';
 import { analyzeProfile } from '../lib/ai';
-import { db } from '../lib/db'; // Import Database
-import { Loader2, AlertCircle, Save, CheckCircle } from 'lucide-react'; // Added icons
+import type { UserContextForMatch } from '../lib/ai';
+import { db } from '../lib/db';
+import type { UserIdentity } from '../lib/db';
+import { Loader2, AlertCircle, Save, CheckCircle, User } from 'lucide-react';
 
 export default function Upload() {
   const navigate = useNavigate();
@@ -15,10 +17,39 @@ export default function Upload() {
   const [analysis, setAnalysis] = useState<any | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [userIdentity, setUserIdentity] = useState<UserIdentity | undefined>(undefined);
+  const [userContextLoaded, setUserContextLoaded] = useState(false);
+
+  // Fetch user identity on mount
+  useEffect(() => {
+    const loadUserIdentity = async () => {
+      const identity = await db.userIdentity.get(1);
+      setUserIdentity(identity);
+      setUserContextLoaded(true);
+    };
+    loadUserIdentity();
+  }, []);
+
+  // Build user context for personalized match analysis
+  const getUserContext = (): UserContextForMatch | undefined => {
+    if (!userIdentity?.synthesis) return undefined;
+
+    return {
+      goal_type: userIdentity.datingGoals?.type,
+      archetype_summary: userIdentity.synthesis.psychological_profile.archetype_summary,
+      communication_style: userIdentity.synthesis.behavioral_insights.communication_style,
+      what_to_look_for: userIdentity.synthesis.dating_strategy.what_to_look_for,
+      what_to_avoid: userIdentity.synthesis.dating_strategy.what_to_avoid,
+      opener_style_recommendations: userIdentity.synthesis.dating_strategy.opener_style_recommendations,
+      location: userIdentity.manualEntry?.location
+    };
+  };
+
+  const hasUserProfile = userIdentity?.synthesis !== undefined;
 
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile);
-    setFrames([]); 
+    setFrames([]);
     setAnalysis(null);
     setErrorMessage(null);
   };
@@ -29,16 +60,18 @@ export default function Upload() {
     setIsProcessing(true);
     setAnalysis(null);
     setErrorMessage(null);
-    
+
     try {
       console.log("Starting extraction...");
       const extractedImages = await extractFramesFromVideo(file, 2);
       setFrames(extractedImages);
-      
+
       console.log("Sending to AI...");
       if (extractedImages.length === 0) throw new Error("No frames extracted.");
 
-      const result = await analyzeProfile(extractedImages);
+      // Pass user context for personalized analysis
+      const userContext = getUserContext();
+      const result = await analyzeProfile(extractedImages, userContext);
       setAnalysis(result);
 
     } catch (error: any) {
@@ -53,28 +86,27 @@ export default function Upload() {
 
   const saveProfile = async () => {
     if (!analysis || frames.length === 0) return;
-    
+
     setIsSaving(true);
     try {
       // 1. Determine the best thumbnail
-      // Did the AI suggest a best index? If so, use it. If not, use the 2nd frame (often better than 1st).
       const bestIndex = analysis.meta?.best_photo_index ?? 1;
-      // Safety check: ensure index is within bounds
       const safeIndex = (bestIndex >= 0 && bestIndex < frames.length) ? bestIndex : 0;
-      
       const thumbnailImage = frames[safeIndex];
 
-      // 2. Add to database
+      // 2. Add to database with compatibility data if available
       await db.profiles.add({
         name: analysis.basics?.name || "Unknown Match",
         age: analysis.basics?.age || undefined,
-        appName: analysis.meta?.app_name || "Unknown App", // Save the app name
+        appName: analysis.meta?.app_name || "Unknown App",
         timestamp: new Date(),
         analysis: analysis,
-        thumbnail: thumbnailImage 
+        thumbnail: thumbnailImage,
+        // Include compatibility if user context was used
+        compatibility: analysis.compatibility || undefined
       });
-      
-      navigate('/'); 
+
+      navigate('/');
     } catch (error) {
       alert("Failed to save profile: " + error);
       setIsSaving(false);
@@ -88,7 +120,23 @@ export default function Upload() {
       </Link>
       
       <h1 className="text-3xl font-bold mb-6 text-slate-800">Upload Recording</h1>
-      
+
+      {/* Warning if no user profile for personalized analysis */}
+      {userContextLoaded && !hasUserProfile && !analysis && (
+        <div className="mb-6 bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-lg flex items-start">
+          <User className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-amber-600" />
+          <div>
+            <p className="text-sm">
+              For personalized compatibility insights,{' '}
+              <Link to="/my-profile" className="font-bold underline hover:text-amber-900">
+                create your profile first
+              </Link>
+              . You can still analyze matches without it.
+            </p>
+          </div>
+        </div>
+      )}
+
       {!analysis && (
         <div className="mb-8">
           <VideoUploader onFileSelect={handleFileSelect} />

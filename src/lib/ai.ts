@@ -1,10 +1,29 @@
 // src/lib/ai.ts
-import { PROFILE_ANALYSIS_PROMPT, USER_CONTEXT_PROMPT, USER_SELF_ANALYSIS_PROMPT } from './prompts';
-import type { DatingGoals, DataExport, ManualEntry } from './db';
+import { PROFILE_ANALYSIS_PROMPT, USER_CONTEXT_PROMPT, USER_SELF_ANALYSIS_PROMPT, USER_CONTEXT_FOR_MATCH, ZODIAC_COMPATIBILITY_PROMPT, REGENERATE_OPENERS_PROMPT, REGENERATE_PROMPT_OPENER_PROMPT } from './prompts';
+import type { DatingGoals, DataExport, ManualEntry, DateSuggestion, ZodiacCompatibility } from './db';
+import type { WeatherForecast } from './weather';
+
+// Date suggestions options
+export interface DateSuggestionsOptions {
+  targetDate?: Date;
+  weatherForecast?: WeatherForecast;
+  localEvents?: string[];
+}
+
+// User context for personalized match analysis
+export interface UserContextForMatch {
+  goal_type?: string;
+  archetype_summary?: string;
+  communication_style?: string;
+  what_to_look_for?: string[];
+  what_to_avoid?: string[];
+  opener_style_recommendations?: string[];
+  location?: string;
+}
 
 const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
 
-export async function analyzeProfile(frames: string[]) {
+export async function analyzeProfile(frames: string[], userContext?: UserContextForMatch) {
   if (!API_KEY) {
     throw new Error("Missing API Key. Please add VITE_ANTHROPIC_API_KEY to your .env file.");
   }
@@ -14,15 +33,31 @@ export async function analyzeProfile(frames: string[]) {
   }
 
   console.log("src/lib/ai.ts: Sending " + frames.length + " frames to Claude...");
+  if (userContext) {
+    console.log("src/lib/ai.ts: Including user context for personalized analysis");
+  }
 
   const imageContent = frames.map(frame => ({
     type: "image",
     source: {
       type: "base64",
       media_type: "image/jpeg",
-      data: frame.split(',')[1] 
+      data: frame.split(',')[1]
     }
   }));
+
+  // Build full prompt with user context if available
+  let fullPrompt = PROFILE_ANALYSIS_PROMPT;
+  if (userContext) {
+    fullPrompt += USER_CONTEXT_FOR_MATCH
+      .replace('{goal_type}', userContext.goal_type || 'Not specified')
+      .replace('{archetype_summary}', userContext.archetype_summary || 'Not available')
+      .replace('{communication_style}', userContext.communication_style || 'Not available')
+      .replace('{what_to_look_for}', userContext.what_to_look_for?.join(', ') || 'Not specified')
+      .replace('{what_to_avoid}', userContext.what_to_avoid?.join(', ') || 'Not specified')
+      .replace('{opener_style_recommendations}', userContext.opener_style_recommendations?.join(', ') || 'Not specified')
+      .replace('{user_location}', userContext.location || 'Not specified');
+  }
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -31,17 +66,17 @@ export async function analyzeProfile(frames: string[]) {
         "x-api-key": API_KEY,
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
-        "anthropic-dangerous-direct-browser-access": "true" 
+        "anthropic-dangerous-direct-browser-access": "true"
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5-20250929", 
+        model: "claude-sonnet-4-5-20250929",
         max_tokens: 4096,
         messages: [
           {
             role: "user",
             content: [
               ...imageContent,
-              { type: "text", text: PROFILE_ANALYSIS_PROMPT }
+              { type: "text", text: fullPrompt }
             ]
           }
         ]
@@ -338,6 +373,432 @@ export async function analyzeUserSelf(input: UserSelfAnalysisInput) {
     // Ensure debug info is saved for any error
     debugInfo.finalError = String(error);
     localStorage.setItem('aura_debug_info', JSON.stringify(debugInfo, null, 2));
+    throw error;
+  }
+}
+
+// Generate date suggestions based on both profiles
+export async function getDateSuggestions(
+  matchLocation: string,
+  userLocation: string,
+  matchInterests: string[],
+  userGoal: string,
+  options?: DateSuggestionsOptions
+): Promise<DateSuggestion[]> {
+  if (!API_KEY) {
+    throw new Error("Missing API Key. Please add VITE_ANTHROPIC_API_KEY to your .env file.");
+  }
+
+  console.log("src/lib/ai.ts: Generating date suggestions...");
+
+  // Build weather context
+  let weatherContext = '';
+  if (options?.weatherForecast) {
+    const w = options.weatherForecast;
+    weatherContext = `
+Weather Forecast for ${options.targetDate?.toLocaleDateString() || 'the date'}:
+- High: ${w.temp_high}F / Low: ${w.temp_low}F
+- Conditions: ${w.condition}
+- Precipitation chance: ${w.precipitation_probability}%
+
+IMPORTANT: Factor weather into your suggestions. If it's rainy/cold, prioritize indoor activities. If it's nice, outdoor options are great.`;
+  }
+
+  // Build events context
+  let eventsContext = '';
+  if (options?.localEvents && options.localEvents.length > 0) {
+    eventsContext = `
+Local Events Happening:
+${options.localEvents.map(e => `- ${e}`).join('\n')}
+
+IMPORTANT: Try to incorporate at least one of these events if it aligns with the match's interests.`;
+  }
+
+  const prompt = `You are a creative date planner. Based on the following context, suggest 4 unique date ideas.
+
+Match's Location: ${matchLocation || 'Unknown'}
+Your Location: ${userLocation || 'Unknown'}
+Match's Interests: ${matchInterests?.join(', ') || 'Not specified'}
+Dating Goal: ${userGoal || 'Not specified'}
+${weatherContext}
+${eventsContext}
+
+For each date, consider:
+- The midpoint or convenient meeting location between both people
+- Activities that align with the match's apparent interests
+- Appropriate venues for the stated dating goal (casual dates for casual goals, more intimate settings for long-term)
+${options?.weatherForecast ? '- Weather appropriateness for outdoor vs indoor activities' : ''}
+${options?.localEvents?.length ? '- Local events that could make for a memorable date' : ''}
+
+Return a JSON array with exactly 4 date suggestions:
+[
+  {
+    "name": "Name of venue or activity",
+    "type": "coffee" | "dinner" | "activity" | "drinks" | "outdoor" | "cultural",
+    "location": "Neighborhood or area suggestion",
+    "why_good_fit": "One sentence explaining why this works for this specific match",
+    "weather_appropriate": true/false (is this good for the forecasted weather?),
+    "weather_note": "Optional note about weather, e.g., 'Perfect for the sunny 72F forecast' or 'Indoor backup for the rain'",
+    "event_tie_in": "Optional - if this ties into a local event, mention it here"
+  }
+]
+
+Do not include markdown. Return only the raw JSON array.`;
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 1500,
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "text", text: prompt }]
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const rawText = data.content[0].text;
+
+    // Extract JSON array
+    const startIndex = rawText.indexOf('[');
+    const endIndex = rawText.lastIndexOf(']');
+
+    if (startIndex === -1 || endIndex === -1) {
+      throw new Error("AI did not return a valid JSON array.");
+    }
+
+    const jsonString = rawText.substring(startIndex, endIndex + 1);
+    return JSON.parse(jsonString) as DateSuggestion[];
+
+  } catch (error) {
+    console.error("Date suggestions error:", error);
+    throw error;
+  }
+}
+
+// Search for local events using Claude's knowledge
+export async function searchLocalEvents(
+  location: string,
+  targetDate: Date,
+  matchInterests: string[],
+  userInterests?: string[]
+): Promise<string[]> {
+  if (!API_KEY) {
+    throw new Error("Missing API Key. Please add VITE_ANTHROPIC_API_KEY to your .env file.");
+  }
+
+  console.log(`src/lib/ai.ts: Searching local events for ${location}...`);
+
+  const dateStr = targetDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const allInterests = [...matchInterests, ...(userInterests || [])].filter(Boolean);
+
+  const prompt = `You are a local events expert. Suggest 3-5 events or activities that might be happening in or around "${location}" on or around ${dateStr}.
+
+Based on these interests: ${allInterests.join(', ') || 'general activities'}
+
+Consider:
+- Recurring events common for that day of week (e.g., Sunday farmers markets, Friday night art walks)
+- Seasonal activities appropriate for the time of year
+- Popular local venues and their typical offerings
+- Community events, festivals, or cultural happenings
+
+Return a JSON array of event descriptions (brief, 1 sentence each):
+["Event 1 description", "Event 2 description", ...]
+
+Be creative but realistic. These should be plausible events for the area.
+Do not include markdown. Return only the raw JSON array.`;
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 512,
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "text", text: prompt }]
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const rawText = data.content[0].text;
+
+    // Extract JSON array
+    const startIndex = rawText.indexOf('[');
+    const endIndex = rawText.lastIndexOf(']');
+
+    if (startIndex === -1 || endIndex === -1) {
+      return []; // Return empty array if no valid JSON
+    }
+
+    const jsonString = rawText.substring(startIndex, endIndex + 1);
+    return JSON.parse(jsonString) as string[];
+
+  } catch (error) {
+    console.error("Search local events error:", error);
+    return []; // Return empty array on error, don't throw
+  }
+}
+
+// Zodiac compatibility analysis
+export async function getZodiacCompatibility(
+  userSign: string,
+  matchSign: string,
+  userArchetype?: string,
+  matchArchetype?: string
+): Promise<ZodiacCompatibility> {
+  if (!API_KEY) {
+    throw new Error("Missing API Key. Please add VITE_ANTHROPIC_API_KEY to your .env file.");
+  }
+
+  console.log(`src/lib/ai.ts: Getting zodiac compatibility for ${userSign} + ${matchSign}...`);
+
+  const prompt = ZODIAC_COMPATIBILITY_PROMPT
+    .replace(/{user_sign}/g, userSign)
+    .replace(/{match_sign}/g, matchSign)
+    .replace('{user_archetype}', userArchetype || 'Not available')
+    .replace('{match_archetype}', matchArchetype || 'Not available');
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 1024,
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "text", text: prompt }]
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const rawText = data.content[0].text;
+
+    // Extract JSON
+    const startIndex = rawText.indexOf('{');
+    const endIndex = rawText.lastIndexOf('}');
+
+    if (startIndex === -1 || endIndex === -1) {
+      throw new Error("AI did not return a valid JSON object.");
+    }
+
+    const jsonString = rawText.substring(startIndex, endIndex + 1);
+    return JSON.parse(jsonString) as ZodiacCompatibility;
+
+  } catch (error) {
+    console.error("Zodiac compatibility error:", error);
+    throw error;
+  }
+}
+
+// Recommended opener interface
+export interface RecommendedOpener {
+  type: 'like_comment' | 'match_opener';
+  message: string;
+  tactic: string;
+  why_it_works: string;
+}
+
+// Regenerate all openers for a profile
+export async function regenerateOpeners(
+  profileAnalysis: any,
+  userContext?: UserContextForMatch
+): Promise<RecommendedOpener[]> {
+  if (!API_KEY) {
+    throw new Error("Missing API Key. Please add VITE_ANTHROPIC_API_KEY to your .env file.");
+  }
+
+  console.log("src/lib/ai.ts: Regenerating openers...");
+
+  const basics = profileAnalysis.basics || {};
+  const psych = profileAnalysis.psychological_profile || {};
+  const prompts = profileAnalysis.prompts || [];
+
+  // Build user context string
+  let userContextStr = 'Not available';
+  if (userContext) {
+    userContextStr = `
+- Dating Goal: ${userContext.goal_type || 'Not specified'}
+- User Archetype: ${userContext.archetype_summary || 'Not available'}
+- Opener Style: ${userContext.opener_style_recommendations?.join(', ') || 'Not specified'}`;
+  }
+
+  const prompt = REGENERATE_OPENERS_PROMPT
+    .replace('{basics}', JSON.stringify(basics, null, 2))
+    .replace('{archetype_summary}', psych.archetype_summary || 'Not available')
+    .replace('{vulnerability_indicators}', psych.subtext_analysis?.vulnerability_indicators || 'Not available')
+    .replace('{power_dynamics}', psych.subtext_analysis?.power_dynamics || 'Not available')
+    .replace('{prompts}', prompts.map((p: any) => `Q: ${p.question}\nA: ${p.answer}`).join('\n\n'))
+    .replace('{user_context}', userContextStr);
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 1024,
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "text", text: prompt }]
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const rawText = data.content[0].text;
+
+    // Extract JSON array
+    const startIndex = rawText.indexOf('[');
+    const endIndex = rawText.lastIndexOf(']');
+
+    if (startIndex === -1 || endIndex === -1) {
+      throw new Error("AI did not return a valid JSON array.");
+    }
+
+    const jsonString = rawText.substring(startIndex, endIndex + 1);
+    return JSON.parse(jsonString) as RecommendedOpener[];
+
+  } catch (error) {
+    console.error("Regenerate openers error:", error);
+    throw error;
+  }
+}
+
+// Prompt opener interface
+export interface PromptOpener {
+  message: string;
+  tactic: string;
+  why_it_works: string;
+}
+
+// Regenerate opener for a specific prompt
+export async function regeneratePromptOpener(
+  prompt: { question: string; answer: string; analysis: string },
+  profileContext: { name: string; archetype_summary: string; vulnerability_indicators: string },
+  userContext?: UserContextForMatch
+): Promise<PromptOpener> {
+  if (!API_KEY) {
+    throw new Error("Missing API Key. Please add VITE_ANTHROPIC_API_KEY to your .env file.");
+  }
+
+  console.log("src/lib/ai.ts: Regenerating prompt opener...");
+
+  // Build user context string
+  let userContextStr = 'Not available';
+  if (userContext) {
+    userContextStr = `
+- Dating Goal: ${userContext.goal_type || 'Not specified'}
+- User Archetype: ${userContext.archetype_summary || 'Not available'}
+- Opener Style: ${userContext.opener_style_recommendations?.join(', ') || 'Not specified'}`;
+  }
+
+  const promptText = REGENERATE_PROMPT_OPENER_PROMPT
+    .replace('{question}', prompt.question)
+    .replace('{answer}', prompt.answer)
+    .replace('{analysis}', prompt.analysis)
+    .replace('{name}', profileContext.name || 'Unknown')
+    .replace('{archetype_summary}', profileContext.archetype_summary || 'Not available')
+    .replace('{vulnerability_indicators}', profileContext.vulnerability_indicators || 'Not available')
+    .replace('{user_context}', userContextStr);
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 512,
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "text", text: promptText }]
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const rawText = data.content[0].text;
+
+    // Extract JSON
+    const startIndex = rawText.indexOf('{');
+    const endIndex = rawText.lastIndexOf('}');
+
+    if (startIndex === -1 || endIndex === -1) {
+      throw new Error("AI did not return a valid JSON object.");
+    }
+
+    const jsonString = rawText.substring(startIndex, endIndex + 1);
+    return JSON.parse(jsonString) as PromptOpener;
+
+  } catch (error) {
+    console.error("Regenerate prompt opener error:", error);
     throw error;
   }
 }

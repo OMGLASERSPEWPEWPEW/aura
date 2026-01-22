@@ -1,6 +1,42 @@
 // src/lib/db.ts
 import Dexie, { type EntityTable } from 'dexie';
 
+interface ProfileCompatibility {
+  score: number;           // 1-10
+  summary: string;         // "Strong match for long-term"
+  strengths: string[];     // Why this works for YOU
+  concerns: string[];      // Red flags for YOUR psychology
+  goal_alignment: string;  // How they match your dating goal
+}
+
+interface DateSuggestion {
+  name: string;
+  type: string;            // "coffee", "dinner", "activity"
+  location: string;
+  why_good_fit: string;
+  weather_appropriate?: boolean;
+  weather_note?: string;      // "Perfect for the sunny 72F forecast"
+  event_tie_in?: string;      // "Coincides with Jazz in the Park"
+}
+
+interface DateSuggestions {
+  ideas: DateSuggestion[];
+  searched_at: Date;
+  target_date?: Date;
+  weather_forecast?: { temp_high: number; temp_low: number; condition: string };
+  local_events?: string[];
+}
+
+interface ZodiacCompatibility {
+  user_sign: string;
+  match_sign: string;
+  overall_score: number;  // 1-10
+  summary: string;
+  strengths: string[];
+  challenges: string[];
+  advice: string;
+}
+
 interface Profile {
   id: number;
   name: string;
@@ -9,6 +45,15 @@ interface Profile {
   timestamp: Date;
   analysis: any;
   thumbnail: string;
+
+  // Compatibility assessment (populated when user has synthesis)
+  compatibility?: ProfileCompatibility;
+
+  // Zodiac compatibility (populated when both signs available)
+  zodiac_compatibility?: ZodiacCompatibility;
+
+  // Date suggestions (populated on-demand)
+  date_suggestions?: DateSuggestions;
 }
 
 // Type definitions for UserIdentity sub-structures
@@ -56,6 +101,7 @@ interface ManualEntry {
   interests?: string[];
   attachmentStyle?: string;
   relationshipHistory?: string;
+  zodiac_sign?: string;  // "Aries" | "Taurus" | ... | "Pisces"
 }
 
 interface UserSynthesis {
@@ -190,6 +236,10 @@ db.version(3).stores({
 export { db };
 export type {
   Profile,
+  ProfileCompatibility,
+  ZodiacCompatibility,
+  DateSuggestion,
+  DateSuggestions,
   UserIdentity,
   RawStats,
   DatingGoals,

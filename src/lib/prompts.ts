@@ -44,7 +44,8 @@ Please return a JSON object with the following structure:
     "job": "string or null",
     "location": "string or null",
     "school": "string or null",
-    "hometown": "string or null"
+    "hometown": "string or null",
+    "zodiac_sign": "string or null - Look for zodiac mentions in prompts, bios, or astrology symbols (Aries, Taurus, Gemini, Cancer, Leo, Virgo, Libra, Scorpio, Sagittarius, Capricorn, Aquarius, Pisces)"
   },
   "photos": [
     {
@@ -57,7 +58,12 @@ Please return a JSON object with the following structure:
     {
       "question": "The prompt question",
       "answer": "Their answer",
-      "analysis": "What agenda does this prompt serve? What trauma, wound, or unmet need might it reveal? (e.g., 'I'll know I've found the one when they initiate' reveals past relationships with lazy partners)"
+      "analysis": "What agenda does this prompt serve? What trauma, wound, or unmet need might it reveal? (e.g., 'I'll know I've found the one when they initiate' reveals past relationships with lazy partners)",
+      "suggested_opener": {
+        "message": "A personalized opener specifically referencing THIS prompt's content (punchy, max 2 sentences)",
+        "tactic": "Which tactic this uses (e.g., 'Tease', 'Challenge', 'Confess', 'Flatter')",
+        "why_it_works": "1 sentence explaining why this will land based on what this prompt reveals about them"
+      }
     }
   ],
   "psychological_profile": {
@@ -95,6 +101,36 @@ IMPORTANT for recommended_openers:
 - Be engaging and slightly edgy, not generic or boring. Avoid "Hey" or "How are you?"
 
 Do not include markdown formatting. Just return the raw JSON object.
+`;
+
+export const USER_CONTEXT_FOR_MATCH = `
+---
+## ABOUT THE PERSON VIEWING THIS PROFILE
+
+The user analyzing this match has the following profile:
+- Dating Goal: {goal_type}
+- Their Archetype: {archetype_summary}
+- Communication Style: {communication_style}
+- What They're Looking For: {what_to_look_for}
+- What They Should Avoid: {what_to_avoid}
+- Their Opener Style: {opener_style_recommendations}
+- Their Location: {user_location}
+
+IMPORTANT: Factor this into your analysis:
+1. In "compatibility", rate how good this match is for THIS SPECIFIC USER (not generically)
+2. In "recommended_openers", craft messages that sound like how THIS USER would naturally communicate
+3. Identify any red flags that specifically apply to what this user should avoid
+
+Add this additional field to your JSON response:
+
+"compatibility": {
+  "score": "1-10 rating of match quality for this specific user",
+  "summary": "One sentence: 'Strong match for your long-term goals' or 'Proceed with caution'",
+  "strengths": ["Why this person works for YOU specifically - list 2-3 items"],
+  "concerns": ["Red flags based on YOUR what_to_avoid list - list 0-3 items"],
+  "goal_alignment": "How their presentation aligns with your stated dating goal"
+}
+---
 `;
 
 export const USER_CONTEXT_PROMPT = `
@@ -172,7 +208,8 @@ Please return a JSON object with the following structure:
     "name": "string or null (from manual entry or detected)",
     "age": "number or null",
     "occupation": "string or null",
-    "location": "string or null"
+    "location": "string or null",
+    "zodiac_sign": "string or null - Detect from profile or manual entry (Aries, Taurus, Gemini, Cancer, Leo, Virgo, Libra, Scorpio, Sagittarius, Capricorn, Aquarius, Pisces)"
   },
   "photos": [
     {
@@ -223,4 +260,104 @@ IMPORTANT INSTRUCTIONS:
 - If behavior stats are provided, factor them into attachment_patterns and communication_style analysis
 
 Do not include markdown formatting. Just return the raw JSON object.
+`;
+
+export const ZODIAC_COMPATIBILITY_PROMPT = `
+You are an expert astrologer and relationship counselor. Analyze the romantic compatibility between two zodiac signs, taking into account their personality archetypes.
+
+User's Sign: {user_sign}
+Match's Sign: {match_sign}
+
+User's Archetype: {user_archetype}
+Match's Archetype: {match_archetype}
+
+Provide a nuanced compatibility analysis that goes beyond generic horoscope readings. Consider:
+- Element compatibility (Fire, Earth, Air, Water)
+- Modality interactions (Cardinal, Fixed, Mutable)
+- Traditional planetary rulers and their relationships
+- How their specific archetypes might interact
+
+Return a JSON object with this structure:
+{
+  "user_sign": "{user_sign}",
+  "match_sign": "{match_sign}",
+  "overall_score": "1-10 rating (be honest, not everything is a 10)",
+  "summary": "2-3 sentence overview of the compatibility",
+  "strengths": ["3-4 specific areas where these signs naturally complement each other"],
+  "challenges": ["2-3 potential friction points or areas requiring conscious effort"],
+  "advice": "One actionable piece of advice for making this pairing work"
+}
+
+Do not include markdown formatting. Return only the raw JSON object.
+`;
+
+export const REGENERATE_OPENERS_PROMPT = `
+You are an expert dating coach specializing in conversation starters. Based on the profile analysis below, generate 3 NEW, FRESH conversation openers that are different from any previously generated.
+
+Profile Basics:
+{basics}
+
+Psychological Profile:
+- Archetype: {archetype_summary}
+- Vulnerabilities: {vulnerability_indicators}
+- Power Dynamics: {power_dynamics}
+
+Profile Prompts:
+{prompts}
+
+User Context (if available):
+{user_context}
+
+Generate 3 openers using the Agendas & Tactics framework:
+- 2 "like_comment" openers (for liking a specific photo or prompt)
+- 1 "match_opener" (for after matching)
+
+Each opener should:
+- Be SPECIFIC to this person's profile content
+- Use tactics that appeal to their identified psychology
+- Be punchy and engaging (max 2 sentences)
+- NOT be generic or boring
+
+Return a JSON array:
+[
+  {
+    "type": "like_comment" | "match_opener",
+    "message": "The actual message text",
+    "tactic": "Which tactic this uses (Tease, Challenge, Confess, Flatter, etc.)",
+    "why_it_works": "1 sentence explaining why this will land with THIS person"
+  }
+]
+
+Do not include markdown formatting. Return only the raw JSON array.
+`;
+
+export const REGENERATE_PROMPT_OPENER_PROMPT = `
+You are an expert dating coach. Generate a NEW, FRESH conversation opener specifically for this dating app prompt response.
+
+Prompt Question: {question}
+Their Answer: "{answer}"
+Prompt Analysis: {analysis}
+
+Profile Context:
+- Name: {name}
+- Archetype: {archetype_summary}
+- Vulnerabilities: {vulnerability_indicators}
+
+User Context (if available):
+{user_context}
+
+Generate ONE opener that:
+- DIRECTLY references the content of THIS specific prompt
+- Uses a tactic that would appeal to their psychology
+- Is punchy and engaging (max 2 sentences)
+- Shows you actually read and thought about their answer
+
+Return a JSON object:
+{
+  "message": "The opener text that references this prompt",
+  "tactic": "Which tactic this uses (Tease, Challenge, Confess, Flatter, etc.)",
+  "why_it_works": "1 sentence explaining why this will land"
+}
+
+Do not include markdown formatting. Return only the raw JSON object.
 `;

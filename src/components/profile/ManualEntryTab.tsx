@@ -1,5 +1,5 @@
 // src/components/profile/ManualEntryTab.tsx
-import { User, Plus, X } from 'lucide-react';
+import { User, Plus, X, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import type { ManualEntry } from '../../lib/db';
 
@@ -14,6 +14,21 @@ const ATTACHMENT_STYLES = [
   { value: 'avoidant', label: 'Avoidant', description: 'Values independence, uncomfortable with too much closeness' },
   { value: 'fearful-avoidant', label: 'Fearful-Avoidant', description: 'Desires closeness but fears getting hurt' },
   { value: 'unsure', label: 'Not Sure', description: 'Still figuring it out' },
+];
+
+const ZODIAC_SIGNS = [
+  { value: 'aries', label: 'Aries', symbol: '\u2648', dates: 'Mar 21 - Apr 19' },
+  { value: 'taurus', label: 'Taurus', symbol: '\u2649', dates: 'Apr 20 - May 20' },
+  { value: 'gemini', label: 'Gemini', symbol: '\u264A', dates: 'May 21 - Jun 20' },
+  { value: 'cancer', label: 'Cancer', symbol: '\u264B', dates: 'Jun 21 - Jul 22' },
+  { value: 'leo', label: 'Leo', symbol: '\u264C', dates: 'Jul 23 - Aug 22' },
+  { value: 'virgo', label: 'Virgo', symbol: '\u264D', dates: 'Aug 23 - Sep 22' },
+  { value: 'libra', label: 'Libra', symbol: '\u264E', dates: 'Sep 23 - Oct 22' },
+  { value: 'scorpio', label: 'Scorpio', symbol: '\u264F', dates: 'Oct 23 - Nov 21' },
+  { value: 'sagittarius', label: 'Sagittarius', symbol: '\u2650', dates: 'Nov 22 - Dec 21' },
+  { value: 'capricorn', label: 'Capricorn', symbol: '\u2651', dates: 'Dec 22 - Jan 19' },
+  { value: 'aquarius', label: 'Aquarius', symbol: '\u2652', dates: 'Jan 20 - Feb 18' },
+  { value: 'pisces', label: 'Pisces', symbol: '\u2653', dates: 'Feb 19 - Mar 20' },
 ];
 
 export default function ManualEntryTab({ manualEntry, onManualEntryChange }: ManualEntryTabProps) {
@@ -93,6 +108,45 @@ export default function ManualEntryTab({ manualEntry, onManualEntryChange }: Man
             />
           </div>
         </div>
+      </div>
+
+      {/* Zodiac Sign */}
+      <div className="bg-white p-4 rounded-xl shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="text-purple-600" size={20} />
+          <h2 className="font-semibold text-gray-800">Zodiac Sign</h2>
+        </div>
+        <p className="text-sm text-slate-500 mb-4">
+          Used for compatibility insights with matches
+        </p>
+
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {ZODIAC_SIGNS.map((sign) => (
+            <button
+              key={sign.value}
+              onClick={() => updateField('zodiac_sign', sign.value)}
+              className={`p-2 rounded-lg border-2 text-center transition-all ${
+                manualEntry.zodiac_sign === sign.value
+                  ? 'border-purple-500 bg-purple-50'
+                  : 'border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              <div className="text-2xl mb-1">{sign.symbol}</div>
+              <div className={`text-xs font-medium ${manualEntry.zodiac_sign === sign.value ? 'text-purple-700' : 'text-slate-800'}`}>
+                {sign.label}
+              </div>
+              <div className="text-xs text-slate-400">{sign.dates}</div>
+            </button>
+          ))}
+        </div>
+        {manualEntry.zodiac_sign && (
+          <button
+            onClick={() => updateField('zodiac_sign', undefined)}
+            className="mt-3 text-sm text-slate-500 hover:text-slate-700"
+          >
+            Clear selection
+          </button>
+        )}
       </div>
 
       {/* Interests */}
