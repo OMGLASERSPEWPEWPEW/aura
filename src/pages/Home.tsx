@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
+import { extractAnalysisFields } from '../lib/utils/profileHelpers';
 import { Plus, User, Trash2, Flame, Brain } from 'lucide-react';
 
 export default function Home() {
@@ -95,13 +96,20 @@ export default function Home() {
                     </button>
                 </div>
                 
-                <p className="text-sm text-slate-500 mb-2 truncate">
-                    {profile.age ? `${profile.age} • ` : ''}
-                    {profile.analysis.basics?.location || 'Unknown Location'}
-                </p>
-                <p className="text-xs text-slate-600 line-clamp-2 bg-slate-50 p-2 rounded border border-slate-100">
-                    "{profile.analysis.overall_analysis?.summary}"
-                </p>
+                {(() => {
+                  const { basics, overall } = extractAnalysisFields(profile.analysis);
+                  return (
+                    <>
+                      <p className="text-sm text-slate-500 mb-2 truncate">
+                        {profile.age ? `${profile.age} • ` : ''}
+                        {basics.location || 'Unknown Location'}
+                      </p>
+                      <p className="text-xs text-slate-600 line-clamp-2 bg-slate-50 p-2 rounded border border-slate-100">
+                        "{overall.summary}"
+                      </p>
+                    </>
+                  );
+                })()}
               </div>
             </Link>
           ))}

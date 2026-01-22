@@ -17,13 +17,13 @@ interface TinderData {
   Messages: TinderMatch[];
 }
 
-export function parseTinderData(json: any) {
+export function parseTinderData(json: TinderData | unknown) {
   console.log("src/lib/dataParsing.ts: parseTinderData: Starting analysis...");
-  
+
   const data = json as TinderData;
   const matches = data.Messages || [];
 
-  let totalMatches = matches.length;
+  const totalMatches = matches.length;
   let conversationCount = 0;
   let initiatedCount = 0;
   let doubleTextCount = 0;

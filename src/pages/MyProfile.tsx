@@ -20,6 +20,51 @@ import {
 import { db, type UserIdentity, type DatingGoals, type DataExport, type TextInput, type VideoAnalysis, type PhotoEntry, type ManualEntry, type UserSynthesis } from '../lib/db';
 import { analyzeUserSelf } from '../lib/ai';
 
+// Type for user self-analysis result
+interface UserSelfAnalysisResult {
+  basics?: {
+    name?: string;
+    age?: number;
+    occupation?: string;
+    location?: string;
+  };
+  photos?: Array<{
+    description: string;
+    vibe: string;
+    subtext: string;
+    attractiveness_notes?: string;
+  }>;
+  psychological_profile?: {
+    agendas: Array<{
+      type: string;
+      evidence: string;
+      priority: 'primary' | 'secondary';
+    }>;
+    presentation_tactics: string[];
+    predicted_tactics: string[];
+    subtext_analysis: {
+      sexual_signaling: string;
+      power_dynamics: string;
+      vulnerability_indicators: string;
+      disconnect: string;
+    };
+    archetype_summary: string;
+  };
+  dating_strategy?: {
+    ideal_partner_profile: string;
+    what_to_look_for: string[];
+    what_to_avoid: string[];
+    bio_suggestions: string[];
+    opener_style_recommendations: string[];
+  };
+  behavioral_insights?: {
+    communication_style: string;
+    attachment_patterns: string;
+    growth_areas: string[];
+    strengths: string[];
+  };
+}
+
 // Tab components
 import GoalsTab from '../components/profile/GoalsTab';
 import DataExportTab from '../components/profile/DataExportTab';
@@ -189,7 +234,7 @@ export default function MyProfile() {
         dataExports: localExports.length > 0 ? localExports : undefined,
         datingGoals: localGoals,
         manualInfo: Object.keys(localManualEntry).length > 0 ? localManualEntry : undefined
-      });
+      }) as UserSelfAnalysisResult;
 
       console.log("MyProfile: Synthesis complete:", result);
 
@@ -213,7 +258,12 @@ export default function MyProfile() {
           agendas: [],
           presentation_tactics: [],
           predicted_tactics: [],
-          subtext_analysis: {},
+          subtext_analysis: {
+            sexual_signaling: '',
+            power_dynamics: '',
+            vulnerability_indicators: '',
+            disconnect: '',
+          },
           archetype_summary: ''
         },
         dating_strategy: result.dating_strategy || {

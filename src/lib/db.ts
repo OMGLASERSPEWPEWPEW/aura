@@ -1,6 +1,96 @@
 // src/lib/db.ts
 import Dexie, { type EntityTable } from 'dexie';
 
+// --- Profile Analysis Types ---
+
+interface ProfileBasics {
+  name?: string;
+  age?: number;
+  location?: string;
+  job?: string;
+  school?: string;
+  hometown?: string;
+  zodiac_sign?: string;
+}
+
+interface PhotoAnalysis {
+  description?: string;
+  vibe?: string;
+  subtext?: string;
+  attractiveness_notes?: string;
+}
+
+interface PromptAnalysis {
+  question: string;
+  answer: string;
+  analysis: string;
+  suggested_opener?: {
+    message: string;
+    tactic: string;
+    why_it_works: string;
+  };
+}
+
+interface SubtextAnalysis {
+  sexual_signaling?: string;
+  power_dynamics?: string;
+  vulnerability_indicators?: string;
+  disconnect?: string;
+}
+
+interface Agenda {
+  type: string;
+  evidence: string;
+  priority: 'primary' | 'secondary';
+}
+
+interface PsychologicalProfile {
+  agendas?: Agenda[];
+  presentation_tactics?: string[];
+  predicted_tactics?: string[];
+  subtext_analysis?: SubtextAnalysis;
+  archetype_summary?: string;
+}
+
+interface RecommendedOpener {
+  type: 'like_comment' | 'match_opener';
+  message: string;
+  tactic: string;
+  why_it_works: string;
+}
+
+// Legacy analysis format (for old data)
+interface LegacyAnalysis {
+  overall_analysis?: {
+    summary?: string;
+    green_flags?: string[];
+    red_flags?: string[];
+  };
+}
+
+// New structured analysis format
+interface ProfileAnalysis {
+  meta?: {
+    app_name?: string;
+    best_photo_index?: number;
+  };
+  basics?: ProfileBasics;
+  photos?: PhotoAnalysis[];
+  prompts?: PromptAnalysis[];
+  psychological_profile?: PsychologicalProfile;
+  recommended_openers?: RecommendedOpener[];
+  compatibility?: ProfileCompatibility;
+  // Legacy fallback fields
+  overall_analysis?: {
+    summary?: string;
+    green_flags?: string[];
+    red_flags?: string[];
+  };
+}
+
+// Analysis can be new format, legacy format, or raw string (error case)
+type AnalysisData = ProfileAnalysis | LegacyAnalysis | { raw: string };
+
 interface ProfileCompatibility {
   score: number;           // 1-10
   summary: string;         // "Strong match for long-term"
@@ -43,7 +133,7 @@ interface Profile {
   age?: number;
   appName?: string; // New field for "Hinge", "Tinder", etc.
   timestamp: Date;
-  analysis: any;
+  analysis: AnalysisData;
   thumbnail: string;
 
   // Compatibility assessment (populated when user has synthesis)
@@ -179,11 +269,11 @@ interface UserIdentity {
 
   // Legacy selfProfile (preserved for migration)
   selfProfile?: {
-    meta: any;
-    basics: any;
-    photos: any[];
-    prompts: any[];
-    overall_analysis: any;
+    meta: unknown;
+    basics: unknown;
+    photos: unknown[];
+    prompts: unknown[];
+    overall_analysis: unknown;
   };
 
   // NEW: My Profile system fields
@@ -236,6 +326,15 @@ db.version(3).stores({
 export { db };
 export type {
   Profile,
+  ProfileAnalysis,
+  AnalysisData,
+  ProfileBasics,
+  PhotoAnalysis,
+  PromptAnalysis,
+  SubtextAnalysis,
+  Agenda,
+  PsychologicalProfile,
+  RecommendedOpener,
   ProfileCompatibility,
   ZodiacCompatibility,
   DateSuggestion,
@@ -248,5 +347,5 @@ export type {
   VideoAnalysis,
   PhotoEntry,
   ManualEntry,
-  UserSynthesis
+  UserSynthesis,
 };

@@ -4,9 +4,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import VideoUploader from '../components/VideoUploader';
 import { extractFramesFromVideo } from '../lib/frameExtraction';
 import { analyzeProfile } from '../lib/ai';
-import type { UserContextForMatch } from '../lib/ai';
 import { db } from '../lib/db';
-import type { UserIdentity } from '../lib/db';
+import type { UserIdentity, ProfileAnalysis } from '../lib/db';
+import { buildUserContextForMatch, hasUserProfile as checkHasUserProfile } from '../lib/utils';
 import { Loader2, AlertCircle, Save, CheckCircle, User } from 'lucide-react';
 
 export default function Upload() {
@@ -14,7 +14,7 @@ export default function Upload() {
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [frames, setFrames] = useState<string[]>([]);
-  const [analysis, setAnalysis] = useState<any | null>(null);
+  const [analysis, setAnalysis] = useState<ProfileAnalysis | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [userIdentity, setUserIdentity] = useState<UserIdentity | undefined>(undefined);
@@ -30,22 +30,7 @@ export default function Upload() {
     loadUserIdentity();
   }, []);
 
-  // Build user context for personalized match analysis
-  const getUserContext = (): UserContextForMatch | undefined => {
-    if (!userIdentity?.synthesis) return undefined;
-
-    return {
-      goal_type: userIdentity.datingGoals?.type,
-      archetype_summary: userIdentity.synthesis.psychological_profile.archetype_summary,
-      communication_style: userIdentity.synthesis.behavioral_insights.communication_style,
-      what_to_look_for: userIdentity.synthesis.dating_strategy.what_to_look_for,
-      what_to_avoid: userIdentity.synthesis.dating_strategy.what_to_avoid,
-      opener_style_recommendations: userIdentity.synthesis.dating_strategy.opener_style_recommendations,
-      location: userIdentity.manualEntry?.location
-    };
-  };
-
-  const hasUserProfile = userIdentity?.synthesis !== undefined;
+  const hasUserProfile = checkHasUserProfile(userIdentity);
 
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile);
@@ -70,11 +55,11 @@ export default function Upload() {
       if (extractedImages.length === 0) throw new Error("No frames extracted.");
 
       // Pass user context for personalized analysis
-      const userContext = getUserContext();
-      const result = await analyzeProfile(extractedImages, userContext);
+      const userContext = buildUserContextForMatch(userIdentity);
+      const result = await analyzeProfile(extractedImages, userContext) as ProfileAnalysis;
       setAnalysis(result);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Process failed:", error);
       setErrorMessage(error instanceof Error ? error.message : String(error));
     } finally {
