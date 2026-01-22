@@ -254,6 +254,13 @@ export async function analyzeUserSelf(input: UserSelfAnalysisInput) {
 
   console.log("src/lib/ai.ts: analyzeUserSelf | Sending request to Claude...");
 
+  // Debug info collector
+  const debugInfo: Record<string, unknown> = {
+    timestamp: new Date().toISOString(),
+    imageCount: allImages.length,
+    hasText: !!contextText,
+  };
+
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -265,7 +272,7 @@ export async function analyzeUserSelf(input: UserSelfAnalysisInput) {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-5-20250929",
-        max_tokens: 4096,
+        max_tokens: 8192,
         messages: [
           {
             role: "user",
@@ -275,35 +282,62 @@ export async function analyzeUserSelf(input: UserSelfAnalysisInput) {
       })
     });
 
+    debugInfo.responseStatus = response.status;
+    debugInfo.responseOk = response.ok;
+
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("API Error:", errorData);
+      debugInfo.errorData = errorData;
+      localStorage.setItem('aura_debug_info', JSON.stringify(debugInfo, null, 2));
       throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
     }
 
     const data = await response.json();
+    debugInfo.hasContent = !!data.content;
+    debugInfo.contentLength = data.content?.length;
+
+    if (!data.content || !data.content[0] || !data.content[0].text) {
+      debugInfo.fullResponse = data;
+      localStorage.setItem('aura_debug_info', JSON.stringify(debugInfo, null, 2));
+      throw new Error("API returned unexpected response structure");
+    }
+
     const rawText = data.content[0].text;
-    console.log("src/lib/ai.ts: analyzeUserSelf | AI Raw Response:", rawText);
+    debugInfo.rawTextLength = rawText.length;
+    debugInfo.rawTextPreview = rawText.substring(0, 2000);
 
     // --- NUCLEAR JSON EXTRACTOR (Reused) ---
     const startIndex = rawText.indexOf('{');
     const endIndex = rawText.lastIndexOf('}');
 
+    debugInfo.jsonStartIndex = startIndex;
+    debugInfo.jsonEndIndex = endIndex;
+
     if (startIndex === -1 || endIndex === -1) {
+      debugInfo.fullRawText = rawText;
+      localStorage.setItem('aura_debug_info', JSON.stringify(debugInfo, null, 2));
       throw new Error("AI did not return a valid JSON object.");
     }
 
     const jsonString = rawText.substring(startIndex, endIndex + 1);
+    debugInfo.extractedJsonLength = jsonString.length;
 
     try {
-      return JSON.parse(jsonString);
-    } catch {
-      console.error("JSON Parse Failed on:", jsonString);
-      throw new Error("Failed to parse AI response. Check console for raw output.");
+      const parsed = JSON.parse(jsonString);
+      // Success - clear debug info
+      localStorage.removeItem('aura_debug_info');
+      return parsed;
+    } catch (parseError) {
+      debugInfo.parseError = String(parseError);
+      debugInfo.extractedJson = jsonString;
+      localStorage.setItem('aura_debug_info', JSON.stringify(debugInfo, null, 2));
+      throw new Error("Failed to parse AI response. Debug info saved - click 'Download Debug' to see details.");
     }
 
   } catch (error) {
-    console.error("Fatal AI Error (UserSelf):", error);
+    // Ensure debug info is saved for any error
+    debugInfo.finalError = String(error);
+    localStorage.setItem('aura_debug_info', JSON.stringify(debugInfo, null, 2));
     throw error;
   }
 }

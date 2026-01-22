@@ -1,6 +1,6 @@
 // src/pages/MyProfile.tsx
 // Main page for user profile creation and analysis
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -88,6 +88,9 @@ export default function MyProfile() {
   // Live query for user identity
   const userIdentity = useLiveQuery(() => db.userIdentity.get(1));
 
+  // Track if we've done the initial load from DB
+  const isInitialized = useRef(false);
+
   // Local state for unsaved changes (tracks current edits)
   const [localGoals, setLocalGoals] = useState<DatingGoals | undefined>();
   const [localExports, setLocalExports] = useState<DataExport[]>([]);
@@ -96,44 +99,52 @@ export default function MyProfile() {
   const [localPhotos, setLocalPhotos] = useState<PhotoEntry[]>([]);
   const [localManualEntry, setLocalManualEntry] = useState<ManualEntry>({});
 
-  // Initialize local state from DB
+  // Initialize local state from DB - only on first load
   useEffect(() => {
-    if (userIdentity) {
+    if (userIdentity && !isInitialized.current) {
+      console.log("MyProfile: Initializing from DB - photos:", userIdentity.photos?.length ?? 0);
       setLocalGoals(userIdentity.datingGoals);
       setLocalExports(userIdentity.dataExports || []);
       setLocalTextInputs(userIdentity.textInputs || []);
       setLocalVideoAnalysis(userIdentity.videoAnalysis);
       setLocalPhotos(userIdentity.photos || []);
       setLocalManualEntry(userIdentity.manualEntry || {});
+      isInitialized.current = true;
     }
   }, [userIdentity]);
 
   // Save to DB whenever local state changes (debounced effect)
   const saveToDb = useCallback(async () => {
-    const identity: UserIdentity = {
-      id: 1,
-      datingGoals: localGoals,
-      dataExports: localExports,
-      textInputs: localTextInputs,
-      videoAnalysis: localVideoAnalysis,
-      photos: localPhotos,
-      manualEntry: localManualEntry,
-      synthesis: userIdentity?.synthesis,
-      // Preserve legacy fields
-      source: userIdentity?.source,
-      rawStats: userIdentity?.rawStats,
-      analysis: userIdentity?.analysis,
-      selfProfile: userIdentity?.selfProfile,
-      lastUpdated: new Date()
-    };
+    try {
+      const identity: UserIdentity = {
+        id: 1,
+        datingGoals: localGoals,
+        dataExports: localExports,
+        textInputs: localTextInputs,
+        videoAnalysis: localVideoAnalysis,
+        photos: localPhotos,
+        manualEntry: localManualEntry,
+        synthesis: userIdentity?.synthesis,
+        // Preserve legacy fields
+        source: userIdentity?.source,
+        rawStats: userIdentity?.rawStats,
+        analysis: userIdentity?.analysis,
+        selfProfile: userIdentity?.selfProfile,
+        lastUpdated: new Date()
+      };
 
-    await db.userIdentity.put(identity);
+      console.log("MyProfile: Saving to DB - photos:", localPhotos.length, "videoFrames:", localVideoAnalysis?.frames?.length ?? 0);
+      await db.userIdentity.put(identity);
+      console.log("MyProfile: Save successful");
+    } catch (error) {
+      console.error("MyProfile: Failed to save to DB:", error);
+    }
   }, [localGoals, localExports, localTextInputs, localVideoAnalysis, localPhotos, localManualEntry, userIdentity]);
 
   // Auto-save on changes (with debounce)
   useEffect(() => {
     const timer = setTimeout(() => {
-      saveToDb();
+      saveToDb().catch(err => console.error("MyProfile: Auto-save error:", err));
     }, 500);
     return () => clearTimeout(timer);
   }, [saveToDb]);
@@ -163,13 +174,17 @@ export default function MyProfile() {
 
     try {
       console.log("MyProfile: Starting synthesis...");
+      console.log("MyProfile: Input counts - photos:", localPhotos.length, "frames:", localVideoAnalysis?.frames?.length ?? 0);
 
       // Prepare input for AI
       const textContent = localTextInputs.map(t => `[${t.label}]\n${t.content}`).join('\n\n');
+      const photosToSend = localPhotos.map(p => p.base64);
+
+      console.log("MyProfile: Sending", photosToSend.length, "photos to AI");
 
       const result = await analyzeUserSelf({
         frames: localVideoAnalysis?.frames,
-        photos: localPhotos.map(p => p.base64),
+        photos: photosToSend,
         textContext: textContent || undefined,
         dataExports: localExports.length > 0 ? localExports : undefined,
         datingGoals: localGoals,
@@ -352,9 +367,30 @@ export default function MyProfile() {
           </p>
 
           {analysisError && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg flex items-start text-sm">
-              <AlertCircle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
-              {analysisError}
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+              <div className="flex items-start">
+                <AlertCircle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
+                <span className="flex-1">{analysisError}</span>
+              </div>
+              <button
+                onClick={() => {
+                  const debugInfo = localStorage.getItem('aura_debug_info');
+                  if (debugInfo) {
+                    const blob = new Blob([debugInfo], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `aura_debug_${Date.now()}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  } else {
+                    alert('No debug info available');
+                  }
+                }}
+                className="mt-2 text-xs bg-red-100 hover:bg-red-200 px-3 py-1 rounded font-medium transition-colors"
+              >
+                Download Debug Info
+              </button>
             </div>
           )}
 
