@@ -1,8 +1,9 @@
 // src/lib/api/anthropicClient.ts
 // Centralized Anthropic API client
 
-import { ANTHROPIC_CONFIG, getApiKey } from './config';
+import { ANTHROPIC_CONFIG, TIMEOUTS, getApiKey } from './config';
 import { extractJsonObject, extractJsonArray, extractJsonObjectWithDebug } from './jsonExtractor';
+import { saveErrorToFile, type ErrorDebugInfo } from '../utils/errorExport';
 
 // Content types for API messages
 export interface TextContent {
@@ -24,6 +25,10 @@ export type MessageContent = TextContent | ImageContent;
 export interface AnthropicRequestOptions {
   messages: MessageContent[];
   maxTokens: number;
+  signal?: AbortSignal;      // For cancellation
+  timeout?: number;          // Custom timeout in ms
+  retries?: number;          // Number of retry attempts (default: 2)
+  onRetry?: (attempt: number, error: Error) => void;  // Callback for retry notifications
 }
 
 interface AnthropicResponse {
@@ -31,51 +36,217 @@ interface AnthropicResponse {
 }
 
 /**
+ * Check if an error is retryable (network issues, timeouts, 5xx errors)
+ */
+function isRetryableError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    // Retry on timeout, network errors, and 5xx server errors
+    if (message.includes('timeout') ||
+        message.includes('network') ||
+        message.includes('fetch failed') ||
+        message.includes('500') ||
+        message.includes('502') ||
+        message.includes('503') ||
+        message.includes('504')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Check if an error is a user-initiated abort (should not retry)
+ */
+function isAbortError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return error.name === 'AbortError' ||
+           error.message.includes('aborted') ||
+           error.message.includes('user aborted');
+  }
+  return false;
+}
+
+/**
+ * Sleep for a given number of milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Create an AbortSignal that times out after the specified duration.
+ */
+function createTimeoutSignal(timeoutMs: number, existingSignal?: AbortSignal): { signal: AbortSignal; cleanup: () => void } {
+  const controller = new AbortController();
+
+  const timeoutId = setTimeout(() => {
+    controller.abort(new Error(`Request timed out after ${timeoutMs}ms`));
+  }, timeoutMs);
+
+  // If there's an existing signal, abort when it aborts
+  if (existingSignal) {
+    if (existingSignal.aborted) {
+      controller.abort(existingSignal.reason);
+    } else {
+      existingSignal.addEventListener('abort', () => {
+        controller.abort(existingSignal.reason);
+      });
+    }
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup: () => clearTimeout(timeoutId),
+  };
+}
+
+/**
  * Make a request to the Anthropic API and return the raw text response.
  */
-async function makeRequest(options: AnthropicRequestOptions): Promise<string> {
+async function makeRequest(options: AnthropicRequestOptions, operationName?: string): Promise<string> {
   const apiKey = getApiKey();
+  const timeout = options.timeout ?? TIMEOUTS.DEFAULT;
 
-  const response = await fetch(ANTHROPIC_CONFIG.API_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': ANTHROPIC_CONFIG.API_VERSION,
-      'content-type': 'application/json',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: ANTHROPIC_CONFIG.MODEL,
-      max_tokens: options.maxTokens,
-      messages: [
-        {
-          role: 'user',
-          content: options.messages,
+  // Create timeout signal, combining with any user-provided signal
+  const { signal, cleanup } = createTimeoutSignal(timeout, options.signal);
+
+  try {
+    const response = await fetch(ANTHROPIC_CONFIG.API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': ANTHROPIC_CONFIG.API_VERSION,
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: ANTHROPIC_CONFIG.MODEL,
+        max_tokens: options.maxTokens,
+        messages: [
+          {
+            role: 'user',
+            content: options.messages,
+          },
+        ],
+      }),
+      signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('API Error:', errorData);
+
+      // Auto-save error info for debugging
+      const debugInfo: ErrorDebugInfo = {
+        timestamp: new Date().toISOString(),
+        operation: operationName || 'makeRequest',
+        inputSummary: {
+          maxTokens: options.maxTokens,
+          messageCount: options.messages.length,
+          messageTypes: options.messages.map(m => m.type),
         },
-      ],
-    }),
-  });
+        apiError: {
+          status: response.status,
+          message: errorData.error?.message || response.statusText,
+        },
+      };
+      saveErrorToFile(debugInfo);
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error('API Error:', errorData);
-    throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
+      throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
+    }
+
+    const data: AnthropicResponse = await response.json();
+
+    if (!data.content || !data.content[0] || !data.content[0].text) {
+      // Auto-save error info for debugging
+      const debugInfo: ErrorDebugInfo = {
+        timestamp: new Date().toISOString(),
+        operation: operationName || 'makeRequest',
+        inputSummary: {
+          maxTokens: options.maxTokens,
+          messageCount: options.messages.length,
+        },
+        rawResponse: JSON.stringify(data).substring(0, 2000),
+        parseError: 'API returned unexpected response structure',
+      };
+      saveErrorToFile(debugInfo);
+
+      throw new Error('API returned unexpected response structure');
+    }
+
+    return data.content[0].text;
+  } finally {
+    cleanup();
+  }
+}
+
+/**
+ * Make a request with automatic retry on transient failures.
+ * Exponential backoff: 1s, 3s delays between retries.
+ */
+async function makeRequestWithRetry(
+  options: AnthropicRequestOptions,
+  operationName?: string
+): Promise<string> {
+  const maxRetries = options.retries ?? 2;
+  const backoffDelays = [1000, 3000]; // 1s, 3s
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await makeRequest(options, operationName);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Don't retry user aborts
+      if (isAbortError(error)) {
+        throw error;
+      }
+
+      // Don't retry 4xx client errors (except rate limits which are 429)
+      if (lastError.message.includes('API Error: 4') && !lastError.message.includes('429')) {
+        throw error;
+      }
+
+      // Check if we should retry
+      const isLastAttempt = attempt === maxRetries;
+      if (isLastAttempt || !isRetryableError(error)) {
+        throw error;
+      }
+
+      // Notify about retry
+      const nextAttempt = attempt + 1;
+      console.log(`Request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${backoffDelays[attempt]}ms...`);
+
+      if (options.onRetry) {
+        options.onRetry(nextAttempt, lastError);
+      }
+
+      // Wait before retry
+      await sleep(backoffDelays[attempt] || backoffDelays[backoffDelays.length - 1]);
+    }
   }
 
-  const data: AnthropicResponse = await response.json();
+  // Should never reach here, but TypeScript needs it
+  throw lastError || new Error('Request failed after retries');
+}
 
-  if (!data.content || !data.content[0] || !data.content[0].text) {
-    throw new Error('API returned unexpected response structure');
-  }
-
-  return data.content[0].text;
+/**
+ * Call Anthropic API and return raw text response (no JSON parsing).
+ */
+export async function callAnthropicForText(options: AnthropicRequestOptions): Promise<string> {
+  const rawText = await makeRequestWithRetry(options);
+  console.log('AI Raw Text Response:', rawText.substring(0, 500) + '...');
+  return rawText;
 }
 
 /**
  * Call Anthropic API and parse response as JSON object.
  */
 export async function callAnthropicForObject<T>(options: AnthropicRequestOptions): Promise<T> {
-  const rawText = await makeRequest(options);
+  const rawText = await makeRequestWithRetry(options);
   console.log('AI Raw Response:', rawText);
   return extractJsonObject<T>(rawText);
 }
@@ -84,7 +255,7 @@ export async function callAnthropicForObject<T>(options: AnthropicRequestOptions
  * Call Anthropic API and parse response as JSON array.
  */
 export async function callAnthropicForArray<T>(options: AnthropicRequestOptions): Promise<T[]> {
-  const rawText = await makeRequest(options);
+  const rawText = await makeRequestWithRetry(options);
   console.log('AI Raw Response:', rawText);
   return extractJsonArray<T>(rawText);
 }
@@ -110,29 +281,41 @@ export async function callAnthropicWithDebug<T>(
   debugInfo: Record<string, unknown>
 ): Promise<T> {
   const apiKey = getApiKey();
+  const timeout = options.timeout ?? TIMEOUTS.DEFAULT;
 
   debugInfo.timestamp = new Date().toISOString();
 
-  const response = await fetch(ANTHROPIC_CONFIG.API_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': ANTHROPIC_CONFIG.API_VERSION,
-      'content-type': 'application/json',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: ANTHROPIC_CONFIG.MODEL,
-      max_tokens: options.maxTokens,
-      messages: [
-        {
-          role: 'user',
-          content: options.messages,
-        },
-      ],
-    }),
-  });
+  // Create timeout signal, combining with any user-provided signal
+  const { signal, cleanup } = createTimeoutSignal(timeout, options.signal);
 
+  let response: Response;
+  try {
+    response = await fetch(ANTHROPIC_CONFIG.API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': ANTHROPIC_CONFIG.API_VERSION,
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: ANTHROPIC_CONFIG.MODEL,
+        max_tokens: options.maxTokens,
+        messages: [
+          {
+            role: 'user',
+            content: options.messages,
+          },
+        ],
+      }),
+      signal,
+    });
+  } catch (error) {
+    cleanup();
+    throw error;
+  }
+
+  cleanup();
   debugInfo.responseStatus = response.status;
   debugInfo.responseOk = response.ok;
 
@@ -140,6 +323,18 @@ export async function callAnthropicWithDebug<T>(
     const errorData = await response.json();
     debugInfo.errorData = errorData;
     localStorage.setItem('aura_debug_info', JSON.stringify(debugInfo, null, 2));
+
+    // Auto-save error file for debugging
+    saveErrorToFile({
+      timestamp: new Date().toISOString(),
+      operation: (debugInfo.operation as string) || 'callAnthropicWithDebug',
+      inputSummary: debugInfo,
+      apiError: {
+        status: response.status,
+        message: errorData.error?.message || response.statusText,
+      },
+    });
+
     throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
   }
 
@@ -150,6 +345,16 @@ export async function callAnthropicWithDebug<T>(
   if (!data.content || !data.content[0] || !data.content[0].text) {
     debugInfo.fullResponse = data;
     localStorage.setItem('aura_debug_info', JSON.stringify(debugInfo, null, 2));
+
+    // Auto-save error file for debugging
+    saveErrorToFile({
+      timestamp: new Date().toISOString(),
+      operation: (debugInfo.operation as string) || 'callAnthropicWithDebug',
+      inputSummary: debugInfo,
+      rawResponse: JSON.stringify(data).substring(0, 2000),
+      parseError: 'API returned unexpected response structure',
+    });
+
     throw new Error('API returned unexpected response structure');
   }
 

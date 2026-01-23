@@ -1,5 +1,6 @@
 // src/lib/db.ts
 import Dexie, { type EntityTable } from 'dexie';
+import type { UserAspectProfile, MatchAspectScores } from './virtues/types';
 
 // --- Profile Analysis Types ---
 
@@ -52,6 +53,22 @@ interface PsychologicalProfile {
   archetype_summary?: string;
 }
 
+// Transactional/Financial Motivation Indicators
+interface TransactionalIndicators {
+  likelihood: 'none' | 'low' | 'moderate' | 'high';
+  confidence: number;  // 1-10
+  signals: string[];   // What in the profile suggests this
+  context: string;     // Nuanced explanation
+  ethical_note: string; // Reminder that sugar relationships can be consensual
+}
+
+interface RelationshipStyleInference {
+  likely_preference: string; // monogamous | enm | polyamorous | open | unclear
+  confidence: number;  // 1-10
+  signals: string[];   // Profile elements suggesting this
+  note: string;        // Nuanced explanation
+}
+
 interface RecommendedOpener {
   type: 'like_comment' | 'match_opener';
   message: string;
@@ -80,6 +97,8 @@ interface ProfileAnalysis {
   psychological_profile?: PsychologicalProfile;
   recommended_openers?: RecommendedOpener[];
   compatibility?: ProfileCompatibility;
+  transactional_indicators?: TransactionalIndicators;
+  relationship_style_inference?: RelationshipStyleInference;
   // Legacy fallback fields
   overall_analysis?: {
     summary?: string;
@@ -127,6 +146,67 @@ interface ZodiacCompatibility {
   advice: string;
 }
 
+// --- Partner Virtues (Greek Philosophy / Eudaimonia-based) ---
+
+interface PartnerVirtue {
+  name: string;           // e.g., "Intellectual Curiosity"
+  description: string;    // Why this matters for YOU
+  evidence: string;       // What in your profile suggests this
+  anti_virtue: string;    // What the opposite looks like (red flag)
+}
+
+interface VirtueScore {
+  virtue: string;         // Name of the virtue
+  score: number;          // 1-10
+  evidence: string;       // What in their profile suggests this score
+}
+
+// --- Neurodivergence Insights ---
+
+interface NeurodivergentTrait {
+  condition: string;           // e.g., "ADHD", "Autism Spectrum", "Dyslexia"
+  likelihood: 'low' | 'moderate' | 'notable' | 'significant';
+  confidence: number;          // 1-10 how confident based on available data
+  indicators: string[];        // What in their profile suggests this
+  dating_implications: string; // How this might show up in dating/relationships
+  strengths: string[];         // Positive aspects of this trait in relationships
+}
+
+interface NeurodivergenceAnalysis {
+  summary: string;                    // Overall summary
+  traits: NeurodivergentTrait[];      // Individual trait analyses
+  communication_tips: string[];       // Tips for partners
+  self_awareness_notes: string;       // Helpful self-awareness insights
+  disclaimer: string;                 // Important disclaimer about this not being a diagnosis
+}
+
+// --- Coaching Session Types ---
+
+interface CoachingResponse {
+  message: string;
+  tactic: string;
+  why_it_works: string;
+  growth_insight: string;  // Based on user's attachment style, etc.
+}
+
+interface MatchCoachingAnalysis {
+  detected_agenda: string;
+  detected_tactics: string[];
+  subtext: string;
+}
+
+interface CoachingSession {
+  id?: number;
+  profileId: number;              // Link to match profile
+  timestamp: Date;
+  conversationImages: string[];   // Base64 screenshots
+  matchAnalysis: MatchCoachingAnalysis;
+  suggestedResponses: CoachingResponse[];
+  userActualResponse?: string;    // What user actually sent
+  responseScore?: number;         // 1-10 AI rating
+  scoreExplanation?: string;
+}
+
 interface Profile {
   id: number;
   name: string;
@@ -144,6 +224,12 @@ interface Profile {
 
   // Date suggestions (populated on-demand)
   date_suggestions?: DateSuggestions;
+
+  // Virtue scores (populated when user has partner_virtues)
+  virtue_scores?: VirtueScore[];
+
+  // 23 Aspects scores (new system - takes precedence over virtue_scores when present)
+  aspect_scores?: MatchAspectScores;
 }
 
 // Type definitions for UserIdentity sub-structures
@@ -192,6 +278,7 @@ interface ManualEntry {
   attachmentStyle?: string;
   relationshipHistory?: string;
   zodiac_sign?: string;  // "Aries" | "Taurus" | ... | "Pisces"
+  relationshipStyle?: string[];  // Multi-select: ['monogamous', 'enm', 'polyamorous', 'open', 'exploring']
 }
 
 interface UserSynthesis {
@@ -240,6 +327,12 @@ interface UserSynthesis {
     growth_areas: string[];
     strengths: string[];
   };
+  // Virtue-based partner profile (Greek philosophy / eudaimonia)
+  partner_virtues?: PartnerVirtue[];  // 5 core virtues you seek
+  // Neurodivergence insights
+  neurodivergence?: NeurodivergenceAnalysis;
+  // 23 Aspects profile (new system)
+  aspect_profile?: UserAspectProfile;
 }
 
 // Extended UserIdentity interface for My Profile system
@@ -291,6 +384,7 @@ interface UserIdentity {
 const db = new Dexie('AuraDB') as Dexie & {
   profiles: EntityTable<Profile, 'id'>;
   userIdentity: EntityTable<UserIdentity, 'id'>;
+  coachingSessions: EntityTable<CoachingSession, 'id'>;
 };
 
 // Schema definition with migration
@@ -323,7 +417,32 @@ db.version(3).stores({
   });
 });
 
+// Version 4: Add coaching sessions table
+db.version(4).stores({
+  profiles: '++id, name, appName, timestamp',
+  userIdentity: '++id, lastUpdated',
+  coachingSessions: '++id, profileId, timestamp'
+});
+
+// Version 5: Add relationshipStyle to ManualEntry
+db.version(5).stores({
+  profiles: '++id, name, appName, timestamp',
+  userIdentity: '++id, lastUpdated',
+  coachingSessions: '++id, profileId, timestamp'
+}).upgrade(tx => {
+  // Migrate existing userIdentity records to include relationshipStyle in manualEntry
+  return tx.table('userIdentity').toCollection().modify((identity: Partial<UserIdentity>) => {
+    // Initialize relationshipStyle if manualEntry exists but doesn't have it
+    if (identity.manualEntry && !identity.manualEntry.relationshipStyle) {
+      identity.manualEntry.relationshipStyle = [];
+    }
+  });
+});
+
 export { db };
+// Re-export aspect types for convenience
+export type { UserAspectProfile, MatchAspectScores, AspectScore } from './virtues/types';
+
 export type {
   Profile,
   ProfileAnalysis,
@@ -348,4 +467,12 @@ export type {
   PhotoEntry,
   ManualEntry,
   UserSynthesis,
+  CoachingSession,
+  CoachingResponse,
+  MatchCoachingAnalysis,
+  PartnerVirtue,
+  VirtueScore,
+  NeurodivergentTrait,
+  NeurodivergenceAnalysis,
+  TransactionalIndicators,
 };

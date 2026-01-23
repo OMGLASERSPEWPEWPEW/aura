@@ -1,5 +1,5 @@
 // src/components/profile/ManualEntryTab.tsx
-import { User, Plus, X, Sparkles } from 'lucide-react';
+import { User, Plus, X, Sparkles, Heart } from 'lucide-react';
 import { useState } from 'react';
 import type { ManualEntry } from '../../lib/db';
 
@@ -14,6 +14,14 @@ const ATTACHMENT_STYLES = [
   { value: 'avoidant', label: 'Avoidant', description: 'Values independence, uncomfortable with too much closeness' },
   { value: 'fearful-avoidant', label: 'Fearful-Avoidant', description: 'Desires closeness but fears getting hurt' },
   { value: 'unsure', label: 'Not Sure', description: 'Still figuring it out' },
+];
+
+const RELATIONSHIP_STYLES = [
+  { value: 'monogamous', label: 'Monogamous', description: 'Exclusive romantic relationship with one person' },
+  { value: 'enm', label: 'Ethically Non-Monogamous', description: 'Open to multiple ethical connections with transparency' },
+  { value: 'polyamorous', label: 'Polyamorous', description: 'Multiple loving relationships with the knowledge of all involved' },
+  { value: 'open', label: 'Open Relationship', description: 'Primary partnership with openness to other connections' },
+  { value: 'exploring', label: 'Still Exploring', description: 'Learning what works best for you' },
 ];
 
 const ZODIAC_SIGNS = [
@@ -50,6 +58,15 @@ export default function ManualEntryTab({ manualEntry, onManualEntryChange }: Man
   const removeInterest = (interest: string) => {
     const interests = manualEntry.interests || [];
     updateField('interests', interests.filter(i => i !== interest));
+  };
+
+  const toggleRelationshipStyle = (styleValue: string) => {
+    const currentStyles = manualEntry.relationshipStyle || [];
+    if (currentStyles.includes(styleValue)) {
+      updateField('relationshipStyle', currentStyles.filter(s => s !== styleValue));
+    } else {
+      updateField('relationshipStyle', [...currentStyles, styleValue]);
+    }
   };
 
   return (
@@ -216,6 +233,64 @@ export default function ManualEntryTab({ manualEntry, onManualEntryChange }: Man
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Relationship Style */}
+      <div className="bg-white p-4 rounded-xl shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <Heart className="text-rose-500" size={20} />
+          <h3 className="font-semibold text-gray-800">Relationship Style</h3>
+        </div>
+        <p className="text-sm text-slate-500 mb-4">
+          What type of relationship structure are you open to? Select all that apply.
+        </p>
+
+        <div className="space-y-2">
+          {RELATIONSHIP_STYLES.map((style) => {
+            const isSelected = (manualEntry.relationshipStyle || []).includes(style.value);
+            return (
+              <button
+                key={style.value}
+                onClick={() => toggleRelationshipStyle(style.value)}
+                className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
+                  isSelected
+                    ? 'border-rose-500 bg-rose-50'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className={`font-medium ${isSelected ? 'text-rose-700' : 'text-slate-800'}`}>
+                      {style.label}
+                    </div>
+                    <div className="text-xs text-slate-500">{style.description}</div>
+                  </div>
+                  {isSelected && (
+                    <div className="w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+                      <X size={12} className="text-white" />
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {(manualEntry.relationshipStyle?.length ?? 0) > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {manualEntry.relationshipStyle?.map(style => {
+              const styleInfo = RELATIONSHIP_STYLES.find(s => s.value === style);
+              return (
+                <span
+                  key={style}
+                  className="px-3 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-medium"
+                >
+                  {styleInfo?.label || style}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Relationship History */}

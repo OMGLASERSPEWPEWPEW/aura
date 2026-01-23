@@ -23,6 +23,7 @@ export function buildUserContextForMatch(
     what_to_avoid: synthesis.dating_strategy?.what_to_avoid,
     opener_style_recommendations: synthesis.dating_strategy?.opener_style_recommendations,
     location: userIdentity.manualEntry?.location,
+    relationship_style: userIdentity.manualEntry?.relationshipStyle,
   };
 }
 

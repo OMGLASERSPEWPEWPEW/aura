@@ -38,6 +38,7 @@ Video Upload → Frame Extraction (Canvas) → AI Analysis → IndexedDB → UI
   - `utils/` - Shared utilities (`userContext.ts`, `profileHelpers.ts`)
   - `ai.ts` - AI function orchestration (uses api/ internally)
   - `db.ts` - Dexie schema and TypeScript types
+  
   - `prompts.ts` - AI prompt templates
   - `frameExtraction.ts` - Video frame extraction via Canvas
   - `weather.ts` - Weather API integration

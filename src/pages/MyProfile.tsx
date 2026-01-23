@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 import { db, type UserIdentity, type DatingGoals, type DataExport, type TextInput, type VideoAnalysis, type PhotoEntry, type ManualEntry, type UserSynthesis } from '../lib/db';
-import { analyzeUserSelf } from '../lib/ai';
+import { analyzeUserSelf, extractPartnerVirtues, analyzeNeurodivergence, extractUserAspects } from '../lib/ai';
 
 // Type for user self-analysis result
 interface UserSelfAnalysisResult {
@@ -136,6 +136,15 @@ export default function MyProfile() {
   // Track if we've done the initial load from DB
   const isInitialized = useRef(false);
 
+  // Track if component is mounted to prevent state updates after unmount
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   // Local state for unsaved changes (tracks current edits)
   const [localGoals, setLocalGoals] = useState<DatingGoals | undefined>();
   const [localExports, setLocalExports] = useState<DataExport[]>([]);
@@ -159,32 +168,34 @@ export default function MyProfile() {
   }, [userIdentity]);
 
   // Save to DB whenever local state changes (debounced effect)
+  // Uses update() to only modify specified fields, preserving synthesis
   const saveToDb = useCallback(async () => {
     try {
-      const identity: UserIdentity = {
-        id: 1,
+      const fieldsToUpdate = {
         datingGoals: localGoals,
         dataExports: localExports,
         textInputs: localTextInputs,
         videoAnalysis: localVideoAnalysis,
         photos: localPhotos,
         manualEntry: localManualEntry,
-        synthesis: userIdentity?.synthesis,
-        // Preserve legacy fields
-        source: userIdentity?.source,
-        rawStats: userIdentity?.rawStats,
-        analysis: userIdentity?.analysis,
-        selfProfile: userIdentity?.selfProfile,
         lastUpdated: new Date()
       };
 
       console.log("MyProfile: Saving to DB - photos:", localPhotos.length, "videoFrames:", localVideoAnalysis?.frames?.length ?? 0);
-      await db.userIdentity.put(identity);
+
+      // Use update() instead of put() to preserve synthesis and other fields
+      const updated = await db.userIdentity.update(1, fieldsToUpdate);
+
+      // If record doesn't exist yet (updated === 0), create it
+      if (updated === 0) {
+        await db.userIdentity.put({ id: 1, ...fieldsToUpdate });
+      }
+
       console.log("MyProfile: Save successful");
     } catch (error) {
       console.error("MyProfile: Failed to save to DB:", error);
     }
-  }, [localGoals, localExports, localTextInputs, localVideoAnalysis, localPhotos, localManualEntry, userIdentity]);
+  }, [localGoals, localExports, localTextInputs, localVideoAnalysis, localPhotos, localManualEntry]);
 
   // Auto-save on changes (with debounce)
   useEffect(() => {
@@ -236,6 +247,7 @@ export default function MyProfile() {
         manualInfo: Object.keys(localManualEntry).length > 0 ? localManualEntry : undefined
       }) as UserSelfAnalysisResult;
 
+      if (!isMounted.current) return;
       console.log("MyProfile: Synthesis complete:", result);
 
       // Build synthesis object
@@ -246,6 +258,80 @@ export default function MyProfile() {
       if ((localVideoAnalysis?.frames?.length ?? 0) > 0) inputsUsed.push('video');
       if (localPhotos.length > 0) inputsUsed.push('photos');
       if (localManualEntry.name || localManualEntry.age) inputsUsed.push('profile_info');
+
+      // Extract partner virtues based on the psychological profile
+      console.log("MyProfile: Extracting partner virtues...");
+      let partnerVirtues = undefined;
+      try {
+        partnerVirtues = await extractPartnerVirtues({
+          archetype_summary: result.psychological_profile?.archetype_summary,
+          attachment_patterns: result.behavioral_insights?.attachment_patterns,
+          communication_style: result.behavioral_insights?.communication_style,
+          dating_goal: localGoals?.type,
+          what_to_look_for: result.dating_strategy?.what_to_look_for,
+          what_to_avoid: result.dating_strategy?.what_to_avoid,
+          growth_areas: result.behavioral_insights?.growth_areas,
+          strengths: result.behavioral_insights?.strengths
+        });
+        console.log("MyProfile: Extracted", partnerVirtues?.length || 0, "partner virtues");
+      } catch (virtueError) {
+        console.error("MyProfile: Failed to extract partner virtues:", virtueError);
+        // Continue without virtues - this is optional
+      }
+
+      if (!isMounted.current) return;
+
+      // Analyze neurodivergence traits
+      console.log("MyProfile: Analyzing neurodivergence traits...");
+      let neurodivergence = undefined;
+      const photoAnalysis = result.photos?.map((p, i) =>
+        `Photo ${i + 1}: ${p.vibe} - ${p.subtext}`
+      ).join('; ') || '';
+
+      try {
+        neurodivergence = await analyzeNeurodivergence({
+          archetype_summary: result.psychological_profile?.archetype_summary,
+          communication_style: result.behavioral_insights?.communication_style,
+          attachment_patterns: result.behavioral_insights?.attachment_patterns,
+          growth_areas: result.behavioral_insights?.growth_areas,
+          strengths: result.behavioral_insights?.strengths,
+          photo_analysis: photoAnalysis,
+          dating_goal: localGoals?.type,
+          behavioral_patterns: result.psychological_profile?.subtext_analysis?.disconnect
+        });
+        console.log("MyProfile: Neurodivergence analysis complete:", neurodivergence?.traits?.length || 0, "traits identified");
+      } catch (ndError) {
+        console.error("MyProfile: Failed to analyze neurodivergence:", ndError);
+        // Continue without neurodivergence - this is optional
+      }
+
+      if (!isMounted.current) return;
+
+      // Extract 23 Aspects profile
+      console.log("MyProfile: Extracting 23 Aspects profile...");
+      let aspectProfile = undefined;
+      try {
+        aspectProfile = await extractUserAspects({
+          archetype_summary: result.psychological_profile?.archetype_summary,
+          communication_style: result.behavioral_insights?.communication_style,
+          attachment_patterns: result.behavioral_insights?.attachment_patterns,
+          dating_goal: localGoals?.type,
+          what_to_look_for: result.dating_strategy?.what_to_look_for,
+          what_to_avoid: result.dating_strategy?.what_to_avoid,
+          growth_areas: result.behavioral_insights?.growth_areas,
+          strengths: result.behavioral_insights?.strengths,
+          photo_analysis: photoAnalysis,
+          behavioral_data: localExports.length > 0
+            ? `Stats from ${localExports.map(e => e.source).join(', ')}`
+            : undefined
+        });
+        console.log("MyProfile: 23 Aspects profile extracted:", aspectProfile?.scores?.length || 0, "aspects scored");
+      } catch (aspectError) {
+        console.error("MyProfile: Failed to extract 23 Aspects profile:", aspectError);
+        // Continue without aspects - this is optional
+      }
+
+      if (!isMounted.current) return;
 
       const synthesis: UserSynthesis = {
         meta: {
@@ -278,11 +364,14 @@ export default function MyProfile() {
           attachment_patterns: '',
           growth_areas: [],
           strengths: []
-        }
+        },
+        partner_virtues: partnerVirtues,
+        neurodivergence: neurodivergence,
+        aspect_profile: aspectProfile
       };
 
       // Auto-populate manual entry from synthesis basics if fields are empty
-      if (result.basics) {
+      if (result.basics && isMounted.current) {
         const updatedManualEntry = { ...localManualEntry };
         let needsUpdate = false;
 
@@ -308,14 +397,18 @@ export default function MyProfile() {
         }
       }
 
-      // Save synthesis to DB
+      // Save synthesis to DB (DB writes are safe even if unmounted)
       await db.userIdentity.update(1, { synthesis, lastUpdated: new Date() });
 
     } catch (error) {
       console.error("MyProfile: Synthesis error:", error);
-      setAnalysisError(error instanceof Error ? error.message : "Analysis failed. Please try again.");
+      if (isMounted.current) {
+        setAnalysisError(error instanceof Error ? error.message : "Analysis failed. Please try again.");
+      }
     } finally {
-      setIsAnalyzing(false);
+      if (isMounted.current) {
+        setIsAnalyzing(false);
+      }
     }
   };
 
@@ -467,6 +560,7 @@ export default function MyProfile() {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <UserProfileDisplay
               synthesis={userIdentity.synthesis}
+              photos={localPhotos}
               onRerunSynthesis={runSynthesis}
             />
           </div>

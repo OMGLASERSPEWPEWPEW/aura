@@ -3,6 +3,7 @@ import {
   callAnthropicForObject,
   callAnthropicForArray,
   callAnthropicForArraySafe,
+  callAnthropicForText,
   callAnthropicWithDebug,
   textContent,
   imageContent,
@@ -11,14 +12,26 @@ import {
 } from './api';
 import {
   PROFILE_ANALYSIS_PROMPT,
+  PROFILE_BASICS_PROMPT,
+  PROFILE_DEEP_PROMPT,
   USER_CONTEXT_PROMPT,
   USER_SELF_ANALYSIS_PROMPT,
   USER_CONTEXT_FOR_MATCH,
   ZODIAC_COMPATIBILITY_PROMPT,
   REGENERATE_OPENERS_PROMPT,
   REGENERATE_PROMPT_OPENER_PROMPT,
+  CONVERSATION_COACH_PROMPT,
+  SCORE_RESPONSE_PROMPT,
+  DATE_ASK_PROMPT,
+  PARTNER_VIRTUES_PROMPT,
+  VIRTUE_SCORING_PROMPT,
+  ASK_ABOUT_MATCH_PROMPT,
+  NEURODIVERGENCE_ANALYSIS_PROMPT,
+  USER_ASPECTS_PROMPT,
+  MATCH_ASPECTS_PROMPT,
 } from './prompts';
-import type { DatingGoals, DataExport, ManualEntry, DateSuggestion, ZodiacCompatibility } from './db';
+import type { UserAspectProfile, MatchAspectScores } from './virtues/types';
+import type { DatingGoals, DataExport, ManualEntry, DateSuggestion, ZodiacCompatibility, CoachingResponse, MatchCoachingAnalysis, PartnerVirtue, VirtueScore, ProfileAnalysis, NeurodivergenceAnalysis } from './db';
 import type { WeatherForecast } from './weather';
 
 // Date suggestions options
@@ -37,6 +50,7 @@ export interface UserContextForMatch {
   what_to_avoid?: string[];
   opener_style_recommendations?: string[];
   location?: string;
+  relationship_style?: string[];
 }
 
 // Recommended opener interface
@@ -70,6 +84,11 @@ interface UserSelfAnalysisInput {
 function buildPromptWithUserContext(basePrompt: string, userContext?: UserContextForMatch): string {
   if (!userContext) return basePrompt;
 
+  // Format relationship style for display
+  const relationshipStyleText = userContext.relationship_style?.length
+    ? userContext.relationship_style.join(', ')
+    : 'Not specified';
+
   return (
     basePrompt +
     USER_CONTEXT_FOR_MATCH.replace('{goal_type}', userContext.goal_type || 'Not specified')
@@ -79,6 +98,7 @@ function buildPromptWithUserContext(basePrompt: string, userContext?: UserContex
       .replace('{what_to_avoid}', userContext.what_to_avoid?.join(', ') || 'Not specified')
       .replace('{opener_style_recommendations}', userContext.opener_style_recommendations?.join(', ') || 'Not specified')
       .replace('{user_location}', userContext.location || 'Not specified')
+      .replace('{relationship_style}', relationshipStyleText)
   );
 }
 
@@ -113,6 +133,188 @@ export async function analyzeProfile(frames: string[], userContext?: UserContext
     messages,
     maxTokens: TOKEN_LIMITS.PROFILE_ANALYSIS,
   });
+}
+
+// --- SPLIT ANALYSIS (Progressive Loading) ---
+
+// Quick extraction result (basics only)
+export interface QuickBasicsResult {
+  meta: {
+    app_name?: string;
+    best_photo_index?: number;
+  };
+  basics: {
+    name?: string;
+    age?: number;
+    height?: string;
+    job?: string;
+    location?: string;
+    school?: string;
+    hometown?: string;
+    zodiac_sign?: string;
+  };
+}
+
+export interface ProfileDeepAnalysis {
+  photos: Array<{
+    description: string;
+    vibe: string;
+    subtext: string;
+  }>;
+  prompts: Array<{
+    question: string;
+    answer: string;
+    analysis: string;
+    suggested_opener?: {
+      message: string;
+      tactic: string;
+      why_it_works: string;
+    };
+  }>;
+  psychological_profile: {
+    agendas: Array<{
+      type: string;
+      evidence: string;
+      priority: 'primary' | 'secondary';
+    }>;
+    presentation_tactics: string[];
+    predicted_tactics: string[];
+    subtext_analysis: {
+      sexual_signaling: string;
+      power_dynamics: string;
+      vulnerability_indicators: string;
+      disconnect: string;
+    };
+    archetype_summary: string;
+  };
+  recommended_openers: Array<{
+    type: 'like_comment' | 'match_opener';
+    message: string;
+    tactic: string;
+    why_it_works: string;
+  }>;
+  transactional_indicators: {
+    likelihood: 'none' | 'low' | 'moderate' | 'high';
+    confidence: number;
+    signals: string[];
+    context: string;
+    ethical_note: string;
+  };
+  relationship_style_inference: {
+    likely_preference: string;
+    confidence: number;
+    signals: string[];
+    note: string;
+  };
+}
+
+/**
+ * Quick extraction of basic profile info (name, age, location, etc.)
+ * Uses only first 3 frames for speed.
+ */
+export async function analyzeQuickBasicsResult(
+  frames: string[],
+  options?: { signal?: AbortSignal }
+): Promise<QuickBasicsResult> {
+  if (!frames || frames.length === 0) {
+    throw new Error('No frames provided for analysis.');
+  }
+
+  // Use only first 3 frames for quick extraction
+  const quickFrames = frames.slice(0, 3);
+  console.log(`src/lib/ai.ts: Quick basics extraction with ${quickFrames.length} frames...`);
+
+  const messages: MessageContent[] = [
+    ...quickFrames.map((frame) => imageContent(frame)),
+    textContent(PROFILE_BASICS_PROMPT),
+  ];
+
+  return callAnthropicForObject<QuickBasicsResult>({
+    messages,
+    maxTokens: TOKEN_LIMITS.PROFILE_BASICS,
+    signal: options?.signal,
+    timeout: 30000, // 30 second timeout for basics
+  });
+}
+
+/**
+ * Deep psychological analysis with all frames.
+ * Takes previously extracted basics to avoid redundant work.
+ */
+export async function analyzeProfileDeep(
+  frames: string[],
+  basics: QuickBasicsResult,
+  userContext?: UserContextForMatch,
+  options?: { signal?: AbortSignal }
+): Promise<ProfileDeepAnalysis> {
+  if (!frames || frames.length === 0) {
+    throw new Error('No frames provided for analysis.');
+  }
+
+  // Limit frames to prevent token overflow - use at most 12 frames
+  // If more than 12, sample evenly across the video
+  const maxFrames = 12;
+  const framesToUse = frames.length > maxFrames
+    ? frames.filter((_, i) => i % Math.ceil(frames.length / maxFrames) === 0).slice(0, maxFrames)
+    : frames;
+
+  console.log(`src/lib/ai.ts: Deep analysis with ${framesToUse.length} frames (from ${frames.length} total)...`);
+
+  // Build the deep prompt with basics info
+  const deepPrompt = PROFILE_DEEP_PROMPT.replace(
+    '{basics_json}',
+    JSON.stringify(basics, null, 2)
+  );
+
+  const messages: MessageContent[] = [
+    ...framesToUse.map((frame) => imageContent(frame)),
+    textContent(buildPromptWithUserContext(deepPrompt, userContext)),
+  ];
+
+  return callAnthropicForObject<ProfileDeepAnalysis>({
+    messages,
+    maxTokens: TOKEN_LIMITS.PROFILE_DEEP,
+    signal: options?.signal,
+    timeout: 90000, // 90 second timeout for deep analysis
+  });
+}
+
+/**
+ * Combined split analysis - returns basics quickly, then full analysis.
+ * Calls onBasicsReady when basics are available for progressive UI update.
+ */
+export async function analyzeProfileProgressive(
+  frames: string[],
+  userContext?: UserContextForMatch,
+  options?: {
+    signal?: AbortSignal;
+    onBasicsReady?: (basics: QuickBasicsResult) => void;
+  }
+): Promise<ProfileAnalysis> {
+  // Step 1: Quick basics extraction
+  const basics = await analyzeQuickBasicsResult(frames, { signal: options?.signal });
+
+  // Notify UI that basics are ready
+  if (options?.onBasicsReady) {
+    options.onBasicsReady(basics);
+  }
+
+  // Step 2: Deep analysis with all frames
+  const deepAnalysis = await analyzeProfileDeep(frames, basics, userContext, { signal: options?.signal });
+
+  // Merge basics and deep analysis into full ProfileAnalysis format
+  const fullAnalysis: ProfileAnalysis = {
+    meta: basics.meta,
+    basics: basics.basics,
+    photos: deepAnalysis.photos,
+    prompts: deepAnalysis.prompts,
+    psychological_profile: deepAnalysis.psychological_profile,
+    recommended_openers: deepAnalysis.recommended_openers,
+    transactional_indicators: deepAnalysis.transactional_indicators,
+    relationship_style_inference: deepAnalysis.relationship_style_inference,
+  };
+
+  return fullAnalysis;
 }
 
 export async function analyzeUserBackstory(textContext: string) {
@@ -181,6 +383,9 @@ export async function analyzeUserSelf(input: UserSelfAnalysisInput) {
       contextText += `Interests: ${info.interests.join(', ')}\n`;
     }
     if (info.attachmentStyle) contextText += `Self-identified Attachment Style: ${info.attachmentStyle}\n`;
+    if (info.relationshipStyle && info.relationshipStyle.length > 0) {
+      contextText += `Relationship Style Preferences: ${info.relationshipStyle.join(', ')}\n`;
+    }
     if (info.relationshipHistory) contextText += `Relationship History Notes: ${info.relationshipHistory}\n`;
   }
 
@@ -393,5 +598,473 @@ export async function regeneratePromptOpener(
   return callAnthropicForObject<PromptOpener>({
     messages: [textContent(promptText)],
     maxTokens: TOKEN_LIMITS.PROMPT_OPENER,
+  });
+}
+
+// --- CONVERSATION COACHING ---
+
+export interface CoachingAnalysisInput {
+  conversationImages: string[];
+  userContext: {
+    archetype?: string;
+    attachmentPatterns?: string;
+    communicationStyle?: string;
+    growthAreas?: string[];
+    goal?: string;
+  };
+  matchContext: {
+    name?: string;
+    archetype?: string;
+    agendas?: string[];
+    tactics?: string[];
+    vulnerabilities?: string;
+    powerDynamics?: string;
+  };
+}
+
+export interface CoachingAnalysisResult {
+  match_analysis: MatchCoachingAnalysis;
+  suggested_responses: CoachingResponse[];
+}
+
+export interface DateAskSuggestion {
+  message: string;
+  approach: 'Direct' | 'Playful' | 'Low-pressure';
+  tactic: string;
+  why_it_works: string;
+}
+
+export interface ResponseScoreResult {
+  score: number;
+  explanation: string;
+  growth_note: string;
+}
+
+/**
+ * Analyze a conversation and provide coaching suggestions
+ */
+export async function analyzeConversation(input: CoachingAnalysisInput): Promise<CoachingAnalysisResult> {
+  if (!input.conversationImages || input.conversationImages.length === 0) {
+    throw new Error('No conversation images provided for analysis.');
+  }
+
+  console.log(`src/lib/ai.ts: Analyzing conversation with ${input.conversationImages.length} images...`);
+
+  const prompt = CONVERSATION_COACH_PROMPT
+    .replace('{user_archetype}', input.userContext.archetype || 'Not available')
+    .replace('{user_attachment_patterns}', input.userContext.attachmentPatterns || 'Not available')
+    .replace('{user_communication_style}', input.userContext.communicationStyle || 'Not available')
+    .replace('{user_growth_areas}', input.userContext.growthAreas?.join(', ') || 'Not specified')
+    .replace('{user_goal}', input.userContext.goal || 'Not specified')
+    .replace('{match_name}', input.matchContext.name || 'Unknown')
+    .replace('{match_archetype}', input.matchContext.archetype || 'Not available')
+    .replace('{match_agendas}', input.matchContext.agendas?.join(', ') || 'Not analyzed')
+    .replace('{match_tactics}', input.matchContext.tactics?.join(', ') || 'Not analyzed')
+    .replace('{match_vulnerabilities}', input.matchContext.vulnerabilities || 'Not available');
+
+  const messages: MessageContent[] = [
+    ...input.conversationImages.map((img) => imageContent(img)),
+    textContent(prompt),
+  ];
+
+  return callAnthropicForObject<CoachingAnalysisResult>({
+    messages,
+    maxTokens: TOKEN_LIMITS.COACHING,
+  });
+}
+
+/**
+ * Score the user's actual response compared to suggestions
+ */
+export async function scoreUserResponse(
+  userResponse: string,
+  matchContext: {
+    archetype?: string;
+    detectedAgenda: string;
+    detectedTactics: string[];
+    subtext: string;
+  },
+  userContext: {
+    archetype?: string;
+    growthAreas?: string[];
+    communicationStyle?: string;
+  },
+  suggestedResponses: CoachingResponse[]
+): Promise<ResponseScoreResult> {
+  console.log('src/lib/ai.ts: Scoring user response...');
+
+  const suggestedResponsesText = suggestedResponses
+    .map((r, i) => `${i + 1}. "${r.message}" (Tactic: ${r.tactic})`)
+    .join('\n');
+
+  const prompt = SCORE_RESPONSE_PROMPT
+    .replace('{match_archetype}', matchContext.archetype || 'Not available')
+    .replace('{detected_agenda}', matchContext.detectedAgenda)
+    .replace('{detected_tactics}', matchContext.detectedTactics.join(', '))
+    .replace('{subtext}', matchContext.subtext)
+    .replace('{user_archetype}', userContext.archetype || 'Not available')
+    .replace('{user_growth_areas}', userContext.growthAreas?.join(', ') || 'Not specified')
+    .replace('{user_communication_style}', userContext.communicationStyle || 'Not available')
+    .replace('{suggested_responses}', suggestedResponsesText)
+    .replace('{user_response}', userResponse);
+
+  return callAnthropicForObject<ResponseScoreResult>({
+    messages: [textContent(prompt)],
+    maxTokens: TOKEN_LIMITS.COACHING_SCORE,
+  });
+}
+
+/**
+ * Generate date ask messages based on conversation context
+ */
+export async function generateDateAsk(
+  conversationImages: string[],
+  matchContext: {
+    name?: string;
+    archetype?: string;
+    powerDynamics?: string;
+    vulnerabilities?: string;
+  },
+  userContext: {
+    goal?: string;
+    communicationStyle?: string;
+  }
+): Promise<DateAskSuggestion[]> {
+  if (!conversationImages || conversationImages.length === 0) {
+    throw new Error('No conversation images provided for date ask generation.');
+  }
+
+  console.log('src/lib/ai.ts: Generating date ask suggestions...');
+
+  const prompt = DATE_ASK_PROMPT
+    .replace('{match_name}', matchContext.name || 'them')
+    .replace('{match_archetype}', matchContext.archetype || 'Not available')
+    .replace('{power_dynamics}', matchContext.powerDynamics || 'Not analyzed')
+    .replace('{match_vulnerabilities}', matchContext.vulnerabilities || 'Not available')
+    .replace('{user_goal}', userContext.goal || 'Not specified')
+    .replace('{user_communication_style}', userContext.communicationStyle || 'Not available')
+    .replace('{conversation_summary}', 'See conversation screenshots above');
+
+  const messages: MessageContent[] = [
+    ...conversationImages.map((img) => imageContent(img)),
+    textContent(prompt),
+  ];
+
+  return callAnthropicForArray<DateAskSuggestion>({
+    messages,
+    maxTokens: TOKEN_LIMITS.COACHING_DATE_ASK,
+  });
+}
+
+// --- PARTNER VIRTUES (Eudaimonia) ---
+
+export interface PartnerVirtuesInput {
+  archetype_summary?: string;
+  attachment_patterns?: string;
+  communication_style?: string;
+  dating_goal?: string;
+  what_to_look_for?: string[];
+  what_to_avoid?: string[];
+  growth_areas?: string[];
+  strengths?: string[];
+}
+
+export interface PartnerVirtuesResult {
+  partner_virtues: PartnerVirtue[];
+}
+
+/**
+ * Extract 5 core partner virtues based on user's psychological profile
+ */
+export async function extractPartnerVirtues(input: PartnerVirtuesInput): Promise<PartnerVirtue[]> {
+  console.log('src/lib/ai.ts: Extracting partner virtues...');
+
+  const prompt = PARTNER_VIRTUES_PROMPT
+    .replace('{archetype_summary}', input.archetype_summary || 'Not available')
+    .replace('{attachment_patterns}', input.attachment_patterns || 'Not available')
+    .replace('{communication_style}', input.communication_style || 'Not available')
+    .replace('{dating_goal}', input.dating_goal || 'Not specified')
+    .replace('{what_to_look_for}', input.what_to_look_for?.join(', ') || 'Not specified')
+    .replace('{what_to_avoid}', input.what_to_avoid?.join(', ') || 'Not specified')
+    .replace('{growth_areas}', input.growth_areas?.join(', ') || 'Not specified')
+    .replace('{strengths}', input.strengths?.join(', ') || 'Not specified');
+
+  const result = await callAnthropicForObject<PartnerVirtuesResult>({
+    messages: [textContent(prompt)],
+    maxTokens: TOKEN_LIMITS.VIRTUE_EXTRACTION,
+  });
+
+  return result.partner_virtues || [];
+}
+
+export interface VirtueScoreResult {
+  virtue_scores: VirtueScore[];
+}
+
+/**
+ * Score a match against user's partner virtues
+ */
+export async function scoreMatchVirtues(
+  matchAnalysis: ProfileAnalysis,
+  userVirtues: PartnerVirtue[]
+): Promise<VirtueScore[]> {
+  if (!userVirtues || userVirtues.length === 0) {
+    console.log('src/lib/ai.ts: No user virtues provided, skipping virtue scoring');
+    return [];
+  }
+
+  console.log('src/lib/ai.ts: Scoring match virtues...');
+
+  // Format user virtues for the prompt
+  const virtuesText = userVirtues.map((v, i) =>
+    `${i + 1}. ${v.name}\n   - Description: ${v.description}\n   - Anti-virtue (red flag): ${v.anti_virtue}`
+  ).join('\n\n');
+
+  // Extract match info from analysis
+  const psych = matchAnalysis.psychological_profile;
+  const photoVibes = matchAnalysis.photos?.map(p => `${p.vibe}: ${p.subtext}`).join('; ') || 'Not available';
+  const promptsText = matchAnalysis.prompts?.map(p => `Q: ${p.question}\nA: ${p.answer}`).join('\n\n') || 'Not available';
+  const agendasText = psych?.agendas?.map(a => `${a.type} (${a.priority}): ${a.evidence}`).join('; ') || 'Not analyzed';
+  const subtextText = psych?.subtext_analysis
+    ? `Sexual signaling: ${psych.subtext_analysis.sexual_signaling || 'N/A'}; Power: ${psych.subtext_analysis.power_dynamics || 'N/A'}; Vulnerability: ${psych.subtext_analysis.vulnerability_indicators || 'N/A'}`
+    : 'Not available';
+
+  const prompt = VIRTUE_SCORING_PROMPT
+    .replace('{user_virtues}', virtuesText)
+    .replace('{match_name}', matchAnalysis.basics?.name || 'Unknown')
+    .replace('{match_archetype}', psych?.archetype_summary || 'Not available')
+    .replace('{match_agendas}', agendasText)
+    .replace('{match_tactics}', psych?.presentation_tactics?.join(', ') || 'Not analyzed')
+    .replace('{match_subtext}', subtextText)
+    .replace('{match_photo_vibes}', photoVibes)
+    .replace('{match_prompts}', promptsText);
+
+  const result = await callAnthropicForObject<VirtueScoreResult>({
+    messages: [textContent(prompt)],
+    maxTokens: TOKEN_LIMITS.VIRTUE_SCORING,
+  });
+
+  return result.virtue_scores || [];
+}
+
+// --- ASK ABOUT MATCH ---
+
+export interface AskAboutMatchInput {
+  question: string;
+  matchAnalysis: ProfileAnalysis;
+  compatibility?: {
+    score: number;
+    summary: string;
+    strengths?: string[];
+    concerns?: string[];
+  };
+}
+
+/**
+ * Ask a question about a match profile and get an AI response.
+ */
+export async function askAboutMatch(input: AskAboutMatchInput): Promise<string> {
+  console.log('src/lib/ai.ts: Asking about match:', input.question);
+
+  const { matchAnalysis, compatibility } = input;
+  const psych = matchAnalysis.psychological_profile;
+
+  // Format photos for prompt
+  const photosText = matchAnalysis.photos?.map((p, i) =>
+    `Photo ${i + 1}: ${p.vibe} - ${p.subtext}`
+  ).join('\n') || 'No photo analysis available';
+
+  // Format prompts for prompt
+  const promptsText = matchAnalysis.prompts?.map(p =>
+    `Q: ${p.question}\nA: ${p.answer}\nAnalysis: ${p.analysis}`
+  ).join('\n\n') || 'No prompt responses available';
+
+  // Format subtext
+  const subtextText = psych?.subtext_analysis
+    ? `Sexual signaling: ${psych.subtext_analysis.sexual_signaling || 'N/A'}
+Power dynamics: ${psych.subtext_analysis.power_dynamics || 'N/A'}
+Vulnerability: ${psych.subtext_analysis.vulnerability_indicators || 'N/A'}
+Disconnect: ${psych.subtext_analysis.disconnect || 'N/A'}`
+    : 'Not available';
+
+  // Format compatibility
+  const compatibilityText = compatibility
+    ? `Score: ${compatibility.score}/10 - ${compatibility.summary}
+Strengths: ${compatibility.strengths?.join(', ') || 'None noted'}
+Concerns: ${compatibility.concerns?.join(', ') || 'None noted'}`
+    : 'No compatibility analysis available';
+
+  const prompt = ASK_ABOUT_MATCH_PROMPT
+    .replace('{match_name}', matchAnalysis.basics?.name || 'Unknown')
+    .replace('{match_age}', matchAnalysis.basics?.age?.toString() || 'Unknown')
+    .replace('{match_location}', matchAnalysis.basics?.location || 'Unknown')
+    .replace('{match_job}', matchAnalysis.basics?.job || 'Unknown')
+    .replace('{match_archetype}', psych?.archetype_summary || 'Not available')
+    .replace('{match_agendas}', psych?.agendas?.map(a => `${a.type} (${a.priority})`).join(', ') || 'Not analyzed')
+    .replace('{match_tactics}', psych?.presentation_tactics?.join(', ') || 'Not analyzed')
+    .replace('{match_subtext}', subtextText)
+    .replace('{match_photos}', photosText)
+    .replace('{match_prompts}', promptsText)
+    .replace('{compatibility_notes}', compatibilityText)
+    .replace('{user_question}', input.question);
+
+  return callAnthropicForText({
+    messages: [textContent(prompt)],
+    maxTokens: TOKEN_LIMITS.ASK_ABOUT_MATCH,
+  });
+}
+
+// --- NEURODIVERGENCE ANALYSIS ---
+
+export interface NeurodivergenceInput {
+  archetype_summary?: string;
+  communication_style?: string;
+  attachment_patterns?: string;
+  growth_areas?: string[];
+  strengths?: string[];
+  photo_analysis?: string;
+  dating_goal?: string;
+  behavioral_patterns?: string;
+}
+
+/**
+ * Analyze potential neurodivergent traits based on user's profile.
+ * This is for self-awareness purposes only, not a clinical diagnosis.
+ */
+export async function analyzeNeurodivergence(input: NeurodivergenceInput): Promise<NeurodivergenceAnalysis> {
+  console.log('src/lib/ai.ts: Analyzing neurodivergence traits...');
+
+  const prompt = NEURODIVERGENCE_ANALYSIS_PROMPT
+    .replace('{archetype_summary}', input.archetype_summary || 'Not available')
+    .replace('{communication_style}', input.communication_style || 'Not available')
+    .replace('{attachment_patterns}', input.attachment_patterns || 'Not available')
+    .replace('{behavioral_patterns}', input.behavioral_patterns || 'Not available')
+    .replace('{growth_areas}', input.growth_areas?.join(', ') || 'Not specified')
+    .replace('{strengths}', input.strengths?.join(', ') || 'Not specified')
+    .replace('{photo_analysis}', input.photo_analysis || 'Not available')
+    .replace('{dating_goal}', input.dating_goal || 'Not specified');
+
+  return callAnthropicForObject<NeurodivergenceAnalysis>({
+    messages: [textContent(prompt)],
+    maxTokens: TOKEN_LIMITS.NEURODIVERGENCE_ANALYSIS,
+  });
+}
+
+// --- 23 ASPECTS SYSTEM ---
+
+export interface UserAspectsInput {
+  archetype_summary?: string;
+  communication_style?: string;
+  attachment_patterns?: string;
+  dating_goal?: string;
+  what_to_look_for?: string[];
+  what_to_avoid?: string[];
+  growth_areas?: string[];
+  strengths?: string[];
+  photo_analysis?: string;
+  behavioral_data?: string;
+}
+
+/**
+ * Extract user's 23 Aspect profile based on their synthesis data.
+ */
+export async function extractUserAspects(input: UserAspectsInput): Promise<UserAspectProfile> {
+  console.log('src/lib/ai.ts: Extracting user aspects (23 Aspects system)...');
+
+  // Build user profile data string
+  const profileData = `
+Archetype Summary: ${input.archetype_summary || 'Not available'}
+Communication Style: ${input.communication_style || 'Not available'}
+Attachment Patterns: ${input.attachment_patterns || 'Not available'}
+Dating Goal: ${input.dating_goal || 'Not specified'}
+What They Look For: ${input.what_to_look_for?.join(', ') || 'Not specified'}
+What They Avoid: ${input.what_to_avoid?.join(', ') || 'Not specified'}
+Growth Areas: ${input.growth_areas?.join(', ') || 'Not specified'}
+Strengths: ${input.strengths?.join(', ') || 'Not specified'}
+Photo Analysis: ${input.photo_analysis || 'Not available'}
+Behavioral Data: ${input.behavioral_data || 'Not available'}
+`.trim();
+
+  const prompt = USER_ASPECTS_PROMPT.replace('{user_profile_data}', profileData);
+
+  const result = await callAnthropicForObject<UserAspectProfile>({
+    messages: [textContent(prompt)],
+    maxTokens: TOKEN_LIMITS.USER_ASPECTS,
+  });
+
+  // Add timestamp
+  result.lastUpdated = new Date();
+
+  return result;
+}
+
+/**
+ * Score a match on the 23 Aspects and compare against user's aspect profile.
+ */
+export async function scoreMatchAspects(
+  matchAnalysis: ProfileAnalysis,
+  userAspects: UserAspectProfile
+): Promise<MatchAspectScores> {
+  if (!userAspects || !userAspects.scores || userAspects.scores.length === 0) {
+    console.log('src/lib/ai.ts: No user aspects provided, skipping aspect scoring');
+    throw new Error('User aspect profile required for match scoring');
+  }
+
+  console.log('src/lib/ai.ts: Scoring match aspects (23 Aspects system)...');
+
+  // Format user aspects for the prompt
+  const userAspectsText = userAspects.scores
+    .map(s => `${s.aspect_id}: ${s.score}/100${s.evidence ? ` (${s.evidence})` : ''}`)
+    .join('\n');
+
+  const userAspectsFormatted = `
+Scores:
+${userAspectsText}
+
+Dominant Aspects: ${userAspects.dominant_aspects?.join(', ') || 'Not specified'}
+Shadow Aspects: ${userAspects.shadow_aspects?.join(', ') || 'Not specified'}
+
+Realm Summary:
+- Vitality: ${userAspects.realm_summary?.vitality || 'Not available'}
+- Connection: ${userAspects.realm_summary?.connection || 'Not available'}
+- Structure: ${userAspects.realm_summary?.structure || 'Not available'}
+`.trim();
+
+  // Format match analysis for the prompt
+  const psych = matchAnalysis.psychological_profile;
+  const photoVibes = matchAnalysis.photos?.map(p => `${p.vibe}: ${p.subtext}`).join('; ') || 'Not available';
+  const promptsText = matchAnalysis.prompts?.map(p => `Q: ${p.question}\nA: ${p.answer}\nAnalysis: ${p.analysis}`).join('\n\n') || 'Not available';
+  const agendasText = psych?.agendas?.map(a => `${a.type} (${a.priority}): ${a.evidence}`).join('; ') || 'Not analyzed';
+
+  const matchAnalysisText = `
+Basics: ${matchAnalysis.basics?.name || 'Unknown'}, ${matchAnalysis.basics?.age || '?'} years old
+Location: ${matchAnalysis.basics?.location || 'Unknown'}
+Job: ${matchAnalysis.basics?.job || 'Unknown'}
+
+Archetype: ${psych?.archetype_summary || 'Not available'}
+Agendas: ${agendasText}
+Presentation Tactics: ${psych?.presentation_tactics?.join(', ') || 'Not analyzed'}
+Predicted Tactics: ${psych?.predicted_tactics?.join(', ') || 'Not analyzed'}
+
+Subtext Analysis:
+- Sexual Signaling: ${psych?.subtext_analysis?.sexual_signaling || 'Not available'}
+- Power Dynamics: ${psych?.subtext_analysis?.power_dynamics || 'Not available'}
+- Vulnerability: ${psych?.subtext_analysis?.vulnerability_indicators || 'Not available'}
+- Disconnect: ${psych?.subtext_analysis?.disconnect || 'Not available'}
+
+Photo Vibes: ${photoVibes}
+
+Prompts:
+${promptsText}
+`.trim();
+
+  const prompt = MATCH_ASPECTS_PROMPT
+    .replace('{user_aspects}', userAspectsFormatted)
+    .replace('{match_name}', matchAnalysis.basics?.name || 'Unknown')
+    .replace('{match_analysis}', matchAnalysisText);
+
+  return callAnthropicForObject<MatchAspectScores>({
+    messages: [textContent(prompt)],
+    maxTokens: TOKEN_LIMITS.MATCH_ASPECTS,
   });
 }

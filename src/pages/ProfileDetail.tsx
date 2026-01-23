@@ -1,35 +1,36 @@
 // src/pages/ProfileDetail.tsx
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState, useEffect } from 'react';
-import { User } from 'lucide-react';
 
 import { db } from '../lib/db';
-import type { UserIdentity } from '../lib/db';
+import type { UserIdentity, ProfileAnalysis } from '../lib/db';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
 import { hasUserProfile as checkHasUserProfile } from '../lib/utils/userContext';
 
-import { useCopyToClipboard, useZodiacCompatibility, useDateIdeas, useOpenerRefresh } from '../hooks';
+import {
+  useCopyToClipboard,
+  useZodiacCompatibility,
+  useDateIdeas,
+  useOpenerRefresh,
+  useConversationCoach,
+} from '../hooks';
 
 import {
   ProfileHeader,
-  CompatibilityCard,
-  ZodiacSection,
-  DateIdeasSection,
-  OpenersSection,
-  PhotoBreakdown,
-  PsychologicalRead,
-  AgendasSection,
-  TacticsSection,
-  SubtextAnalysis,
-  PromptsSection,
-  DebugSection,
-  LegacySection,
+  TabNavigation,
+  OverviewTab,
+  AnalysisTab,
+  CoachTab,
 } from '../components/profileDetail';
+import type { ProfileTab } from '../components/profileDetail';
 
 export default function ProfileDetail() {
   const { id } = useParams();
   const profile = useLiveQuery(() => db.profiles.get(Number(id)), [id]);
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
 
   // User identity state
   const [userIdentity, setUserIdentity] = useState<UserIdentity | undefined>(undefined);
@@ -39,6 +40,7 @@ export default function ProfileDetail() {
   const zodiac = useZodiacCompatibility(profile, userIdentity);
   const dateIdeas = useDateIdeas(profile, userIdentity);
   const openers = useOpenerRefresh(profile, userIdentity);
+  const coach = useConversationCoach(profile, userIdentity);
 
   // Fetch user identity on mount
   useEffect(() => {
@@ -59,96 +61,82 @@ export default function ProfileDetail() {
     profile.analysis
   );
 
+  // Extract transactional indicators if present
+  const transactionalIndicators = 'transactional_indicators' in profile.analysis
+    ? (profile.analysis as ProfileAnalysis).transactional_indicators
+    : undefined;
+
   const hasUserProfileFlag = checkHasUserProfile(userIdentity);
 
   return (
     <div className="pb-24 bg-white min-h-screen">
       <ProfileHeader profile={profile} basics={basics} />
 
-      <div className="p-6 max-w-lg mx-auto space-y-8">
-        {/* Warning if no user profile */}
-        {!hasUserProfileFlag && !profile.compatibility && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-lg flex items-start">
-            <User className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-amber-600" />
-            <div>
-              <p className="text-sm">
-                <Link to="/my-profile" className="font-bold underline hover:text-amber-900">
-                  Create your profile
-                </Link>{' '}
-                for personalized compatibility insights.
-              </p>
-            </div>
-          </div>
+      {/* Tab Navigation */}
+      <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+
+      <div className="p-6 max-w-lg mx-auto">
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <OverviewTab
+            hasUserProfile={hasUserProfileFlag}
+            hasCompatibility={!!profile.compatibility}
+            matchName={basics.name || profile.name}
+            matchAnalysis={profile.analysis as import('../lib/db').ProfileAnalysis}
+            compatibility={profile.compatibility}
+            virtueScores={profile.virtue_scores}
+            aspectScores={profile.aspect_scores}
+            transactionalIndicators={transactionalIndicators}
+            zodiacCompatibility={zodiac.compatibility}
+            zodiacIsLoading={zodiac.isLoading}
+            zodiacError={zodiac.error}
+            userZodiac={zodiac.userZodiac}
+            matchZodiac={zodiac.matchZodiac}
+            canGenerateZodiac={zodiac.canGenerate}
+            onGenerateZodiac={zodiac.generate}
+            dateSuggestions={dateIdeas.suggestions}
+            dateTarget={dateIdeas.targetDate}
+            weatherForecast={dateIdeas.weatherForecast}
+            localEvents={dateIdeas.localEvents}
+            isLoadingWeather={dateIdeas.isLoadingWeather}
+            isLoadingDates={dateIdeas.isLoadingDates}
+            dateError={dateIdeas.error}
+            onDateSelect={dateIdeas.handleDateSelect}
+            onGenerateDates={dateIdeas.generate}
+            openers={openersList}
+            copiedIndex={copiedIndex}
+            isRefreshingOpeners={openers.isRefreshingOpeners}
+            onCopy={handleCopy}
+            onRefreshOpeners={openers.refreshAll}
+          />
         )}
 
-        {/* Compatibility Card */}
-        {profile.compatibility && <CompatibilityCard compatibility={profile.compatibility} />}
+        {/* Analysis Tab */}
+        {activeTab === 'analysis' && (
+          <AnalysisTab
+            profile={profile}
+            basics={basics}
+            photos={photos}
+            prompts={prompts}
+            psych={psych}
+            subtext={subtext}
+            overall={overall}
+            copiedIndex={copiedIndex}
+            refreshingPromptIndex={openers.refreshingPromptIndex}
+            onCopy={handleCopy}
+            onRefreshPrompt={openers.refreshPrompt}
+          />
+        )}
 
-        {/* Zodiac Compatibility */}
-        <ZodiacSection
-          compatibility={zodiac.compatibility}
-          isLoading={zodiac.isLoading}
-          error={zodiac.error}
-          userZodiac={zodiac.userZodiac}
-          matchZodiac={zodiac.matchZodiac}
-          canGenerate={zodiac.canGenerate}
-          onGenerate={zodiac.generate}
-        />
-
-        {/* Date Ideas */}
-        <DateIdeasSection
-          suggestions={dateIdeas.suggestions}
-          targetDate={dateIdeas.targetDate}
-          weatherForecast={dateIdeas.weatherForecast}
-          localEvents={dateIdeas.localEvents}
-          isLoadingWeather={dateIdeas.isLoadingWeather}
-          isLoadingDates={dateIdeas.isLoadingDates}
-          error={dateIdeas.error}
-          onDateSelect={dateIdeas.handleDateSelect}
-          onGenerate={dateIdeas.generate}
-        />
-
-        {/* Recommended Openers */}
-        <OpenersSection
-          openers={openersList}
-          copiedIndex={copiedIndex}
-          isRefreshing={openers.isRefreshingOpeners}
-          onCopy={handleCopy}
-          onRefresh={openers.refreshAll}
-        />
-
-        {/* Photo Breakdown */}
-        <PhotoBreakdown photos={photos} />
-
-        {/* Psychological Read */}
-        <PsychologicalRead archetypeSummary={psych.archetype_summary || ''} />
-
-        {/* Agendas */}
-        <AgendasSection agendas={psych.agendas || []} />
-
-        {/* Tactics */}
-        <TacticsSection
-          presentationTactics={psych.presentation_tactics}
-          predictedTactics={psych.predicted_tactics}
-        />
-
-        {/* Deep Subtext */}
-        <SubtextAnalysis subtext={subtext} />
-
-        {/* Prompts */}
-        <PromptsSection
-          prompts={prompts}
-          copiedIndex={copiedIndex}
-          refreshingPromptIndex={openers.refreshingPromptIndex}
-          onCopy={handleCopy}
-          onRefreshPrompt={openers.refreshPrompt}
-        />
-
-        {/* Legacy Fallback */}
-        <LegacySection overall={overall} hasArchetype={!!psych.archetype_summary} />
-
-        {/* Debug Section */}
-        <DebugSection profile={profile} basics={basics} />
+        {/* Coach Tab */}
+        {activeTab === 'coach' && (
+          <CoachTab
+            coach={coach}
+            matchName={basics.name || profile.name}
+            copiedIndex={copiedIndex}
+            onCopy={handleCopy}
+          />
+        )}
       </div>
     </div>
   );

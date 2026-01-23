@@ -1,7 +1,7 @@
 // src/lib/api/index.ts
 // Re-export all API utilities
 
-export { ANTHROPIC_CONFIG, TOKEN_LIMITS, getApiKey } from './config';
+export { ANTHROPIC_CONFIG, TOKEN_LIMITS, TIMEOUTS, getApiKey } from './config';
 export {
   extractJsonObject,
   extractJsonArray,
@@ -11,6 +11,7 @@ export {
   callAnthropicForObject,
   callAnthropicForArray,
   callAnthropicForArraySafe,
+  callAnthropicForText,
   callAnthropicWithDebug,
   textContent,
   imageContent,
