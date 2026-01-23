@@ -14,6 +14,7 @@ import {
   useDateIdeas,
   useOpenerRefresh,
   useConversationCoach,
+  useCompatibilityScores,
 } from '../hooks';
 
 import {
@@ -41,6 +42,7 @@ export default function ProfileDetail() {
   const dateIdeas = useDateIdeas(profile, userIdentity);
   const openers = useOpenerRefresh(profile, userIdentity);
   const coach = useConversationCoach(profile, userIdentity);
+  const compatibilityScores = useCompatibilityScores(profile, userIdentity);
 
   // Fetch user identity on mount
   useEffect(() => {
@@ -84,8 +86,17 @@ export default function ProfileDetail() {
             matchName={basics.name || profile.name}
             matchAnalysis={profile.analysis as import('../lib/db').ProfileAnalysis}
             compatibility={profile.compatibility}
-            virtueScores={profile.virtue_scores}
-            aspectScores={profile.aspect_scores}
+            virtueScores={compatibilityScores.virtueScores}
+            aspectScores={compatibilityScores.aspectScores}
+            isLoadingVirtues={compatibilityScores.isLoadingVirtues}
+            isLoadingAspects={compatibilityScores.isLoadingAspects}
+            virtueError={compatibilityScores.virtueError}
+            aspectError={compatibilityScores.aspectError}
+            canGenerateVirtues={compatibilityScores.canGenerateVirtues}
+            canGenerateAspects={compatibilityScores.canGenerateAspects}
+            onGenerateVirtues={compatibilityScores.generateVirtues}
+            onGenerateAspects={compatibilityScores.generateAspects}
+            onGenerateAllScores={compatibilityScores.generateAll}
             transactionalIndicators={transactionalIndicators}
             zodiacCompatibility={zodiac.compatibility}
             zodiacIsLoading={zodiac.isLoading}

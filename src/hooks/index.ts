@@ -6,3 +6,4 @@ export { useZodiacCompatibility } from './useZodiacCompatibility';
 export { useDateIdeas } from './useDateIdeas';
 export { useOpenerRefresh } from './useOpenerRefresh';
 export { useConversationCoach } from './useConversationCoach';
+export { useCompatibilityScores } from './useCompatibilityScores';
