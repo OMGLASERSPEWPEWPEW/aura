@@ -32,19 +32,51 @@ npm run test:run  # Run all unit tests
 Video Upload → Frame Extraction (Canvas) → AI Analysis → IndexedDB → UI
 ```
 
+### Streaming Analysis Architecture
+
+The app uses progressive streaming analysis to provide incremental results as frames are processed:
+
+```
+Video → Extract Chunk (4 frames) → Analyze Chunk → Merge Results → Update UI
+                ↓                       ↓                ↓
+            [Repeat]              [Auto-save]      [Progressive]
+```
+
+**State Machine Phases:**
+1. `idle` - No analysis in progress
+2. `extracting` - Extracting video frames
+3. `chunk-1` through `chunk-4` - Processing each frame chunk
+4. `consolidating` - Final synthesis of all chunks
+5. `complete` - Analysis finished
+
+**Chunk Strategy (4 frames per chunk):**
+- **Chunk 1**: Basic info (name, age), initial observations
+- **Chunk 2**: Interests, hobbies, lifestyle signals
+- **Chunk 3**: Communication style, personality indicators
+- **Chunk 4**: Final details, synthesis preparation
+
+**Early Save Mechanism:** Profile auto-saves after chunk 1 completes. This prevents data loss if the user navigates away mid-analysis. The `analysisPhase` field tracks progress.
+
+**Key Files:**
+- `src/hooks/useStreamingAnalysis.ts` - State machine hook
+- `src/lib/streaming/types.ts` - Streaming types and chunk definitions
+- `src/lib/ai.ts` - `analyzeProfileStreaming()` and merge functions
+- `src/components/upload/` - Progressive UI components
+
 ### Directory Structure
 
 - `src/lib/` - Core business logic
   - `api/` - Anthropic API client (`anthropicClient.ts`, `config.ts`, `jsonExtractor.ts`)
   - `utils/` - Shared utilities (`userContext.ts`, `profileHelpers.ts`)
-  - `ai.ts` - AI function orchestration (uses api/ internally)
+  - `streaming/` - Streaming analysis types and chunk definitions
+  - `ai.ts` - AI function orchestration (includes `analyzeProfileStreaming()`)
   - `db.ts` - Dexie schema and TypeScript types
-  
-  - `prompts.ts` - AI prompt templates
-  - `frameExtraction.ts` - Video frame extraction via Canvas
+  - `prompts.ts` - AI prompt templates (includes chunk-specific prompts)
+  - `frameExtraction.ts` - Video frame extraction via Canvas (chunked support)
   - `weather.ts` - Weather API integration
 
 - `src/hooks/` - Custom React hooks for feature state management
+  - `useStreamingAnalysis.ts` - State machine hook for progressive analysis
   - `useZodiacCompatibility.ts`, `useDateIdeas.ts`, `useOpenerRefresh.ts`, `useCopyToClipboard.ts`
 
 - `src/pages/` - Route-level components
@@ -56,6 +88,7 @@ Video Upload → Frame Extraction (Canvas) → AI Analysis → IndexedDB → UI
 - `src/components/`
   - `profileDetail/` - Section components for ProfileDetail page
   - `profile/` - Tab components for MyProfile page
+  - `upload/` - Progressive analysis UI (ProgressiveHeader, InsightCard)
   - `ui/` - Reusable UI components
 
 ### Key Patterns
