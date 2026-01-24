@@ -8,6 +8,7 @@ import {
   textContent,
   imageContent,
   TOKEN_LIMITS,
+  TIMEOUTS,
   type MessageContent,
 } from './api';
 import {
@@ -351,9 +352,9 @@ export async function analyzeUserSelf(input: UserSelfAnalysisInput) {
 
   const messages: MessageContent[] = [];
 
-  // Add images (limit to 6 photos + 10 video frames = 16 max)
-  const photoImages = (input.photos || []).slice(0, 6);
-  const frameImages = (input.frames || []).slice(0, 10);
+  // Add images (limit to 4 photos + 4 video frames = 8 max to stay within Edge Function timeout)
+  const photoImages = (input.photos || []).slice(0, 4);
+  const frameImages = (input.frames || []).slice(0, 4);
   const allImages = [...photoImages, ...frameImages];
 
   if (allImages.length > 0) {
@@ -418,6 +419,7 @@ export async function analyzeUserSelf(input: UserSelfAnalysisInput) {
   return callAnthropicWithDebug({
     messages,
     maxTokens: TOKEN_LIMITS.USER_SELF_ANALYSIS,
+    timeout: TIMEOUTS.PROFILE_ANALYSIS,  // 120s for large analysis
   }, debugInfo);
 }
 
