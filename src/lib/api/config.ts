@@ -51,9 +51,10 @@ export const TOKEN_LIMITS = {
 } as const;
 
 // Timeout configuration in milliseconds
+// Note: Supabase Pro Edge Function has 150-second timeout
 export const TIMEOUTS = {
   DEFAULT: 60000,           // 60 seconds default
-  PROFILE_ANALYSIS: 120000, // 120 seconds for large analysis (deep analysis with many frames)
+  PROFILE_ANALYSIS: 150000, // 150 seconds - matches Supabase Pro limit for image-heavy requests
   QUICK_ANALYSIS: 30000,    // 30 seconds for basics extraction
 } as const;
 

@@ -102,3 +102,33 @@ Always run `npm run test:run` after implementation to catch regressions before c
 2. **No Backend**: All storage is client-side IndexedDB
 3. **Video Handling**: Videos processed locally via Canvas, never uploaded
 4. **iOS Safari**: Videos must be muted and playsinline for frame extraction
+
+## Infrastructure
+
+### Production Hosting (Vercel)
+- **URL:** https://aura-xi-ten.vercel.app
+- **Repo:** github.com/OMGLASERSPEWPEWPEW/aura
+- **Auto-deploy:** Every push to `main` triggers deploy
+- **CLI:** `vercel` commands available for logs/debugging
+
+### API Proxy (Supabase Edge Function)
+- **Project:** qaueoxubnifmtdirnxgz
+- **Edge Function:** `anthropic-proxy` at `/functions/v1/anthropic-proxy`
+- **Purpose:** Keeps Anthropic API key server-side (not in browser bundle)
+- **Tier:** Pro (150-second timeout). Free tier has 60-second timeout.
+
+### Environment Variables
+
+**Vercel (Production):**
+- `VITE_USE_PROXY=true`
+- `VITE_SUPABASE_URL=https://qaueoxubnifmtdirnxgz.supabase.co`
+- `VITE_SUPABASE_ANON_KEY=<anon_key>`
+
+**Local Development (.env):**
+- Same as above, OR
+- `VITE_USE_PROXY=false` + `VITE_ANTHROPIC_API_KEY=<key>` for direct API
+
+### CLI Tools for Debugging
+- `vercel logs <deployment-url>` - View runtime logs
+- `vercel list` - See recent deployments
+- Supabase MCP - Query database and Edge Function logs directly
