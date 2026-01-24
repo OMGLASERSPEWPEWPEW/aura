@@ -5,10 +5,14 @@
 // This keeps the API key server-side and secure
 const USE_PROXY = import.meta.env.VITE_USE_PROXY === 'true';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 // Validate proxy configuration
 if (USE_PROXY && !SUPABASE_URL) {
   console.error('VITE_SUPABASE_URL is required when VITE_USE_PROXY is true');
+}
+if (USE_PROXY && !SUPABASE_ANON_KEY) {
+  console.error('VITE_SUPABASE_ANON_KEY is required when VITE_USE_PROXY is true');
 }
 
 export const ANTHROPIC_CONFIG = {
@@ -68,4 +72,8 @@ export function getApiKey(): string {
 
 export function isUsingProxy(): boolean {
   return ANTHROPIC_CONFIG.USE_PROXY;
+}
+
+export function getSupabaseAnonKey(): string {
+  return SUPABASE_ANON_KEY || '';
 }

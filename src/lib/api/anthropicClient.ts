@@ -1,7 +1,7 @@
 // src/lib/api/anthropicClient.ts
 // Centralized Anthropic API client
 
-import { ANTHROPIC_CONFIG, TIMEOUTS, getApiKey, isUsingProxy } from './config';
+import { ANTHROPIC_CONFIG, TIMEOUTS, getApiKey, isUsingProxy, getSupabaseAnonKey } from './config';
 import { extractJsonObject, extractJsonArray, extractJsonObjectWithDebug } from './jsonExtractor';
 import { saveErrorToFile, type ErrorDebugInfo } from '../utils/errorExport';
 
@@ -118,7 +118,8 @@ async function makeRequest(options: AnthropicRequestOptions, operationName?: str
 
   if (usingProxy) {
     // Proxy mode: Edge Function adds API key and version headers
-    // No special headers needed from client
+    // Send Supabase anon key for Edge Function authentication
+    headers['Authorization'] = `Bearer ${getSupabaseAnonKey()}`;
   } else {
     // Direct mode: include all Anthropic-required headers
     headers['x-api-key'] = getApiKey();
@@ -303,7 +304,11 @@ export async function callAnthropicWithDebug<T>(
     'content-type': 'application/json',
   };
 
-  if (!usingProxy) {
+  if (usingProxy) {
+    // Proxy mode: Edge Function adds API key and version headers
+    // Send Supabase anon key for Edge Function authentication
+    headers['Authorization'] = `Bearer ${getSupabaseAnonKey()}`;
+  } else {
     // Direct mode: include all Anthropic-required headers
     headers['x-api-key'] = getApiKey();
     headers['anthropic-version'] = ANTHROPIC_CONFIG.API_VERSION;
