@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
-import { Plus, User, Trash2, Flame, Brain } from 'lucide-react';
+import { Plus, User, Trash2, Flame, Brain, Settings } from 'lucide-react';
 
 export default function Home() {
   const profiles = useLiveQuery(() => db.profiles.orderBy('timestamp').reverse().toArray());
@@ -35,14 +35,24 @@ export default function Home() {
           </h1>
           <p className="text-slate-500 text-sm">Your dating intelligence</p>
         </div>
-        {/* My Profile Button */}
-        <Link
-          to="/my-profile"
-          className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
-        >
-          <Brain size={20} />
-          <span className="text-sm font-medium hidden sm:inline">My Profile</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          {/* Settings Button */}
+          <Link
+            to="/settings"
+            className="p-2 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-700 transition-colors"
+            title="Settings"
+          >
+            <Settings size={20} />
+          </Link>
+          {/* My Profile Button */}
+          <Link
+            to="/my-profile"
+            className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
+          >
+            <Brain size={20} />
+            <span className="text-sm font-medium hidden sm:inline">My Profile</span>
+          </Link>
+        </div>
       </div>
 
       <div className="max-w-md mx-auto">

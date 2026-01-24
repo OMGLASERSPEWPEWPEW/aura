@@ -19,6 +19,7 @@ interface OverviewTabProps {
   hasCompatibility: boolean;
 
   // Match info for Ask feature
+  profileId: number;
   matchName: string;
   matchAnalysis: ProfileAnalysis;
 
@@ -71,6 +72,7 @@ interface OverviewTabProps {
 export function OverviewTab({
   hasUserProfile,
   hasCompatibility,
+  profileId,
   matchName,
   matchAnalysis,
   compatibility,
@@ -303,6 +305,7 @@ export function OverviewTab({
 
       {/* Ask About Match */}
       <AskAboutMatch
+        profileId={profileId}
         matchName={matchName}
         matchAnalysis={matchAnalysis}
         compatibility={compatibility}

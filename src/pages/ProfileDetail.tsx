@@ -83,6 +83,7 @@ export default function ProfileDetail() {
           <OverviewTab
             hasUserProfile={hasUserProfileFlag}
             hasCompatibility={!!profile.compatibility}
+            profileId={profile.id}
             matchName={basics.name || profile.name}
             matchAnalysis={profile.analysis as import('../lib/db').ProfileAnalysis}
             compatibility={profile.compatibility}

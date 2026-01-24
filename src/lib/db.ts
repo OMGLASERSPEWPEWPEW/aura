@@ -207,6 +207,22 @@ interface CoachingSession {
   scoreExplanation?: string;
 }
 
+// --- Match Chat Messages (for Ask About Match feature) ---
+
+interface MatchChatMessage {
+  id?: number;
+  profileId: number;
+  timestamp: Date;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+// --- App Settings ---
+
+interface AppSettings {
+  autoCompatibility: boolean;  // Auto-run compatibility scoring when saving matches
+}
+
 interface Profile {
   id: number;
   name: string;
@@ -378,6 +394,9 @@ interface UserIdentity {
   manualEntry: ManualEntry;
   synthesis?: UserSynthesis;
 
+  // App settings
+  settings?: AppSettings;
+
   lastUpdated: Date;
 }
 
@@ -385,6 +404,7 @@ const db = new Dexie('AuraDB') as Dexie & {
   profiles: EntityTable<Profile, 'id'>;
   userIdentity: EntityTable<UserIdentity, 'id'>;
   coachingSessions: EntityTable<CoachingSession, 'id'>;
+  matchChats: EntityTable<MatchChatMessage, 'id'>;
 };
 
 // Schema definition with migration
@@ -439,6 +459,14 @@ db.version(5).stores({
   });
 });
 
+// Version 6: Add matchChats table for Ask About Match persistence + settings field
+db.version(6).stores({
+  profiles: '++id, name, appName, timestamp',
+  userIdentity: '++id, lastUpdated',
+  coachingSessions: '++id, profileId, timestamp',
+  matchChats: '++id, profileId, timestamp'
+});
+
 export { db };
 // Re-export aspect types for convenience
 export type { UserAspectProfile, MatchAspectScores, AspectScore } from './virtues/types';
@@ -475,4 +503,6 @@ export type {
   NeurodivergentTrait,
   NeurodivergenceAnalysis,
   TransactionalIndicators,
+  MatchChatMessage,
+  AppSettings,
 };

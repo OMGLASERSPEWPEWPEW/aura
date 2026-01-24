@@ -9,10 +9,11 @@ Aura is a local-first Progressive Web App (PWA) for dating profile analysis. It 
 ## Development Commands
 
 ```bash
-npm run dev      # Start dev server (localhost:5173)
-npm run build    # TypeScript check + Vite production build
-npm run lint     # ESLint check
-npm run preview  # Preview production build
+npm run dev       # Start dev server (localhost:5173)
+npm run build     # TypeScript check + Vite production build
+npm run lint      # ESLint check
+npm run preview   # Preview production build
+npm run test:run  # Run all unit tests
 ```
 
 ## Tech Stack
@@ -81,6 +82,19 @@ Required in `.env`:
 ```
 VITE_ANTHROPIC_API_KEY=your_key_here
 ```
+
+## Workflow Guidelines
+
+### Task Tracking
+When planning multi-step tasks, create a todo list to track progress. Update task status as you complete each step. This keeps work organized and provides visibility into progress.
+
+### Unit Test Maintenance
+Tests live alongside the code they cover (`*.test.ts` files). When making code changes:
+- **Adding a feature**: Add corresponding unit tests
+- **Modifying a feature**: Update affected tests to match new behavior
+- **Removing a feature**: Remove obsolete tests
+
+Always run `npm run test:run` after implementation to catch regressions before considering work complete.
 
 ## Important Constraints
 

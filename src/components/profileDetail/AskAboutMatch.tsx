@@ -1,15 +1,11 @@
 // src/components/profileDetail/AskAboutMatch.tsx
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, Loader2, X, Sparkles } from 'lucide-react';
-import { askAboutMatch } from '../../lib/ai';
+import { MessageCircle, Send, Loader2, X, Sparkles, Trash2 } from 'lucide-react';
+import { useAskAboutMatch } from '../../hooks';
 import type { ProfileAnalysis, ProfileCompatibility } from '../../lib/db';
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
 interface AskAboutMatchProps {
+  profileId: number;
   matchName: string;
   matchAnalysis: ProfileAnalysis;
   compatibility?: ProfileCompatibility;
@@ -25,14 +21,20 @@ const EXAMPLE_QUESTIONS = [
 
 /**
  * Chat interface to ask AI questions about a match profile.
+ * Messages persist in IndexedDB across sessions.
  */
-export function AskAboutMatch({ matchName, matchAnalysis, compatibility }: AskAboutMatchProps) {
+export function AskAboutMatch({ profileId, matchName, matchAnalysis, compatibility }: AskAboutMatchProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Use hook for persisted chat history
+  const { messages, isLoading, sendMessage, clearHistory } = useAskAboutMatch(
+    profileId,
+    matchAnalysis,
+    compatibility
+  );
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -48,31 +50,8 @@ export function AskAboutMatch({ matchName, matchAnalysis, compatibility }: AskAb
 
   const handleSubmit = async (question: string) => {
     if (!question.trim() || isLoading) return;
-
-    const userMessage: Message = { role: 'user', content: question.trim() };
-    setMessages(prev => [...prev, userMessage]);
     setInputValue('');
-    setIsLoading(true);
-
-    try {
-      const response = await askAboutMatch({
-        question: question.trim(),
-        matchAnalysis,
-        compatibility,
-      });
-
-      const assistantMessage: Message = { role: 'assistant', content: response };
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Failed to ask about match:', error);
-      const errorMessage: Message = {
-        role: 'assistant',
-        content: "Sorry, I couldn't process that question. Please try again.",
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
+    await sendMessage(question);
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -82,6 +61,12 @@ export function AskAboutMatch({ matchName, matchAnalysis, compatibility }: AskAb
 
   const handleExampleClick = (question: string) => {
     handleSubmit(question);
+  };
+
+  const handleClearHistory = async () => {
+    if (confirm('Clear all chat history for this match?')) {
+      await clearHistory();
+    }
   };
 
   if (!isExpanded) {
@@ -104,12 +89,23 @@ export function AskAboutMatch({ matchName, matchAnalysis, compatibility }: AskAb
           <Sparkles size={18} />
           Ask about {matchName}
         </h3>
-        <button
-          onClick={() => setIsExpanded(false)}
-          className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/20 transition-colors"
-        >
-          <X size={18} />
-        </button>
+        <div className="flex items-center gap-1">
+          {messages.length > 0 && (
+            <button
+              onClick={handleClearHistory}
+              className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/20 transition-colors"
+              title="Clear history"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+          <button
+            onClick={() => setIsExpanded(false)}
+            className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/20 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}

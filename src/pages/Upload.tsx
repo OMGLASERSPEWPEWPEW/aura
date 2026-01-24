@@ -83,6 +83,14 @@ export default function Upload() {
     setErrorMessage(null);
   };
 
+  // Auto-start analysis when file is selected
+  useEffect(() => {
+    if (file && !isProcessing && !analysis && !errorMessage) {
+      startAnalysis();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file]);
+
   const cancelAnalysis = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -368,7 +376,7 @@ export default function Upload() {
       const thumbnailImage = frames[safeIndex];
 
       // 2. Add to database with compatibility data if available
-      await db.profiles.add({
+      const profileId = await db.profiles.add({
         name: analysis.basics?.name || "Unknown Match",
         age: analysis.basics?.age || undefined,
         appName: analysis.meta?.app_name || "Unknown App",
@@ -383,10 +391,53 @@ export default function Upload() {
         aspect_scores: aspectScores || undefined
       });
 
+      // 3. Background compatibility scoring if enabled and not already scored
+      if (userIdentity?.settings?.autoCompatibility) {
+        runBackgroundCompatibilityScoring(profileId);
+      }
+
       navigate('/');
     } catch (error) {
       alert("Failed to save profile: " + error);
       setIsSaving(false);
+    }
+  };
+
+  // Background scoring - runs after save without blocking navigation
+  const runBackgroundCompatibilityScoring = async (profileId: number) => {
+    try {
+      // Only run if we don't already have scores
+      if (virtueScores.length > 0 && aspectScores) {
+        return; // Already scored during analysis
+      }
+
+      const profile = await db.profiles.get(profileId);
+      if (!profile) return;
+
+      const matchAnalysis = profile.analysis as ProfileAnalysis;
+
+      // Score virtues if user has partner_virtues and profile doesn't have scores
+      if (
+        userIdentity?.synthesis?.partner_virtues?.length &&
+        !profile.virtue_scores?.length
+      ) {
+        const scores = await scoreMatchVirtues(matchAnalysis, userIdentity.synthesis.partner_virtues);
+        await db.profiles.update(profileId, { virtue_scores: scores });
+        console.log('Background virtue scoring complete:', scores.length, 'virtues');
+      }
+
+      // Score aspects if user has aspect_profile and profile doesn't have scores
+      if (
+        userIdentity?.synthesis?.aspect_profile?.scores?.length &&
+        !profile.aspect_scores?.scores?.length
+      ) {
+        const scores = await scoreMatchAspects(matchAnalysis, userIdentity.synthesis.aspect_profile);
+        await db.profiles.update(profileId, { aspect_scores: scores });
+        console.log('Background aspect scoring complete:', scores.scores?.length, 'aspects');
+      }
+    } catch (error) {
+      console.error('Background compatibility scoring failed:', error);
+      // Don't alert - this is background work, errors are non-critical
     }
   };
 
