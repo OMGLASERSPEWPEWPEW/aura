@@ -29,6 +29,7 @@ dist-ssr
 # SECURITY: Do not upload API keys
 .env
 .env.*
+!.env.example
 
 # Testing
 coverage

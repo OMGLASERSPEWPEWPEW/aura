@@ -1,7 +1,7 @@
 // src/lib/api/anthropicClient.ts
 // Centralized Anthropic API client
 
-import { ANTHROPIC_CONFIG, TIMEOUTS, getApiKey } from './config';
+import { ANTHROPIC_CONFIG, TIMEOUTS, getApiKey, isUsingProxy } from './config';
 import { extractJsonObject, extractJsonArray, extractJsonObjectWithDebug } from './jsonExtractor';
 import { saveErrorToFile, type ErrorDebugInfo } from '../utils/errorExport';
 
@@ -105,21 +105,31 @@ function createTimeoutSignal(timeoutMs: number, existingSignal?: AbortSignal): {
  * Make a request to the Anthropic API and return the raw text response.
  */
 async function makeRequest(options: AnthropicRequestOptions, operationName?: string): Promise<string> {
-  const apiKey = getApiKey();
   const timeout = options.timeout ?? TIMEOUTS.DEFAULT;
+  const usingProxy = isUsingProxy();
 
   // Create timeout signal, combining with any user-provided signal
   const { signal, cleanup } = createTimeoutSignal(timeout, options.signal);
 
+  // Build headers based on whether we're using proxy or direct API
+  const headers: Record<string, string> = {
+    'content-type': 'application/json',
+  };
+
+  if (usingProxy) {
+    // Proxy mode: Edge Function adds API key and version headers
+    // No special headers needed from client
+  } else {
+    // Direct mode: include all Anthropic-required headers
+    headers['x-api-key'] = getApiKey();
+    headers['anthropic-version'] = ANTHROPIC_CONFIG.API_VERSION;
+    headers['anthropic-dangerous-direct-browser-access'] = 'true';
+  }
+
   try {
     const response = await fetch(ANTHROPIC_CONFIG.API_ENDPOINT, {
       method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': ANTHROPIC_CONFIG.API_VERSION,
-        'content-type': 'application/json',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
+      headers,
       body: JSON.stringify({
         model: ANTHROPIC_CONFIG.MODEL,
         max_tokens: options.maxTokens,
@@ -280,24 +290,31 @@ export async function callAnthropicWithDebug<T>(
   options: AnthropicRequestOptions,
   debugInfo: Record<string, unknown>
 ): Promise<T> {
-  const apiKey = getApiKey();
   const timeout = options.timeout ?? TIMEOUTS.DEFAULT;
+  const usingProxy = isUsingProxy();
 
   debugInfo.timestamp = new Date().toISOString();
 
   // Create timeout signal, combining with any user-provided signal
   const { signal, cleanup } = createTimeoutSignal(timeout, options.signal);
 
+  // Build headers based on whether we're using proxy or direct API
+  const headers: Record<string, string> = {
+    'content-type': 'application/json',
+  };
+
+  if (!usingProxy) {
+    // Direct mode: include all Anthropic-required headers
+    headers['x-api-key'] = getApiKey();
+    headers['anthropic-version'] = ANTHROPIC_CONFIG.API_VERSION;
+    headers['anthropic-dangerous-direct-browser-access'] = 'true';
+  }
+
   let response: Response;
   try {
     response = await fetch(ANTHROPIC_CONFIG.API_ENDPOINT, {
       method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': ANTHROPIC_CONFIG.API_VERSION,
-        'content-type': 'application/json',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
+      headers,
       body: JSON.stringify({
         model: ANTHROPIC_CONFIG.MODEL,
         max_tokens: options.maxTokens,

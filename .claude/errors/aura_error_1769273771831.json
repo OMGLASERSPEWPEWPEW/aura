@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-01-24T16:56:11.830Z",
+  "operation": "makeRequest",
+  "inputSummary": {
+    "maxTokens": 2048,
+    "messageCount": 4,
+    "messageTypes": [
+      "image",
+      "image",
+      "image",
+      "text"
+    ]
+  },
+  "apiError": {
+    "status": 401,
+    "message": ""
+  }
+}

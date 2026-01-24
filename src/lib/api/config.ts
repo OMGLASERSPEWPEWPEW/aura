@@ -1,11 +1,26 @@
 // src/lib/api/config.ts
 // Centralized Anthropic API configuration
 
+// Proxy mode: when enabled, calls go through Supabase Edge Function instead of direct to Anthropic
+// This keeps the API key server-side and secure
+const USE_PROXY = import.meta.env.VITE_USE_PROXY === 'true';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+// Validate proxy configuration
+if (USE_PROXY && !SUPABASE_URL) {
+  console.error('VITE_SUPABASE_URL is required when VITE_USE_PROXY is true');
+}
+
 export const ANTHROPIC_CONFIG = {
-  API_KEY: import.meta.env.VITE_ANTHROPIC_API_KEY as string,
-  API_ENDPOINT: 'https://api.anthropic.com/v1/messages',
+  // Only load API key when not using proxy (development mode)
+  API_KEY: USE_PROXY ? '' : (import.meta.env.VITE_ANTHROPIC_API_KEY as string),
+  // Use proxy endpoint when enabled, otherwise direct Anthropic API
+  API_ENDPOINT: USE_PROXY
+    ? `${SUPABASE_URL}/functions/v1/anthropic-proxy`
+    : 'https://api.anthropic.com/v1/messages',
   API_VERSION: '2023-06-01',
   MODEL: 'claude-sonnet-4-5-20250929',
+  USE_PROXY,
 } as const;
 
 export const TOKEN_LIMITS = {
@@ -39,9 +54,18 @@ export const TIMEOUTS = {
 } as const;
 
 export function getApiKey(): string {
+  // When using proxy, API key is stored server-side
+  if (ANTHROPIC_CONFIG.USE_PROXY) {
+    return ''; // Empty string - the Edge Function will add the key
+  }
+
   const key = ANTHROPIC_CONFIG.API_KEY;
   if (!key) {
     throw new Error('Missing API Key. Please add VITE_ANTHROPIC_API_KEY to your .env file.');
   }
   return key;
+}
+
+export function isUsingProxy(): boolean {
+  return ANTHROPIC_CONFIG.USE_PROXY;
 }

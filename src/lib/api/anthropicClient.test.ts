@@ -18,6 +18,7 @@ vi.mock('./config', () => ({
     API_ENDPOINT: 'https://api.anthropic.com/v1/messages',
     API_VERSION: '2023-06-01',
     MODEL: 'claude-sonnet-4-5-20250929',
+    USE_PROXY: false,
   },
   TOKEN_LIMITS: {
     PROFILE_ANALYSIS: 12288,
@@ -26,6 +27,7 @@ vi.mock('./config', () => ({
     DEFAULT: 60000,
   },
   getApiKey: () => 'test-key',
+  isUsingProxy: () => false,
 }));
 
 vi.mock('./jsonExtractor', () => ({
