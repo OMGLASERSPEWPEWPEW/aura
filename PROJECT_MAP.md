@@ -9,7 +9,8 @@ A comprehensive audit of all pages, routes, features, and components in the Aura
 | Route | Component | Purpose |
 |-------|-----------|---------|
 | `/` | Home.tsx | Main gallery of analyzed profiles |
-| `/upload` | Upload.tsx | Video upload and AI analysis |
+| `/upload` | Upload.tsx | Video upload and streaming AI analysis |
+| `/settings` | Settings.tsx | App configuration and preferences |
 | `/profile/:id` | ProfileDetail.tsx | Detailed match profile view with tabs |
 | `/my-profile` | MyProfile.tsx | User's own profile creation and analysis |
 | `/mirror` | MyProfile.tsx | Alias for backward compatibility |
@@ -30,6 +31,8 @@ A comprehensive audit of all pages, routes, features, and components in the Aura
 - Profile cards displaying:
   - Thumbnail image
   - Name with app badge (Tinder/Bumble/Hinge color-coded)
+  - Analysis phase badge (Quick/Complete)
+  - Virtue score average badge (if compatibility scored)
   - Date added
   - Age and location
   - Summary quote
@@ -46,28 +49,36 @@ A comprehensive audit of all pages, routes, features, and components in the Aura
 
 ### 2. Upload.tsx (`/upload`)
 
-**Purpose:** Process dating app screen recordings to extract and analyze profiles.
+**Purpose:** Process dating app screen recordings with progressive streaming analysis.
 
 **Features:**
 - Back navigation to Home
 - VideoUploader component (drag-drop, file picker)
-- Frame extraction (2-second intervals via Canvas API)
-- AI analysis via Claude Sonnet API
-- Results display (name, age, summary)
-- Save profile to IndexedDB with thumbnail
-- Error handling display
+- 4-chunk streaming analysis with progressive UI
+- Real-time insight cards as chunks complete
+- Auto-save after chunk 1 for data loss prevention
+- Abort functionality with save progress option
+- Error handling with debug export
 
-**User Flow:**
-1. User uploads screen recording of dating app profile
-2. Frames extracted at 2-second intervals
-3. Frames sent to Claude API for analysis
-4. Analysis results displayed with profile summary
-5. User saves profile → Redirect to Home
+**Streaming Analysis Flow:**
+1. User uploads screen recording
+2. 16 frames extracted (4 chunks of 4 frames each)
+3. **Chunk 1 (Basics)**: Name, age, location, app detection → Auto-save
+4. **Chunk 2 (Impressions)**: Vibes, archetype, psychological signals
+5. **Chunk 3 (Observations)**: Photo analysis, detected prompts
+6. **Chunk 4 (Flags)**: Red/green flags, agendas, tactics
+7. Profile marked "complete" → Redirect to Home
+
+**Progressive UI Components:**
+- `ProgressiveHeader`: Name/age/location as discovered
+- `InsightCard`: Reusable card with loading/complete/pending states
+- Insight cards for: Basic Info, Vibes, Archetype, Prompts, Flags
 
 **Technical Details:**
 - Videos processed locally via Canvas (never uploaded to server)
 - Videos must be muted and playsinline for iOS Safari compatibility
-- Thumbnail generated from first usable frame
+- Uses `useStreamingAnalysis` hook for state machine management
+- Supports Quick (chunk 1 only) vs Complete (all chunks) analysis phases
 
 ---
 
@@ -252,6 +263,16 @@ Goals | Data | Text | Video | Photos | Info
 
 ---
 
+### 5. Settings.tsx (`/settings`)
+
+**Purpose:** App configuration and preferences.
+
+**Features:**
+- Auto-run compatibility analysis toggle
+- When enabled, automatically scores new matches against user's synthesis
+
+---
+
 ## Component Inventory
 
 ### Profile Detail Components (`src/components/profileDetail/`)
@@ -303,6 +324,13 @@ Goals | Data | Text | Video | Photos | Info
 | ManualEntryTab | Basic info form fields |
 | AspectConstellationCard | 23 Aspects visual display |
 
+### Upload Components (`src/components/upload/`)
+
+| Component | Purpose |
+|-----------|---------|
+| ProgressiveHeader | Display name/age/location as discovered |
+| InsightCard | Reusable card with loading/complete/pending/error states |
+
 ### Shared Components
 
 | Component | Location | Purpose |
@@ -318,12 +346,14 @@ Goals | Data | Text | Video | Photos | Info
 
 | Hook | Purpose |
 |------|---------|
+| useStreamingAnalysis | State machine for 4-chunk progressive analysis |
 | useCopyToClipboard | Copy text with feedback |
 | useZodiacCompatibility | Generate zodiac analysis |
 | useDateIdeas | Generate date suggestions with weather |
 | useOpenerRefresh | Refresh conversation openers |
 | useConversationCoach | Conversation coaching logic |
 | useCompatibilityScores | On-demand compatibility scoring |
+| useAskAboutMatch | Free-form Q&A chat persistence |
 
 ---
 
@@ -337,23 +367,41 @@ Goals | Data | Text | Video | Photos | Info
 | config.ts | API configuration and headers |
 | jsonExtractor.ts | Extract JSON from markdown AI responses |
 
+### Streaming Analysis (`src/lib/streaming/`)
+
+| File | Purpose |
+|------|---------|
+| types.ts | Chunk types, AccumulatedProfile, merge strategies |
+
 ### Database (`src/lib/db.ts`)
 
 **Tables:**
-- `profiles` - Analyzed match profiles
+- `profiles` - Analyzed match profiles (includes `analysisPhase`: 'quick' | 'complete')
 - `userIdentity` - Single record (id=1) for user's own profile
+- `matchChats` - Chat history for Ask About Match
+- `coachingSessions` - Conversation coaching sessions
 
 **Schema:** Dexie.js IndexedDB wrapper
 
 ### AI Functions (`src/lib/ai.ts`)
 
 Orchestration layer for all AI calls:
-- `analyzeProfile()` - Main profile analysis
-- `generateCompatibility()` - Compatibility scoring
-- `generateZodiac()` - Zodiac analysis
-- `generateDateIdeas()` - Date suggestions
-- `generateOpeners()` - Conversation starters
-- `analyzeConversation()` - Chat coaching
+- `analyzeProfileStreaming()` - 4-chunk streaming analysis with merge
+- `analyzeProfile()` - Legacy single-call analysis
+- `analyzeUserSelf()` - User profile synthesis
+- `extractPartnerVirtues()` - Generate partner virtue preferences
+- `extractUserAspects()` - Score user on 23 Aspects
+- `analyzeNeurodivergence()` - Neurodivergence trait detection
+- `scoreMatchVirtues()` - Score match against user virtues
+- `scoreMatchAspects()` - Score match on 23 Aspects
+- `regenerateOpeners()` - Fresh conversation starters
+- `regeneratePromptOpener()` - Opener for specific prompt
+- `analyzeConversation()` - Chat coaching analysis
+- `scoreUserResponse()` - Message effectiveness score
+- `generateDateAsk()` - Date invitation suggestions
+- `getZodiacCompatibility()` - Zodiac analysis
+- `getDateSuggestions()` - Date ideas with context
+- `askAboutMatch()` - Q&A responses
 
 ### Prompts (`src/lib/prompts.ts`)
 
@@ -381,6 +429,27 @@ All AI prompt templates for:
 
 ## Data Flow
 
+### Streaming Analysis Flow (Upload Page)
+```
+Video Upload → Extract 16 Frames (4 chunks of 4) → Process Chunks
+                                                         │
+    ┌────────────────────────────────────────────────────┤
+    ▼                                                    ▼
+Chunk 1 (Basics)                              Chunks 2-4 (Progressive)
+Name, Age, App                                Vibes, Flags, Tactics
+    │                                                    │
+    ▼                                                    ▼
+Auto-Save (Quick)                              Merge Results
+    │                                                    │
+    └──────────────────────┬─────────────────────────────┘
+                           ▼
+                    Save (Complete)
+                           │
+                           ▼
+                    Profile Gallery
+```
+
+### Overall System Flow
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        USER ACTIONS                              │
@@ -392,8 +461,8 @@ All AI prompt templates for:
 │  Upload Page  │    │  Profile Page │    │ MyProfile Page│
 │               │    │               │    │               │
 │ Video → Frames│    │ View Analysis │    │ Input Data    │
-│ Frames → AI   │    │ Generate More │    │ Run Synthesis │
-│ AI → Save     │    │ Coach Mode    │    │ Save Profile  │
+│ 4-Chunk Stream│    │ Generate More │    │ Run Synthesis │
+│ Progressive UI│    │ Coach Mode    │    │ Save Profile  │
 └───────┬───────┘    └───────┬───────┘    └───────┬───────┘
         │                    │                    │
         └─────────────────────┼─────────────────────┘
@@ -401,19 +470,19 @@ All AI prompt templates for:
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      ANTHROPIC API                               │
-│            (Claude Sonnet via direct browser calls)              │
+│       (Claude via Supabase Edge proxy or direct browser)         │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                        INDEXEDDB                                 │
-│              (Dexie.js - profiles, userIdentity)                 │
+│    (Dexie.js - profiles, userIdentity, matchChats, coaching)     │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                         HOME PAGE                                │
-│                    (Profile Gallery View)                        │
+│           (Profile Gallery with Quick/Complete badges)           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 

@@ -1,8 +1,8 @@
 # Aura Master Roadmap
 
-**Version**: 1.0
+**Version**: 2.0
 **Date**: January 2026
-**Status**: Planning Complete
+**Status**: Phase 1A Complete | Phase 1B-2 Planning
 
 ---
 
@@ -18,17 +18,17 @@ This master roadmap synthesizes findings from the documentation sprint to chart 
 
 | Dimension | Current State | Risk Level |
 |-----------|---------------|------------|
-| **Security** | API key exposed in frontend bundle | 🔴 CRITICAL |
+| **Security** | ✅ API key secured via Supabase Edge Function proxy | 🟢 Resolved |
 | **Scalability** | IndexedDB limited to ~300 profiles | 🟡 Medium |
 | **Data Integrity** | 6 migrations, union types, no validation | 🟡 Medium |
 | **Maintainability** | 3 error handling patterns, hardcoded values | 🟡 Medium |
-| **Performance** | Canvas extraction, base64 overhead | 🟢 Acceptable |
+| **Performance** | ✅ 4-chunk streaming analysis with progressive UI | 🟢 Improved |
 
 ### UX Assessment
 
 | Dimension | Current State | Priority |
 |-----------|---------------|----------|
-| **Upload Flow** | 60-100s wait, no progress indicator | High |
+| **Upload Flow** | ✅ 4-chunk streaming with progressive UI, insight cards | 🟢 Resolved |
 | **Information Density** | 10 sections on Overview, 23 Aspects | Medium |
 | **Conditional Features** | Scoring requires profile setup (hidden) | High |
 | **Accessibility** | No keyboard nav, small touch targets | Medium |
@@ -36,8 +36,12 @@ This master roadmap synthesizes findings from the documentation sprint to chart 
 
 ### Feature Readiness
 
-- ✅ Core analysis pipeline working
-- ✅ Full feature set implemented (23 features)
+- ✅ Core analysis pipeline working (4-chunk streaming)
+- ✅ Full feature set implemented (23+ features)
+- ✅ Supabase Edge Function proxy deployed (Pro tier, 150s timeout)
+- ✅ Progressive streaming UI with auto-save
+- ✅ Conversation coaching with response scoring
+- ✅ User profile synthesis with 23 Aspects
 - 🟡 Settings page minimal
 - 🟡 Data export limited to Tinder JSON
 - ❌ No user accounts
@@ -75,19 +79,21 @@ This master roadmap synthesizes findings from the documentation sprint to chart 
 
 ## Phased Implementation Plan
 
-### Phase 1: Architecture Pivot
+### Phase 1A: Architecture Pivot ✅ COMPLETE
 
-**Duration**: 4-6 weeks
+**Duration**: Completed January 2026
 **Goal**: Secure the API key and establish backend infrastructure
 
-#### Week 1-2: Supabase Setup + API Proxy
+#### Week 1-2: Supabase Setup + API Proxy ✅
 
-- [ ] Create Supabase project
-- [ ] Implement Edge Function for Anthropic proxy
-- [ ] Update frontend to use proxy endpoint
-- [ ] **Remove API key from frontend bundle** ⚠️ CRITICAL
-- [ ] Verify API calls work through proxy
-- [ ] Deploy and test in production
+- [x] Create Supabase project (qaueoxubnifmtdirnxgz)
+- [x] Implement Edge Function for Anthropic proxy (`anthropic-proxy`)
+- [x] Update frontend to use proxy endpoint
+- [x] **Remove API key from frontend bundle** ✅ RESOLVED
+- [x] Verify API calls work through proxy
+- [x] Deploy and test in production
+- [x] Upgrade to Pro tier (150-second timeout)
+- [x] Implement streaming analysis (4-chunk progressive UI)
 
 #### Week 3-4: Authentication
 
@@ -107,11 +113,11 @@ This master roadmap synthesizes findings from the documentation sprint to chart 
 - [ ] Migrate existing local data for logged-in users
 - [ ] Implement data export endpoint
 
-**Phase 1 Exit Criteria**:
-- [ ] API key not in frontend bundle
-- [ ] Users can create accounts
-- [ ] Profile data syncs across devices
-- [ ] Existing PWA users can migrate data
+**Phase 1A Exit Criteria**:
+- [x] API key not in frontend bundle ✅
+- [ ] Users can create accounts (Phase 1B)
+- [ ] Profile data syncs across devices (Phase 1B)
+- [ ] Existing PWA users can migrate data (Phase 1B)
 
 ---
 
@@ -352,4 +358,5 @@ This master roadmap synthesizes findings from the documentation sprint to chart 
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0 | January 2026 | Phase 1A complete: API proxy deployed, streaming analysis shipped |
 | 1.0 | January 2026 | Initial roadmap created |

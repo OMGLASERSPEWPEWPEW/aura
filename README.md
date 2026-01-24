@@ -1,73 +1,96 @@
-# React + TypeScript + Vite
+# Aura
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Local-first dating profile intelligence for the emotionally literate.**
 
-Currently, two official plugins are available:
+Aura analyzes dating app profiles via screen recordings using AI to identify behavioral patterns, psychological insights, and compatibility signals. All user data stays on-device.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+### Profile Analysis
+- Upload screen recordings of dating profiles
+- 4-chunk streaming analysis with progressive UI updates
+- Photo-by-photo psychological breakdown
+- Red/green flags with explanations
+- Archetype classification
+- Subtext analysis (power dynamics, vulnerability markers)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Compatibility Scoring
+- Build your own profile for personalized matching
+- 5 Partner Virtues compatibility scoring
+- 23 Aspects trait matching
+- Zodiac compatibility
+- Transactional indicator detection
 
-## Expanding the ESLint configuration
+### Match Intelligence
+- Conversation coaching (upload chat screenshots)
+- AI-powered response suggestions
+- Response scoring (0-100)
+- Custom opener generation
+- Date ideas with weather integration
+- Free-form Q&A about any match
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Tech Stack
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **Frontend:** React 19 + TypeScript + Vite 7
+- **Styling:** Tailwind CSS 3.4
+- **Storage:** Dexie.js (IndexedDB)
+- **AI:** Claude API (Anthropic)
+- **Hosting:** Vercel
+- **API Proxy:** Supabase Edge Functions
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Getting Started
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env
+# Add your VITE_ANTHROPIC_API_KEY or use proxy config
+
+# Start development server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev       # Start dev server (localhost:5173)
+npm run build     # TypeScript check + production build
+npm run lint      # ESLint check
+npm run test:run  # Run unit tests
+npm run preview   # Preview production build
 ```
+
+## Environment Variables
+
+**Local Development:**
+```
+VITE_ANTHROPIC_API_KEY=your_key_here
+```
+
+**Production (with proxy):**
+```
+VITE_USE_PROXY=true
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key
+```
+
+## Privacy
+
+Aura is **local-first**:
+- All profile data stored in IndexedDB on your device
+- Videos processed locally via Canvas, never uploaded
+- Only extracted frames sent to AI for analysis
+- No central database, no data harvesting
+
+## Documentation
+
+- [CLAUDE.md](./CLAUDE.md) - Development guidelines for Claude Code
+- [PROJECT_MAP.md](./PROJECT_MAP.md) - Complete feature and component inventory
+- [.claude/docs/MASTER_ROADMAP.md](./.claude/docs/MASTER_ROADMAP.md) - Master roadmap and status
+- [.claude/docs/aura_vision.md](./.claude/docs/aura_vision.md) - Product philosophy
+
+## License
+
+Private repository.
