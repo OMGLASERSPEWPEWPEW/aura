@@ -30,7 +30,26 @@ import {
   NEURODIVERGENCE_ANALYSIS_PROMPT,
   USER_ASPECTS_PROMPT,
   MATCH_ASPECTS_PROMPT,
+  // Streaming chunk prompts
+  CHUNK_1_BASICS_PROMPT,
+  CHUNK_2_IMPRESSIONS_PROMPT,
+  CHUNK_3_OBSERVATIONS_PROMPT,
+  CHUNK_4_FLAGS_PROMPT,
 } from './prompts';
+import type {
+  AccumulatedProfile,
+  ChunkBasicsResult,
+  ChunkImpressionsResult,
+  ChunkObservationsResult,
+  ChunkFlagsResult,
+} from './streaming/types';
+import {
+  mergeChunkBasics,
+  mergeChunkImpressions,
+  mergeChunkObservations,
+  mergeChunkFlags,
+  createInitialAccumulatedProfile,
+} from './streaming/types';
 import type { UserAspectProfile, MatchAspectScores } from './virtues/types';
 import type { DatingGoals, DataExport, ManualEntry, DateSuggestion, ZodiacCompatibility, CoachingResponse, MatchCoachingAnalysis, PartnerVirtue, VirtueScore, ProfileAnalysis, NeurodivergenceAnalysis } from './db';
 import type { WeatherForecast } from './weather';
@@ -352,9 +371,9 @@ export async function analyzeUserSelf(input: UserSelfAnalysisInput) {
 
   const messages: MessageContent[] = [];
 
-  // Add images (limit to 4 photos + 4 video frames = 8 max to stay within Edge Function timeout)
-  const photoImages = (input.photos || []).slice(0, 4);
-  const frameImages = (input.frames || []).slice(0, 4);
+  // Add images (limit to 5 photos + 5 video frames = 10 max, graduated increase with Pro tier timeout)
+  const photoImages = (input.photos || []).slice(0, 5);
+  const frameImages = (input.frames || []).slice(0, 5);
   const allImages = [...photoImages, ...frameImages];
 
   if (allImages.length > 0) {
@@ -1069,4 +1088,292 @@ ${promptsText}
     messages: [textContent(prompt)],
     maxTokens: TOKEN_LIMITS.MATCH_ASPECTS,
   });
+}
+
+// --- STREAMING PROFILE ANALYSIS ---
+
+export { createInitialAccumulatedProfile };
+export type { AccumulatedProfile };
+
+export interface StreamingAnalysisCallbacks {
+  onChunkComplete?: (
+    chunkIndex: number,
+    profile: AccumulatedProfile,
+    latency: number
+  ) => void;
+  onError?: (error: Error, chunkIndex: number) => void;
+  signal?: AbortSignal;
+}
+
+/**
+ * Analyze profile in streaming chunks.
+ * Returns results incrementally via onChunkComplete callback.
+ *
+ * @param frameChunks Array of frame arrays (typically 4 chunks of 4 frames)
+ * @param callbacks Callbacks for progress updates
+ * @returns Final accumulated profile
+ */
+export async function analyzeProfileStreaming(
+  frameChunks: string[][],
+  callbacks?: StreamingAnalysisCallbacks
+): Promise<AccumulatedProfile> {
+  console.log(`ai.ts: Starting streaming analysis with ${frameChunks.length} chunks`);
+
+  let profile = createInitialAccumulatedProfile();
+  profile.meta.totalChunks = frameChunks.length;
+
+  // Process each chunk sequentially (context builds on previous chunks)
+  for (let i = 0; i < frameChunks.length; i++) {
+    // Check for abort
+    if (callbacks?.signal?.aborted) {
+      console.log('ai.ts: Streaming analysis aborted');
+      break;
+    }
+
+    const chunkFrames = frameChunks[i];
+    const startTime = Date.now();
+
+    console.log(`ai.ts: Processing chunk ${i + 1}/${frameChunks.length} with ${chunkFrames.length} frames`);
+
+    try {
+      switch (i) {
+        case 0:
+          profile = await processChunk1Basics(chunkFrames, profile, callbacks?.signal);
+          break;
+        case 1:
+          profile = await processChunk2Impressions(chunkFrames, profile, callbacks?.signal);
+          break;
+        case 2:
+          profile = await processChunk3Observations(chunkFrames, profile, callbacks?.signal);
+          break;
+        case 3:
+        default:
+          profile = await processChunk4Flags(chunkFrames, profile, callbacks?.signal);
+          break;
+      }
+
+      const latency = Date.now() - startTime;
+      console.log(`ai.ts: Chunk ${i + 1} complete in ${latency}ms`);
+
+      if (callbacks?.onChunkComplete) {
+        callbacks.onChunkComplete(i, profile, latency);
+      }
+    } catch (error) {
+      console.error(`ai.ts: Chunk ${i + 1} failed:`, error);
+      if (callbacks?.onError) {
+        callbacks.onError(error instanceof Error ? error : new Error(String(error)), i);
+      }
+      // Continue with remaining chunks even if one fails
+    }
+  }
+
+  // Mark as quick analysis complete
+  profile.meta.phase = 'quick';
+
+  return profile;
+}
+
+// --- Chunk Processing Functions ---
+
+async function processChunk1Basics(
+  frames: string[],
+  profile: AccumulatedProfile,
+  signal?: AbortSignal
+): Promise<AccumulatedProfile> {
+  const messages: MessageContent[] = [
+    ...frames.map((frame) => imageContent(frame)),
+    textContent(CHUNK_1_BASICS_PROMPT),
+  ];
+
+  const result = await callAnthropicForObject<ChunkBasicsResult>({
+    messages,
+    maxTokens: 500,
+    signal,
+    timeout: 30000,
+  });
+
+  return mergeChunkBasics(profile, result);
+}
+
+async function processChunk2Impressions(
+  frames: string[],
+  profile: AccumulatedProfile,
+  signal?: AbortSignal
+): Promise<AccumulatedProfile> {
+  // Build context from chunk 1
+  const basicsContext = `
+Name: ${profile.identity.name || 'Unknown'}
+Age: ${profile.identity.age || 'Unknown'}
+Location: ${profile.identity.location || 'Unknown'}
+Job: ${profile.identity.job || 'Unknown'}
+App: ${profile.identity.app || 'Unknown'}
+`.trim();
+
+  const prompt = CHUNK_2_IMPRESSIONS_PROMPT.replace('{basics_context}', basicsContext);
+
+  const messages: MessageContent[] = [
+    ...frames.map((frame) => imageContent(frame)),
+    textContent(prompt),
+  ];
+
+  const result = await callAnthropicForObject<ChunkImpressionsResult>({
+    messages,
+    maxTokens: 800,
+    signal,
+    timeout: 30000,
+  });
+
+  return mergeChunkImpressions(profile, result);
+}
+
+async function processChunk3Observations(
+  frames: string[],
+  profile: AccumulatedProfile,
+  signal?: AbortSignal
+): Promise<AccumulatedProfile> {
+  // Build accumulated context
+  const accumulatedContext = `
+IDENTITY:
+- Name: ${profile.identity.name || 'Unknown'}
+- Age: ${profile.identity.age || 'Unknown'}
+- Location: ${profile.identity.location || 'Unknown'}
+- Job: ${profile.identity.job || 'Unknown'}
+- App: ${profile.identity.app || 'Unknown'}
+
+VIBES OBSERVED:
+${profile.photos.vibesSummary.map(v => `- ${v}`).join('\n') || '- None yet'}
+
+EMERGING ARCHETYPE:
+${profile.psychological.emergingArchetype || 'Still forming...'}
+
+SIGNALS PICKED UP:
+${profile.psychological.signals.map(s => `- ${s}`).join('\n') || '- None yet'}
+`.trim();
+
+  const prompt = CHUNK_3_OBSERVATIONS_PROMPT.replace('{accumulated_context}', accumulatedContext);
+
+  const messages: MessageContent[] = [
+    ...frames.map((frame) => imageContent(frame)),
+    textContent(prompt),
+  ];
+
+  const result = await callAnthropicForObject<ChunkObservationsResult>({
+    messages,
+    maxTokens: 1500,
+    signal,
+    timeout: 45000,
+  });
+
+  return mergeChunkObservations(profile, result);
+}
+
+async function processChunk4Flags(
+  frames: string[],
+  profile: AccumulatedProfile,
+  signal?: AbortSignal
+): Promise<AccumulatedProfile> {
+  // Build full context for final analysis
+  const photoDescriptions = profile.photos.analyses
+    .map((p, i) => `Photo ${i + 1}: ${p.vibe} - ${p.subtext}`)
+    .join('\n');
+
+  const promptResponses = profile.prompts.found
+    .map(p => `Q: ${p.question}\nA: ${p.answer}\nAnalysis: ${p.analysis}`)
+    .join('\n\n');
+
+  const fullContext = `
+IDENTITY:
+- Name: ${profile.identity.name || 'Unknown'}
+- Age: ${profile.identity.age || 'Unknown'}
+- Location: ${profile.identity.location || 'Unknown'}
+- Job: ${profile.identity.job || 'Unknown'}
+- App: ${profile.identity.app || 'Unknown'}
+
+PHOTO ANALYSES:
+${photoDescriptions || 'None captured yet'}
+
+PROMPT RESPONSES:
+${promptResponses || 'None found'}
+
+VIBES:
+${profile.photos.vibesSummary.join(', ') || 'None'}
+
+EMERGING ARCHETYPE (${profile.psychological.confidenceLevel}% confidence):
+${profile.psychological.emergingArchetype || 'Unknown'}
+
+PSYCHOLOGICAL SIGNALS:
+${profile.psychological.signals.map(s => `- ${s}`).join('\n') || '- None'}
+`.trim();
+
+  const prompt = CHUNK_4_FLAGS_PROMPT.replace('{full_context}', fullContext);
+
+  const messages: MessageContent[] = [
+    ...frames.map((frame) => imageContent(frame)),
+    textContent(prompt),
+  ];
+
+  const result = await callAnthropicForObject<ChunkFlagsResult>({
+    messages,
+    maxTokens: 1500,
+    signal,
+    timeout: 45000,
+  });
+
+  return mergeChunkFlags(profile, result);
+}
+
+/**
+ * Convert AccumulatedProfile to ProfileAnalysis format for storage.
+ * This maps the streaming format to the existing database format.
+ */
+export function accumulatedToProfileAnalysis(accumulated: AccumulatedProfile): ProfileAnalysis {
+  return {
+    meta: {
+      app_name: accumulated.identity.app || undefined,
+      best_photo_index: accumulated.photos.thumbnailIndex,
+    },
+    basics: {
+      name: accumulated.identity.name || undefined,
+      age: accumulated.identity.age || undefined,
+      location: accumulated.identity.location || undefined,
+      job: accumulated.identity.job || undefined,
+    },
+    photos: accumulated.photos.analyses.map(p => ({
+      description: p.description,
+      vibe: p.vibe,
+      subtext: p.subtext,
+    })),
+    prompts: accumulated.prompts.found.map(p => ({
+      question: p.question,
+      answer: p.answer,
+      analysis: p.analysis,
+      suggested_opener: p.suggested_opener,
+    })),
+    psychological_profile: {
+      agendas: accumulated.psychological.agendas,
+      presentation_tactics: accumulated.psychological.presentationTactics,
+      predicted_tactics: accumulated.psychological.predictedTactics,
+      subtext_analysis: {
+        sexual_signaling: '',
+        power_dynamics: '',
+        vulnerability_indicators: '',
+        disconnect: '',
+      },
+      archetype_summary: accumulated.psychological.emergingArchetype || '',
+    },
+    recommended_openers: accumulated.prompts.found
+      .filter(p => p.suggested_opener)
+      .map(p => ({
+        type: 'like_comment' as const,
+        message: p.suggested_opener!.message,
+        tactic: p.suggested_opener!.tactic,
+        why_it_works: p.suggested_opener!.why_it_works,
+      })),
+    // Include early warnings as a custom field for display
+    overall_analysis: {
+      summary: accumulated.psychological.emergingArchetype || 'Analysis in progress...',
+      green_flags: accumulated.earlyWarnings.greenFlags,
+      red_flags: accumulated.earlyWarnings.redFlags,
+    },
+  };
 }

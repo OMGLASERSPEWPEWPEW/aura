@@ -223,6 +223,9 @@ interface AppSettings {
   autoCompatibility: boolean;  // Auto-run compatibility scoring when saving matches
 }
 
+// Analysis phase for streaming analysis
+type AnalysisPhaseType = 'quick' | 'deep' | 'complete';
+
 interface Profile {
   id: number;
   name: string;
@@ -231,6 +234,9 @@ interface Profile {
   timestamp: Date;
   analysis: AnalysisData;
   thumbnail: string;
+
+  // Streaming analysis phase tracking
+  analysisPhase?: AnalysisPhaseType; // 'quick' = partial, 'deep' = running deep, 'complete' = full
 
   // Compatibility assessment (populated when user has synthesis)
   compatibility?: ProfileCompatibility;
@@ -467,6 +473,21 @@ db.version(6).stores({
   matchChats: '++id, profileId, timestamp'
 });
 
+// Version 7: Add analysisPhase field for streaming analysis support
+db.version(7).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase',
+  userIdentity: '++id, lastUpdated',
+  coachingSessions: '++id, profileId, timestamp',
+  matchChats: '++id, profileId, timestamp'
+}).upgrade(tx => {
+  // Migrate existing profiles to have 'complete' analysisPhase
+  return tx.table('profiles').toCollection().modify((profile: Partial<Profile>) => {
+    if (!profile.analysisPhase) {
+      profile.analysisPhase = 'complete'; // Existing profiles are fully analyzed
+    }
+  });
+});
+
 export { db };
 // Re-export aspect types for convenience
 export type { UserAspectProfile, MatchAspectScores, AspectScore } from './virtues/types';
@@ -475,6 +496,7 @@ export type {
   Profile,
   ProfileAnalysis,
   AnalysisData,
+  AnalysisPhaseType,
   ProfileBasics,
   PhotoAnalysis,
   PromptAnalysis,

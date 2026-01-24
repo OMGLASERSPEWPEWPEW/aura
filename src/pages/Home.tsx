@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
-import { Plus, User, Trash2, Flame, Brain, Settings } from 'lucide-react';
+import { Plus, User, Trash2, Flame, Brain, Settings, Zap, Star } from 'lucide-react';
+import type { VirtueScore } from '../lib/db';
 
 export default function Home() {
   const profiles = useLiveQuery(() => db.profiles.orderBy('timestamp').reverse().toArray());
@@ -23,6 +24,34 @@ export default function Home() {
     if (app.includes('bumble')) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200">Bumble</span>;
     if (app.includes('hinge')) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">Hinge</span>;
     return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">Profile</span>;
+  };
+
+  // Helper to get analysis phase badge
+  const getAnalysisPhaseBadge = (analysisPhase?: string) => {
+    if (analysisPhase === 'quick') {
+      return (
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 flex items-center gap-1">
+          <Zap size={10} /> Quick
+        </span>
+      );
+    }
+    return null;
+  };
+
+  // Helper to get virtue score badge
+  const getVirtueScoreBadge = (virtueScores?: VirtueScore[]) => {
+    if (!virtueScores || virtueScores.length === 0) return null;
+    const avg = Math.round(virtueScores.reduce((sum, v) => sum + v.score, 0) / virtueScores.length);
+    const colorClass = avg >= 7
+      ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+      : avg >= 5
+        ? 'bg-amber-100 text-amber-700 border-amber-200'
+        : 'bg-slate-100 text-slate-600 border-slate-200';
+    return (
+      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${colorClass}`}>
+        <Star size={10} /> {avg}/10
+      </span>
+    );
   };
 
   return (
@@ -90,9 +119,11 @@ export default function Home() {
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start">
                     <div className="flex flex-col">
-                        <div className="flex items-center space-x-2 mb-1">
+                        <div className="flex items-center space-x-2 mb-1 flex-wrap gap-1">
                              <h3 className="font-bold text-slate-900 truncate text-lg leading-tight">{profile.name}</h3>
                              {getAppBadge(profile.appName)}
+                             {getAnalysisPhaseBadge(profile.analysisPhase)}
+                             {getVirtueScoreBadge(profile.virtue_scores)}
                         </div>
                         <span className="text-xs text-slate-400">{new Date(profile.timestamp).toLocaleDateString()}</span>
                     </div>

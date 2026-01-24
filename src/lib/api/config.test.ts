@@ -5,48 +5,62 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // We'll dynamically import and mock the module
 
 describe('config', () => {
+  const originalEnv = { ...import.meta.env };
+
+  afterEach(() => {
+    // Restore original env values
+    Object.assign(import.meta.env, originalEnv);
+    vi.resetModules();
+  });
+
   // ==================== getApiKey ====================
   describe('getApiKey', () => {
-    const originalEnv = import.meta.env.VITE_ANTHROPIC_API_KEY;
-
-    afterEach(() => {
-      // Restore original env
-      import.meta.env.VITE_ANTHROPIC_API_KEY = originalEnv;
+    it('should return empty string when using proxy mode', async () => {
+      import.meta.env.VITE_USE_PROXY = 'true';
+      import.meta.env.VITE_SUPABASE_URL = 'https://test.supabase.co';
+      import.meta.env.VITE_SUPABASE_ANON_KEY = 'test-anon-key';
       vi.resetModules();
+
+      const { getApiKey } = await import('./config');
+      expect(getApiKey()).toBe('');
     });
 
-    it('should return API key when present', async () => {
+    it('should return API key when not using proxy', async () => {
+      import.meta.env.VITE_USE_PROXY = 'false';
       import.meta.env.VITE_ANTHROPIC_API_KEY = 'test-api-key-123';
+      vi.resetModules();
 
-      // Dynamically import to get fresh module with new env
       const { getApiKey } = await import('./config');
-
       expect(getApiKey()).toBe('test-api-key-123');
     });
 
-    it('should throw error when API key is missing', async () => {
+    it('should throw error when API key is missing in non-proxy mode', async () => {
+      import.meta.env.VITE_USE_PROXY = 'false';
       import.meta.env.VITE_ANTHROPIC_API_KEY = '';
+      vi.resetModules();
 
       const { getApiKey } = await import('./config');
-
       expect(() => getApiKey()).toThrow('Missing API Key');
-    });
-
-    it('should handle falsy API key values', async () => {
-      // Note: In Vite, undefined env vars become empty strings
-      // The getApiKey function checks for falsy values
-      // This test verifies the error message format
-      import.meta.env.VITE_ANTHROPIC_API_KEY = '';
-
-      const { getApiKey } = await import('./config');
-
-      expect(() => getApiKey()).toThrow('VITE_ANTHROPIC_API_KEY');
     });
   });
 
   // ==================== Constants ====================
   describe('ANTHROPIC_CONFIG', () => {
-    it('should have correct API endpoint', async () => {
+    it('should use proxy endpoint when proxy mode enabled', async () => {
+      import.meta.env.VITE_USE_PROXY = 'true';
+      import.meta.env.VITE_SUPABASE_URL = 'https://test.supabase.co';
+      import.meta.env.VITE_SUPABASE_ANON_KEY = 'test-anon-key';
+      vi.resetModules();
+
+      const { ANTHROPIC_CONFIG } = await import('./config');
+      expect(ANTHROPIC_CONFIG.API_ENDPOINT).toBe('https://test.supabase.co/functions/v1/anthropic-proxy');
+    });
+
+    it('should use direct Anthropic endpoint when proxy disabled', async () => {
+      import.meta.env.VITE_USE_PROXY = 'false';
+      import.meta.env.VITE_ANTHROPIC_API_KEY = 'test-key';
+      vi.resetModules();
+
       const { ANTHROPIC_CONFIG } = await import('./config');
       expect(ANTHROPIC_CONFIG.API_ENDPOINT).toBe('https://api.anthropic.com/v1/messages');
     });
@@ -73,7 +87,7 @@ describe('config', () => {
       const { TIMEOUTS } = await import('./config');
 
       expect(TIMEOUTS.DEFAULT).toBe(60000);
-      expect(TIMEOUTS.PROFILE_ANALYSIS).toBe(120000);
+      expect(TIMEOUTS.PROFILE_ANALYSIS).toBe(150000); // Matches Supabase Pro limit
       expect(TIMEOUTS.QUICK_ANALYSIS).toBe(30000);
     });
   });

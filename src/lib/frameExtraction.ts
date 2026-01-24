@@ -15,6 +15,24 @@ export interface FrameExtractionOptions {
   onMetadataLoaded?: (info: { duration: number; totalFrames: number }) => void;
 }
 
+// --- Chunked Extraction Types ---
+
+export interface ChunkInfo {
+  chunkIndex: number;
+  totalChunks: number;
+  frames: string[];
+  allFramesSoFar: string[];
+}
+
+export interface ChunkedExtractionOptions {
+  chunkSize?: number; // Default: 4 frames per chunk
+  intervalSeconds?: number; // Default: 2 seconds between frames
+  totalFrames?: number; // Default: 16 total frames
+  onChunkReady?: (chunk: ChunkInfo) => void;
+  onProgress?: (progress: FrameExtractionProgress) => void;
+  onMetadataLoaded?: (info: { duration: number; totalFrames: number }) => void;
+}
+
 export async function extractFramesFromVideo(
   videoFile: File,
   intervalSecondsOrOptions: number | FrameExtractionOptions = 2
@@ -114,4 +132,126 @@ export async function extractFramesFromVideo(
     };
   });
 }
-// File length: ~1600 chars
+
+/**
+ * Extract frames in chunks for streaming analysis.
+ * Fires onChunkReady callback after each chunk of frames is extracted.
+ *
+ * Default: 4 chunks of 4 frames = 16 total frames
+ */
+export async function extractFramesChunked(
+  videoFile: File,
+  options: ChunkedExtractionOptions = {}
+): Promise<string[]> {
+  const chunkSize = options.chunkSize ?? 4;
+  const totalFramesTarget = options.totalFrames ?? 16;
+  const onChunkReady = options.onChunkReady;
+  const onProgress = options.onProgress;
+  const onMetadataLoaded = options.onMetadataLoaded;
+
+  return new Promise((resolve, reject) => {
+    const allFrames: string[] = [];
+    const video = document.createElement('video');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    console.log("frameExtraction: Created video element for chunked extraction");
+
+    const videoUrl = URL.createObjectURL(videoFile);
+    video.src = videoUrl;
+    video.playsInline = true;
+    video.muted = true;
+    video.crossOrigin = 'anonymous';
+
+    video.onloadedmetadata = async () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const duration = video.duration;
+
+      // Calculate interval to get exactly totalFramesTarget frames spread across the video
+      const intervalSeconds = duration / totalFramesTarget;
+      const totalFrames = totalFramesTarget;
+      const totalChunks = Math.ceil(totalFrames / chunkSize);
+
+      console.log("frameExtraction (chunked): duration:", duration,
+                  "interval:", intervalSeconds.toFixed(2),
+                  "totalFrames:", totalFrames,
+                  "chunks:", totalChunks);
+
+      if (onMetadataLoaded) {
+        onMetadataLoaded({ duration, totalFrames });
+      }
+
+      let currentFrameIndex = 0;
+      let currentChunkIndex = 0;
+      let currentChunkFrames: string[] = [];
+
+      const captureNextFrame = async () => {
+        // Check if we've captured all frames
+        if (currentFrameIndex >= totalFrames) {
+          console.log("frameExtraction (chunked): Complete, total frames:", allFrames.length);
+          URL.revokeObjectURL(videoUrl);
+          resolve(allFrames);
+          return;
+        }
+
+        // Calculate the time for this frame
+        const currentTime = currentFrameIndex * intervalSeconds;
+
+        // Seek to the time
+        video.currentTime = currentTime;
+        await new Promise<void>((r) => {
+          video.onseeked = () => r();
+        });
+
+        // Capture the frame
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const frameData = canvas.toDataURL('image/jpeg', 0.7);
+
+          allFrames.push(frameData);
+          currentChunkFrames.push(frameData);
+
+          // Report progress
+          if (onProgress) {
+            onProgress({
+              currentFrame: currentFrameIndex + 1,
+              totalFrames,
+              currentTime,
+              duration,
+            });
+          }
+        }
+
+        currentFrameIndex++;
+
+        // Check if we've completed a chunk
+        if (currentChunkFrames.length >= chunkSize || currentFrameIndex >= totalFrames) {
+          if (onChunkReady && currentChunkFrames.length > 0) {
+            console.log(`frameExtraction: Chunk ${currentChunkIndex + 1}/${totalChunks} ready with ${currentChunkFrames.length} frames`);
+            onChunkReady({
+              chunkIndex: currentChunkIndex,
+              totalChunks,
+              frames: [...currentChunkFrames],
+              allFramesSoFar: [...allFrames],
+            });
+          }
+          currentChunkIndex++;
+          currentChunkFrames = [];
+        }
+
+        // Capture next frame
+        captureNextFrame();
+      };
+
+      // Start capturing
+      captureNextFrame();
+    };
+
+    video.onerror = (e) => {
+      console.error("frameExtraction (chunked): Error loading video:", e);
+      URL.revokeObjectURL(videoUrl);
+      reject(new Error("Error loading video. Please try a different file format."));
+    };
+  });
+}

@@ -38,6 +38,11 @@ vi.mock('./api', () => ({
     USER_ASPECTS: 4096,
     MATCH_ASPECTS: 4096,
   },
+  TIMEOUTS: {
+    DEFAULT: 60000,
+    PROFILE_ANALYSIS: 150000,
+    QUICK_ANALYSIS: 30000,
+  },
 }));
 
 vi.mock('./prompts', () => ({
