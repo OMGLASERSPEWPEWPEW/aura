@@ -28,7 +28,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  * Returns null if not authenticated
  */
 export async function getAccessToken(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
+  console.log('getAccessToken: Fetching session...');
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error) {
+    console.error('getAccessToken: Error fetching session:', error);
+    return null;
+  }
+  console.log('getAccessToken: Session exists:', !!session, 'User:', session?.user?.email);
   return session?.access_token ?? null;
 }
 

@@ -78,3 +78,7 @@ export function isUsingProxy(): boolean {
 export function getSupabaseAnonKey(): string {
   return SUPABASE_ANON_KEY || '';
 }
+
+export function getSupabaseUrl(): string {
+  return SUPABASE_URL || '';
+}

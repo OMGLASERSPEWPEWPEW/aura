@@ -1,9 +1,10 @@
 // src/lib/api/anthropicClient.ts
 // Centralized Anthropic API client
 
-import { ANTHROPIC_CONFIG, TIMEOUTS, getApiKey, isUsingProxy, getSupabaseAnonKey } from './config';
+import { ANTHROPIC_CONFIG, TIMEOUTS, getApiKey, isUsingProxy } from './config';
 import { extractJsonObject, extractJsonArray, extractJsonObjectWithDebug } from './jsonExtractor';
 import { saveErrorToFile, type ErrorDebugInfo } from '../utils/errorExport';
+import { getAccessToken } from '../supabase';
 
 // Content types for API messages
 export interface TextContent {
@@ -118,8 +119,15 @@ async function makeRequest(options: AnthropicRequestOptions, operationName?: str
 
   if (usingProxy) {
     // Proxy mode: Edge Function adds API key and version headers
-    // Send Supabase anon key for Edge Function authentication
-    headers['Authorization'] = `Bearer ${getSupabaseAnonKey()}`;
+    // Send user's JWT token for authentication (requires user to be logged in)
+    console.log('Proxy mode: fetching access token...');
+    const accessToken = await getAccessToken();
+    console.log('Access token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'NULL');
+    if (!accessToken) {
+      console.error('No access token available - user may not be logged in');
+      throw new Error('Authentication required. Please sign in to analyze profiles.');
+    }
+    headers['Authorization'] = `Bearer ${accessToken}`;
   } else {
     // Direct mode: include all Anthropic-required headers
     headers['x-api-key'] = getApiKey();
@@ -306,8 +314,13 @@ export async function callAnthropicWithDebug<T>(
 
   if (usingProxy) {
     // Proxy mode: Edge Function adds API key and version headers
-    // Send Supabase anon key for Edge Function authentication
-    headers['Authorization'] = `Bearer ${getSupabaseAnonKey()}`;
+    // Send user's JWT token for authentication (requires user to be logged in)
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      cleanup();
+      throw new Error('Authentication required. Please sign in to analyze profiles.');
+    }
+    headers['Authorization'] = `Bearer ${accessToken}`;
   } else {
     // Direct mode: include all Anthropic-required headers
     headers['x-api-key'] = getApiKey();
