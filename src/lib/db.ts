@@ -282,7 +282,9 @@ interface TextInput {
 
 interface VideoAnalysis {
   frames: string[];
-  analyzedAt: Date;
+  thumbnailIndex?: number;  // Best frame for thumbnail
+  extractedAt?: Date;       // When frames were extracted
+  analyzedAt?: Date;        // Legacy field for backwards compatibility
 }
 
 interface PhotoEntry {
@@ -346,6 +348,7 @@ interface UserSynthesis {
   behavioral_insights: {
     communication_style: string;
     attachment_patterns: string;
+    attachment_confidence?: number; // 0-100, show only if > 40%
     growth_areas: string[];
     strengths: string[];
   };
@@ -355,6 +358,13 @@ interface UserSynthesis {
   neurodivergence?: NeurodivergenceAnalysis;
   // 23 Aspects profile (new system)
   aspect_profile?: UserAspectProfile;
+}
+
+// Insight feedback for user validation of AI analysis
+interface InsightFeedback {
+  insightKey: string;       // e.g., "attachment_patterns", "strengths[0]"
+  rating: 'spot_on' | 'mostly' | 'off';
+  timestamp: Date;
 }
 
 // Extended UserIdentity interface for My Profile system
@@ -399,6 +409,9 @@ interface UserIdentity {
   photos: PhotoEntry[];
   manualEntry: ManualEntry;
   synthesis?: UserSynthesis;
+
+  // Insight feedback for user validation
+  insightFeedback?: InsightFeedback[];
 
   // App settings
   settings?: AppSettings;
@@ -488,6 +501,21 @@ db.version(7).stores({
   });
 });
 
+// Version 8: Add insightFeedback field for user validation of AI analysis
+db.version(8).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase',
+  userIdentity: '++id, lastUpdated',
+  coachingSessions: '++id, profileId, timestamp',
+  matchChats: '++id, profileId, timestamp'
+}).upgrade(tx => {
+  // Initialize insightFeedback array for existing users
+  return tx.table('userIdentity').toCollection().modify((identity: Partial<UserIdentity>) => {
+    if (!identity.insightFeedback) {
+      identity.insightFeedback = [];
+    }
+  });
+});
+
 export { db };
 // Re-export aspect types for convenience
 export type { UserAspectProfile, MatchAspectScores, AspectScore } from './virtues/types';
@@ -527,4 +555,5 @@ export type {
   TransactionalIndicators,
   MatchChatMessage,
   AppSettings,
+  InsightFeedback,
 };

@@ -1,24 +1,22 @@
 // src/pages/MyProfile.tsx
 // Main page for user profile creation and analysis
+// Redesigned 4-tab layout: Video | Text | Info | Insights
+// Uses same streaming pattern as match Upload.tsx - auto-starts analysis on video upload
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   ArrowLeft,
-  Target,
-  FileJson,
   FileText,
   Video,
-  Camera,
   User,
   Sparkles,
   Loader2,
-  AlertCircle,
-  Check
 } from 'lucide-react';
 
-import { db, type UserIdentity, type DatingGoals, type DataExport, type TextInput, type VideoAnalysis, type PhotoEntry, type ManualEntry, type UserSynthesis } from '../lib/db';
+import { db, type UserIdentity, type DatingGoals, type TextInput, type VideoAnalysis, type PhotoEntry, type ManualEntry, type UserSynthesis } from '../lib/db';
 import { analyzeUserSelf, extractPartnerVirtues, analyzeNeurodivergence, extractUserAspects } from '../lib/ai';
+import { useUserStreamingAnalysis } from '../hooks/useUserStreamingAnalysis';
 
 // Type for user self-analysis result
 interface UserSelfAnalysisResult {
@@ -66,15 +64,12 @@ interface UserSelfAnalysisResult {
 }
 
 // Tab components
-import GoalsTab from '../components/profile/GoalsTab';
-import DataExportTab from '../components/profile/DataExportTab';
 import TextInputTab from '../components/profile/TextInputTab';
 import VideoTab from '../components/profile/VideoTab';
-import PhotosTab from '../components/profile/PhotosTab';
-import ManualEntryTab from '../components/profile/ManualEntryTab';
-import UserProfileDisplay from '../components/UserProfileDisplay';
+import InfoTab from '../components/profile/InfoTab';
+import InsightsTab from '../components/profile/InsightsTab';
 
-type TabType = 'goals' | 'data' | 'text' | 'video' | 'photos' | 'manual';
+type TabType = 'video' | 'text' | 'info' | 'insights';
 
 interface TabConfig {
   id: TabType;
@@ -85,16 +80,10 @@ interface TabConfig {
 
 const TABS: TabConfig[] = [
   {
-    id: 'goals',
-    label: 'Goals',
-    icon: Target,
-    hasContent: (i) => !!i?.datingGoals?.type
-  },
-  {
-    id: 'data',
-    label: 'Data',
-    icon: FileJson,
-    hasContent: (i) => (i?.dataExports?.length ?? 0) > 0
+    id: 'video',
+    label: 'Video',
+    icon: Video,
+    hasContent: (i) => (i?.videoAnalysis?.frames?.length ?? 0) > 0
   },
   {
     id: 'text',
@@ -103,31 +92,27 @@ const TABS: TabConfig[] = [
     hasContent: (i) => (i?.textInputs?.length ?? 0) > 0
   },
   {
-    id: 'video',
-    label: 'Video',
-    icon: Video,
-    hasContent: (i) => (i?.videoAnalysis?.frames?.length ?? 0) > 0
-  },
-  {
-    id: 'photos',
-    label: 'Photos',
-    icon: Camera,
-    hasContent: (i) => (i?.photos?.length ?? 0) > 0
-  },
-  {
-    id: 'manual',
+    id: 'info',
     label: 'Info',
     icon: User,
     hasContent: (i) => {
       const m = i?.manualEntry;
-      return !!(m?.name || m?.age || m?.occupation || m?.location || m?.attachmentStyle);
+      const hasGoals = !!i?.datingGoals?.type;
+      const hasInfo = !!(m?.name || m?.age || m?.occupation || m?.location);
+      return hasGoals || hasInfo;
     }
+  },
+  {
+    id: 'insights',
+    label: 'Insights',
+    icon: Sparkles,
+    hasContent: (i) => !!i?.synthesis
   }
 ];
 
 export default function MyProfile() {
-  const [activeTab, setActiveTab] = useState<TabType>('goals');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('video');
+  const [isAnalyzingLegacy, setIsAnalyzingLegacy] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   // Live query for user identity
@@ -139,6 +124,18 @@ export default function MyProfile() {
   // Track if component is mounted to prevent state updates after unmount
   const isMounted = useRef(true);
 
+  // Store video file for streaming analysis
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+
+  // Streaming analysis hook - lives at page level like Upload.tsx
+  const {
+    state: streamingState,
+    startAnalysis,
+    abort,
+    reset: resetStreaming,
+    isProcessing: isStreamingProcessing,
+  } = useUserStreamingAnalysis();
+
   useEffect(() => {
     return () => {
       isMounted.current = false;
@@ -147,7 +144,6 @@ export default function MyProfile() {
 
   // Local state for unsaved changes (tracks current edits)
   const [localGoals, setLocalGoals] = useState<DatingGoals | undefined>();
-  const [localExports, setLocalExports] = useState<DataExport[]>([]);
   const [localTextInputs, setLocalTextInputs] = useState<TextInput[]>([]);
   const [localVideoAnalysis, setLocalVideoAnalysis] = useState<VideoAnalysis | undefined>();
   const [localPhotos, setLocalPhotos] = useState<PhotoEntry[]>([]);
@@ -156,9 +152,8 @@ export default function MyProfile() {
   // Initialize local state from DB - only on first load
   useEffect(() => {
     if (userIdentity && !isInitialized.current) {
-      console.log("MyProfile: Initializing from DB - photos:", userIdentity.photos?.length ?? 0);
+      console.log("MyProfile: Initializing from DB - videoFrames:", userIdentity.videoAnalysis?.frames?.length ?? 0);
       setLocalGoals(userIdentity.datingGoals);
-      setLocalExports(userIdentity.dataExports || []);
       setLocalTextInputs(userIdentity.textInputs || []);
       setLocalVideoAnalysis(userIdentity.videoAnalysis);
       setLocalPhotos(userIdentity.photos || []);
@@ -167,13 +162,22 @@ export default function MyProfile() {
     }
   }, [userIdentity]);
 
+  // AUTO-START STREAMING ANALYSIS when video file is selected
+  // This is the key change - matches the Upload.tsx pattern (lines 78-83)
+  useEffect(() => {
+    if (videoFile && streamingState.phase === 'idle') {
+      console.log("MyProfile: Auto-starting streaming analysis...");
+      setActiveTab('insights'); // Switch to insights tab to show progress
+      startAnalysis(videoFile);
+    }
+  }, [videoFile, streamingState.phase, startAnalysis]);
+
   // Save to DB whenever local state changes (debounced effect)
   // Uses update() to only modify specified fields, preserving synthesis
   const saveToDb = useCallback(async () => {
     try {
       const fieldsToUpdate = {
         datingGoals: localGoals,
-        dataExports: localExports,
         textInputs: localTextInputs,
         videoAnalysis: localVideoAnalysis,
         photos: localPhotos,
@@ -181,21 +185,26 @@ export default function MyProfile() {
         lastUpdated: new Date()
       };
 
-      console.log("MyProfile: Saving to DB - photos:", localPhotos.length, "videoFrames:", localVideoAnalysis?.frames?.length ?? 0);
+      console.log("MyProfile: Saving to DB - videoFrames:", localVideoAnalysis?.frames?.length ?? 0);
 
       // Use update() instead of put() to preserve synthesis and other fields
       const updated = await db.userIdentity.update(1, fieldsToUpdate);
 
       // If record doesn't exist yet (updated === 0), create it
       if (updated === 0) {
-        await db.userIdentity.put({ id: 1, ...fieldsToUpdate });
+        await db.userIdentity.put({
+          id: 1,
+          ...fieldsToUpdate,
+          dataExports: [],
+          photos: localPhotos,
+        });
       }
 
       console.log("MyProfile: Save successful");
     } catch (error) {
       console.error("MyProfile: Failed to save to DB:", error);
     }
-  }, [localGoals, localExports, localTextInputs, localVideoAnalysis, localPhotos, localManualEntry]);
+  }, [localGoals, localTextInputs, localVideoAnalysis, localPhotos, localManualEntry]);
 
   // Auto-save on changes (with debounce)
   useEffect(() => {
@@ -206,43 +215,40 @@ export default function MyProfile() {
   }, [saveToDb]);
 
   // Calculate which inputs have content
-  const hasAnyInput = () => {
-    return (
+  const hasAnyInput = useCallback((): boolean => {
+    return !!(
       localGoals?.type ||
-      localExports.length > 0 ||
       localTextInputs.length > 0 ||
       (localVideoAnalysis?.frames?.length ?? 0) > 0 ||
-      localPhotos.length > 0 ||
       localManualEntry.name ||
       localManualEntry.age
     );
-  };
+  }, [localGoals, localTextInputs, localVideoAnalysis, localManualEntry]);
 
-  // Run synthesis
-  const runSynthesis = async () => {
+  // Run legacy synthesis (fallback when no video file)
+  const runLegacySynthesis = async () => {
     if (!hasAnyInput()) {
-      setAnalysisError("Please add some information first (photos, text, goals, etc.)");
+      setAnalysisError("Please add some information first (video, text, or info)");
       return;
     }
 
-    setIsAnalyzing(true);
+    setIsAnalyzingLegacy(true);
     setAnalysisError(null);
 
     try {
-      console.log("MyProfile: Starting synthesis...");
-      console.log("MyProfile: Input counts - photos:", localPhotos.length, "frames:", localVideoAnalysis?.frames?.length ?? 0);
+      console.log("MyProfile: Starting legacy synthesis...");
+      console.log("MyProfile: Input counts - frames:", localVideoAnalysis?.frames?.length ?? 0);
 
       // Prepare input for AI
       const textContent = localTextInputs.map(t => `[${t.label}]\n${t.content}`).join('\n\n');
-      const photosToSend = localPhotos.map(p => p.base64);
 
-      console.log("MyProfile: Sending", photosToSend.length, "photos to AI");
+      console.log("MyProfile: Sending frames to AI");
 
       const result = await analyzeUserSelf({
         frames: localVideoAnalysis?.frames,
-        photos: photosToSend,
+        photos: [], // Photos tab removed - video only
         textContext: textContent || undefined,
-        dataExports: localExports.length > 0 ? localExports : undefined,
+        dataExports: undefined, // Data tab removed
         datingGoals: localGoals,
         manualInfo: Object.keys(localManualEntry).length > 0 ? localManualEntry : undefined
       }) as UserSelfAnalysisResult;
@@ -253,10 +259,8 @@ export default function MyProfile() {
       // Build synthesis object
       const inputsUsed: string[] = [];
       if (localGoals?.type) inputsUsed.push('goals');
-      if (localExports.length > 0) inputsUsed.push('behavior_data');
       if (localTextInputs.length > 0) inputsUsed.push('text');
       if ((localVideoAnalysis?.frames?.length ?? 0) > 0) inputsUsed.push('video');
-      if (localPhotos.length > 0) inputsUsed.push('photos');
       if (localManualEntry.name || localManualEntry.age) inputsUsed.push('profile_info');
 
       // Extract partner virtues based on the psychological profile
@@ -276,7 +280,6 @@ export default function MyProfile() {
         console.log("MyProfile: Extracted", partnerVirtues?.length || 0, "partner virtues");
       } catch (virtueError) {
         console.error("MyProfile: Failed to extract partner virtues:", virtueError);
-        // Continue without virtues - this is optional
       }
 
       if (!isMounted.current) return;
@@ -302,7 +305,6 @@ export default function MyProfile() {
         console.log("MyProfile: Neurodivergence analysis complete:", neurodivergence?.traits?.length || 0, "traits identified");
       } catch (ndError) {
         console.error("MyProfile: Failed to analyze neurodivergence:", ndError);
-        // Continue without neurodivergence - this is optional
       }
 
       if (!isMounted.current) return;
@@ -321,14 +323,11 @@ export default function MyProfile() {
           growth_areas: result.behavioral_insights?.growth_areas,
           strengths: result.behavioral_insights?.strengths,
           photo_analysis: photoAnalysis,
-          behavioral_data: localExports.length > 0
-            ? `Stats from ${localExports.map(e => e.source).join(', ')}`
-            : undefined
+          behavioral_data: undefined
         });
         console.log("MyProfile: 23 Aspects profile extracted:", aspectProfile?.scores?.length || 0, "aspects scored");
       } catch (aspectError) {
         console.error("MyProfile: Failed to extract 23 Aspects profile:", aspectError);
-        // Continue without aspects - this is optional
       }
 
       if (!isMounted.current) return;
@@ -397,8 +396,13 @@ export default function MyProfile() {
         }
       }
 
-      // Save synthesis to DB (DB writes are safe even if unmounted)
+      // Save synthesis to DB
       await db.userIdentity.update(1, { synthesis, lastUpdated: new Date() });
+
+      // Switch to Insights tab to show results
+      if (isMounted.current) {
+        setActiveTab('insights');
+      }
 
     } catch (error) {
       console.error("MyProfile: Synthesis error:", error);
@@ -407,26 +411,61 @@ export default function MyProfile() {
       }
     } finally {
       if (isMounted.current) {
-        setIsAnalyzing(false);
+        setIsAnalyzingLegacy(false);
       }
     }
   };
 
+  // Handle file selection from VideoTab
+  const handleVideoFileSelect = (file: File | null) => {
+    console.log("MyProfile: Video file selected:", file?.name);
+    if (file) {
+      resetStreaming(); // Reset streaming state before starting new analysis
+    }
+    setVideoFile(file);
+  };
+
+  // Determine if analysis is running (either streaming or legacy)
+  const isAnalyzing = isStreamingProcessing || isAnalyzingLegacy;
+
   // Render active tab content
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'goals':
-        return <GoalsTab goals={localGoals} onGoalsChange={setLocalGoals} />;
-      case 'data':
-        return <DataExportTab exports={localExports} onExportsChange={setLocalExports} />;
+      case 'video':
+        return (
+          <VideoTab
+            videoAnalysis={localVideoAnalysis}
+            onVideoAnalysisChange={setLocalVideoAnalysis}
+            videoFile={videoFile}
+            onVideoFileChange={handleVideoFileSelect}
+            isAnalyzing={isAnalyzing}
+          />
+        );
       case 'text':
         return <TextInputTab textInputs={localTextInputs} onTextInputsChange={setLocalTextInputs} />;
-      case 'video':
-        return <VideoTab videoAnalysis={localVideoAnalysis} onVideoAnalysisChange={setLocalVideoAnalysis} />;
-      case 'photos':
-        return <PhotosTab photos={localPhotos} onPhotosChange={setLocalPhotos} />;
-      case 'manual':
-        return <ManualEntryTab manualEntry={localManualEntry} onManualEntryChange={setLocalManualEntry} />;
+      case 'info':
+        return (
+          <InfoTab
+            manualEntry={localManualEntry}
+            onManualEntryChange={setLocalManualEntry}
+            goals={localGoals}
+            onGoalsChange={setLocalGoals}
+          />
+        );
+      case 'insights':
+        return (
+          <InsightsTab
+            synthesis={userIdentity?.synthesis}
+            streamingState={streamingState}
+            isAnalyzingLegacy={isAnalyzingLegacy}
+            analysisError={analysisError}
+            hasAnyInput={hasAnyInput()}
+            onRunAnalysisLegacy={runLegacySynthesis}
+            onClearError={() => setAnalysisError(null)}
+            onAbort={abort}
+            onReset={resetStreaming}
+          />
+        );
       default:
         return null;
     }
@@ -449,11 +488,32 @@ export default function MyProfile() {
               <p className="text-xs text-slate-500">Build your dating intelligence</p>
             </div>
           </div>
+
+          {/* Quick analyze button in header - only show for legacy (non-video) analysis */}
+          {activeTab !== 'insights' && hasAnyInput() && !videoFile && (
+            <button
+              onClick={runLegacySynthesis}
+              disabled={isAnalyzing}
+              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="animate-spin" size={16} />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={16} />
+                  Analyze
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="bg-white border-b border-slate-200 sticky top-[72px] z-10 overflow-x-auto">
+      {/* Tab Navigation - 4 tabs */}
+      <div className="bg-white border-b border-slate-200 sticky top-[72px] z-10">
         <div className="flex max-w-2xl mx-auto">
           {TABS.map((tab) => {
             const Icon = tab.icon;
@@ -464,7 +524,7 @@ export default function MyProfile() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 min-w-[60px] py-3 px-2 flex flex-col items-center gap-1 border-b-2 transition-all ${
+                className={`flex-1 py-3 px-3 flex flex-col items-center gap-1 border-b-2 transition-all ${
                   isActive
                     ? 'border-indigo-600 text-indigo-600'
                     : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -488,83 +548,6 @@ export default function MyProfile() {
         <div className="animate-in fade-in duration-200">
           {renderTabContent()}
         </div>
-
-        {/* Synthesis Section */}
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-xl border border-indigo-100">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="text-indigo-600" size={20} />
-              <h3 className="font-semibold text-slate-800">AI Synthesis</h3>
-            </div>
-            {userIdentity?.synthesis && (
-              <span className="flex items-center gap-1 text-xs text-green-600">
-                <Check size={14} /> Analysis available
-              </span>
-            )}
-          </div>
-
-          <p className="text-sm text-slate-600 mb-4">
-            {hasAnyInput()
-              ? "Ready to synthesize your profile. The AI will analyze all your inputs to create a comprehensive psychological profile and dating strategy."
-              : "Add some information in the tabs above, then run synthesis to get your personalized analysis."}
-          </p>
-
-          {analysisError && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
-              <div className="flex items-start">
-                <AlertCircle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
-                <span className="flex-1">{analysisError}</span>
-              </div>
-              <button
-                onClick={() => {
-                  const debugInfo = localStorage.getItem('aura_debug_info');
-                  if (debugInfo) {
-                    const blob = new Blob([debugInfo], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `aura_debug_${Date.now()}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  } else {
-                    alert('No debug info available');
-                  }
-                }}
-                className="mt-2 text-xs bg-red-100 hover:bg-red-200 px-3 py-1 rounded font-medium transition-colors"
-              >
-                Download Debug Info
-              </button>
-            </div>
-          )}
-
-          <button
-            onClick={runSynthesis}
-            disabled={isAnalyzing || !hasAnyInput()}
-            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="animate-spin mr-2" size={20} />
-                Synthesizing Profile...
-              </>
-            ) : userIdentity?.synthesis ? (
-              "Re-run Synthesis"
-            ) : (
-              "Run Synthesis"
-            )}
-          </button>
-        </div>
-
-        {/* Synthesis Results */}
-        {userIdentity?.synthesis && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <UserProfileDisplay
-              synthesis={userIdentity.synthesis}
-              photos={localPhotos}
-              onRerunSynthesis={runSynthesis}
-            />
-          </div>
-        )}
       </div>
     </div>
   );

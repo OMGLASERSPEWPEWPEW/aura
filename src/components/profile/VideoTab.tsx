@@ -1,72 +1,36 @@
 // src/components/profile/VideoTab.tsx
-// Port from UserBackstory.tsx - handles video upload and frame extraction
-import { useState } from 'react';
-import { Video, Loader2, AlertCircle, Trash2 } from 'lucide-react';
+// Simplified video upload - matches match flow (Upload.tsx)
+// Just shows the uploader - analysis auto-starts when file is selected
+import { Video, Loader2, CheckCircle } from 'lucide-react';
 import VideoUploader from '../VideoUploader';
-import { extractFramesFromVideo } from '../../lib/frameExtraction';
 import type { VideoAnalysis } from '../../lib/db';
 
 interface VideoTabProps {
   videoAnalysis: VideoAnalysis | undefined;
   onVideoAnalysisChange: (analysis: VideoAnalysis | undefined) => void;
+  videoFile: File | null;
+  onVideoFileChange: (file: File | null) => void;
+  isAnalyzing: boolean;
 }
 
-export default function VideoTab({ videoAnalysis, onVideoAnalysisChange }: VideoTabProps) {
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [previewFrames, setPreviewFrames] = useState<string[]>([]);
+export default function VideoTab({
+  videoAnalysis,
+  onVideoAnalysisChange,
+  videoFile,
+  onVideoFileChange,
+  isAnalyzing,
+}: VideoTabProps) {
+  const hasFrames = (videoAnalysis?.frames?.length ?? 0) > 0;
 
   const handleVideoFileSelect = (file: File) => {
     console.log("VideoTab: File selected:", file.name);
-    setVideoFile(file);
-    setError(null);
-    setPreviewFrames([]);
+    onVideoFileChange(file);
   };
 
-  const processVideo = async () => {
-    if (!videoFile) return;
-
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      console.log("VideoTab: Extracting frames...");
-      const extractedFrames = await extractFramesFromVideo(videoFile, 2);
-
-      if (extractedFrames.length === 0) {
-        throw new Error("No frames could be extracted from the video.");
-      }
-
-      console.log(`VideoTab: Extracted ${extractedFrames.length} frames`);
-      setPreviewFrames(extractedFrames);
-
-      // Save to parent state
-      onVideoAnalysisChange({
-        frames: extractedFrames,
-        analyzedAt: new Date()
-      });
-
-      // Clear the file after successful extraction
-      setVideoFile(null);
-
-    } catch (err) {
-      console.error("VideoTab: Error:", err);
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const clearVideo = () => {
-    setVideoFile(null);
-    setPreviewFrames([]);
-    setError(null);
+  const handleClear = () => {
+    onVideoFileChange(null);
     onVideoAnalysisChange(undefined);
   };
-
-  const hasFrames = (videoAnalysis?.frames?.length ?? 0) > 0;
-  const displayFrames = hasFrames ? videoAnalysis!.frames : previewFrames;
 
   return (
     <div className="space-y-6">
@@ -77,92 +41,57 @@ export default function VideoTab({ videoAnalysis, onVideoAnalysisChange }: Video
         </div>
 
         <p className="text-sm text-slate-500 mb-4">
-          Upload a screen recording of your dating profile (preview mode).
-          We'll extract frames to analyze your photos and prompts.
+          Upload a screen recording of your dating profile. Analysis starts automatically.
         </p>
 
-        {/* Video Uploader - Only show if no frames extracted */}
-        {!hasFrames && (
+        {/* Show uploader if not analyzing and no video selected */}
+        {!isAnalyzing && !videoFile && !hasFrames && (
           <VideoUploader onFileSelect={handleVideoFileSelect} />
         )}
 
-        {/* Error Display */}
-        {error && (
-          <div className="mt-4 bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-start">
-            <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
-            <div>
-              <h3 className="font-bold">Processing Failed</h3>
-              <p className="text-sm mt-1">{error}</p>
-            </div>
+        {/* Show analyzing state */}
+        {isAnalyzing && (
+          <div className="bg-indigo-50 p-6 rounded-xl text-center">
+            <Loader2 className="animate-spin mx-auto mb-3 text-indigo-600" size={32} />
+            <h3 className="font-semibold text-indigo-800 mb-1">Analyzing Your Profile...</h3>
+            <p className="text-sm text-indigo-600">
+              Switch to the Insights tab to see your results as they appear
+            </p>
           </div>
         )}
 
-        {/* Process Button */}
-        {videoFile && !hasFrames && (
-          <button
-            onClick={processVideo}
-            disabled={isProcessing}
-            className="mt-4 w-full bg-purple-600 text-white py-3 rounded-xl font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="animate-spin mr-2" size={20} />
-                Extracting Frames...
-              </>
-            ) : (
-              "Extract Frames"
-            )}
-          </button>
+        {/* Show success state if we have frames and not currently analyzing */}
+        {hasFrames && !isAnalyzing && (
+          <div className="bg-green-50 p-6 rounded-xl text-center">
+            <CheckCircle className="mx-auto mb-3 text-green-600" size={32} />
+            <h3 className="font-semibold text-green-800 mb-1">Video Processed</h3>
+            <p className="text-sm text-green-600 mb-4">
+              {videoAnalysis?.frames?.length} frames extracted and analyzed
+            </p>
+            <button
+              onClick={handleClear}
+              className="text-sm text-slate-500 hover:text-slate-700 underline"
+            >
+              Upload a different video
+            </button>
+          </div>
+        )}
+
+        {/* Show file selected but not yet processed state */}
+        {videoFile && !isAnalyzing && !hasFrames && (
+          <div className="bg-purple-50 p-6 rounded-xl text-center">
+            <Video className="mx-auto mb-3 text-purple-600" size={32} />
+            <h3 className="font-semibold text-purple-800 mb-1">Video Ready</h3>
+            <p className="text-sm text-purple-600 mb-2">{videoFile.name}</p>
+            <p className="text-xs text-purple-500">
+              Analysis will start automatically...
+            </p>
+          </div>
         )}
       </div>
 
-      {/* Frame Preview */}
-      {displayFrames.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-800">
-              Extracted Frames ({displayFrames.length})
-            </h3>
-            <button
-              onClick={clearVideo}
-              className="flex items-center gap-1 text-sm text-red-600 hover:text-red-700"
-            >
-              <Trash2 size={16} />
-              Clear
-            </button>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            {displayFrames.slice(0, 9).map((frame, index) => (
-              <div
-                key={index}
-                className="aspect-[9/16] rounded-lg overflow-hidden bg-slate-100"
-              >
-                <img
-                  src={frame}
-                  alt={`Frame ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
-          </div>
-
-          {displayFrames.length > 9 && (
-            <p className="text-xs text-center text-slate-500">
-              +{displayFrames.length - 9} more frames (showing first 9)
-            </p>
-          )}
-
-          {hasFrames && (
-            <div className="bg-green-50 p-3 rounded-lg text-sm text-green-700 text-center">
-              Video frames saved and ready for synthesis
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Instructions */}
-      {!hasFrames && !videoFile && displayFrames.length === 0 && (
+      {/* Instructions - only show when no video */}
+      {!videoFile && !hasFrames && !isAnalyzing && (
         <div className="bg-slate-50 p-4 rounded-xl text-sm text-slate-600">
           <h4 className="font-semibold text-slate-800 mb-2">How to record your profile:</h4>
           <ol className="list-decimal pl-4 space-y-1">

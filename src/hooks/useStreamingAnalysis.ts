@@ -11,7 +11,13 @@ import {
   type AccumulatedProfile,
 } from '../lib/ai';
 import { db } from '../lib/db';
-import type { StreamingPhase } from '../lib/streaming/types';
+import type { StreamingPhase, FrameQualityScore } from '../lib/streaming/types';
+import {
+  scoreAllFrames,
+  generateQualityHints,
+  validateThumbnailChoice,
+  findBestFrameIndex,
+} from '../lib/frameQuality';
 
 export interface StreamingAnalysisState {
   phase: StreamingPhase;
@@ -24,6 +30,10 @@ export interface StreamingAnalysisState {
   chunkLatencies: number[];
   savedProfileId: number | null;
   thumbnailFrame: string | null;
+  /** Frame quality scores for thumbnail selection */
+  frameScores: FrameQualityScore[];
+  /** Whether thumbnail was overridden from AI's choice */
+  thumbnailOverridden: boolean;
 }
 
 export interface UseStreamingAnalysisReturn {
@@ -47,6 +57,8 @@ const INITIAL_STATE: StreamingAnalysisState = {
   chunkLatencies: [],
   savedProfileId: null,
   thumbnailFrame: null,
+  frameScores: [],
+  thumbnailOverridden: false,
 };
 
 export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
@@ -57,6 +69,8 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
   const savedProfileIdRef = useRef<number | null>(null);
   // Track in-flight auto-save promise to prevent race condition between DB write and final save
   const autoSavePromiseRef = useRef<Promise<number> | null>(null);
+  // Track all frame scores across all chunks for final thumbnail selection
+  const allFrameScoresRef = useRef<FrameQualityScore[]>([]);
   const navigate = useNavigate();
 
   // Track mounted state
@@ -88,6 +102,7 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
     }
     autoSavePromiseRef.current = null;
     savedProfileIdRef.current = null;
+    allFrameScoresRef.current = [];
     setState(INITIAL_STATE);
   }, []);
 
@@ -158,19 +173,86 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
 
       console.log(`useStreamingAnalysis: Frame extraction complete, ${frameChunks.length} chunks`);
 
+      // Score first chunk frames for thumbnail quality (runs ~50-100ms)
+      const firstChunkFrames = frameChunks[0] || [];
+      let frameQualityScores: FrameQualityScore[] = [];
+      let qualityHints = '';
+
+      // Reset all frame scores for this analysis
+      allFrameScoresRef.current = [];
+
+      if (firstChunkFrames.length > 0) {
+        console.log('useStreamingAnalysis: Scoring frame quality for thumbnail selection');
+        try {
+          frameQualityScores = await scoreAllFrames(firstChunkFrames);
+          qualityHints = generateQualityHints(frameQualityScores);
+          console.log('useStreamingAnalysis: Frame quality hints generated:', qualityHints);
+
+          // Store chunk 1 scores in ref for later comparison
+          allFrameScoresRef.current = frameQualityScores;
+
+          safeSetState(prev => ({
+            ...prev,
+            frameScores: frameQualityScores,
+          }));
+        } catch (error) {
+          console.error('useStreamingAnalysis: Frame scoring failed, continuing without hints:', error);
+        }
+      }
+
       // Phase 2: Analyze chunks sequentially
       safeSetState({ phase: 'chunk-1' });
 
-      const finalProfile = await analyzeProfileStreaming(frameChunks, {
+      let finalProfile = await analyzeProfileStreaming(frameChunks, {
         signal: abortControllerRef.current?.signal,
+        frameQualityHints: qualityHints,
         onChunkComplete: (chunkIndex, profile, latency) => {
           console.log(`useStreamingAnalysis: Chunk ${chunkIndex + 1} complete, latency: ${latency}ms`);
 
           const chunkPhases: StreamingPhase[] = ['chunk-1', 'chunk-2', 'chunk-3', 'chunk-4'];
           const nextPhase = chunkIndex < 3 ? chunkPhases[chunkIndex + 1] : 'consolidating';
 
-          // Update thumbnail frame if we have it
-          const thumbnailIndex = profile.photos.thumbnailIndex;
+          // Get AI's thumbnail choice
+          let thumbnailIndex = profile.photos.thumbnailIndex;
+          let wasOverridden = false;
+
+          // After chunk 1, validate and potentially override AI's thumbnail choice
+          if (chunkIndex === 0 && frameQualityScores.length > 0) {
+            const validation = validateThumbnailChoice(thumbnailIndex, frameQualityScores);
+            if (validation.wasOverridden) {
+              console.log(`useStreamingAnalysis: ${validation.reason}`);
+              thumbnailIndex = validation.finalIndex;
+              wasOverridden = true;
+              // Update profile with corrected thumbnail index
+              profile = {
+                ...profile,
+                photos: {
+                  ...profile.photos,
+                  thumbnailIndex: thumbnailIndex,
+                },
+              };
+            }
+          }
+
+          // Score frames for chunks 2-4 (non-blocking, runs in background)
+          if (chunkIndex > 0 && chunkIndex < 4) {
+            const chunkFrames = frameChunks[chunkIndex];
+            if (chunkFrames && chunkFrames.length > 0) {
+              scoreAllFrames(chunkFrames).then(chunkScores => {
+                // Adjust indices to be global (0-15 instead of chunk-local 0-3)
+                const adjustedScores = chunkScores.map(s => ({
+                  ...s,
+                  index: s.index + (chunkIndex * 4),
+                }));
+                // Append to all frame scores
+                allFrameScoresRef.current = [...allFrameScoresRef.current, ...adjustedScores];
+                console.log(`useStreamingAnalysis: Scored chunk ${chunkIndex + 1} frames, total scores: ${allFrameScoresRef.current.length}`);
+              }).catch(err => {
+                console.error(`useStreamingAnalysis: Failed to score chunk ${chunkIndex + 1} frames:`, err);
+              });
+            }
+          }
+
           const thumbnailFrame = frameChunks.flat()[thumbnailIndex] || null;
 
           safeSetState(prev => ({
@@ -180,6 +262,7 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
             currentChunk: chunkIndex + 1,
             chunkLatencies: [...prev.chunkLatencies, latency],
             thumbnailFrame,
+            thumbnailOverridden: wasOverridden || prev.thumbnailOverridden,
           }));
 
           // Auto-save after first chunk (has minimum viable profile)
@@ -219,6 +302,31 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
           await autoSavePromiseRef.current;
         } catch {
           // Auto-save failed, will create new profile below
+        }
+      }
+
+      // Final thumbnail upgrade check: compare all 16 frame scores
+      const allScores = allFrameScoresRef.current;
+      if (allScores.length > 4) {
+        const currentThumbnailIndex = finalProfile.photos.thumbnailIndex;
+        const currentThumbnailScore = allScores.find(s => s.index === currentThumbnailIndex);
+        const bestOverallIndex = findBestFrameIndex(allScores);
+        const bestScore = allScores.find(s => s.index === bestOverallIndex);
+
+        // Upgrade if significantly better (15+ points improvement)
+        const IMPROVEMENT_THRESHOLD = 15;
+        if (bestScore && currentThumbnailScore &&
+            bestScore.overallScore > currentThumbnailScore.overallScore + IMPROVEMENT_THRESHOLD) {
+          console.log(`useStreamingAnalysis: Upgrading thumbnail from frame ${currentThumbnailIndex} (score: ${Math.round(currentThumbnailScore.overallScore)}) to frame ${bestOverallIndex} (score: ${Math.round(bestScore.overallScore)})`);
+          finalProfile = {
+            ...finalProfile,
+            photos: {
+              ...finalProfile.photos,
+              thumbnailIndex: bestOverallIndex,
+            },
+          };
+        } else {
+          console.log(`useStreamingAnalysis: Keeping current thumbnail (frame ${currentThumbnailIndex}, score: ${currentThumbnailScore ? Math.round(currentThumbnailScore.overallScore) : 'N/A'}). Best overall: frame ${bestOverallIndex} (score: ${bestScore ? Math.round(bestScore.overallScore) : 'N/A'})`);
         }
       }
 

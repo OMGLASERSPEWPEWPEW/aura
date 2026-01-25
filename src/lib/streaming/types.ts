@@ -1,6 +1,9 @@
 // src/lib/streaming/types.ts
 // Types for streaming profile analysis
 
+// Re-export frame quality types for convenience
+export type { FrameQualityScore } from '../frameQuality';
+
 export type AnalysisPhase = 'quick' | 'deep' | 'complete';
 
 export interface PhotoAnalysisStreaming {

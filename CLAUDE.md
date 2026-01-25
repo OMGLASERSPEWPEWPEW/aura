@@ -57,8 +57,16 @@ Video → Extract Chunk (4 frames) → Analyze Chunk → Merge Results → Updat
 
 **Early Save Mechanism:** Profile auto-saves after chunk 1 completes. This prevents data loss if the user navigates away mid-analysis. The `analysisPhase` field tracks progress.
 
+**Progressive Thumbnail Selection:** All 16 frames are scored for quality (brightness, color variance, edge density) to select the best thumbnail:
+1. **Chunk 1**: Frames 0-3 scored immediately, initial thumbnail selected (fast start)
+2. **Chunks 2-4**: Frames 4-15 scored in background as each chunk completes
+3. **Consolidating phase**: If any frame scores 15+ points higher than current thumbnail, upgrade to better frame
+
+This ensures fast initial display while ultimately selecting the optimal thumbnail from all frames.
+
 **Key Files:**
-- `src/hooks/useStreamingAnalysis.ts` - State machine hook
+- `src/hooks/useStreamingAnalysis.ts` - State machine hook, progressive thumbnail logic
+- `src/lib/frameQuality.ts` - Frame quality scoring (brightness, variance, edge detection)
 - `src/lib/streaming/types.ts` - Streaming types and chunk definitions
 - `src/lib/ai.ts` - `analyzeProfileStreaming()` and merge functions
 - `src/components/upload/` - Progressive UI components
@@ -73,6 +81,7 @@ Video → Extract Chunk (4 frames) → Analyze Chunk → Merge Results → Updat
   - `db.ts` - Dexie schema and TypeScript types
   - `prompts.ts` - AI prompt templates (includes chunk-specific prompts)
   - `frameExtraction.ts` - Video frame extraction via Canvas (chunked support)
+  - `frameQuality.ts` - Frame quality scoring for thumbnail selection
   - `weather.ts` - Weather API integration
 
 - `src/hooks/` - Custom React hooks for feature state management

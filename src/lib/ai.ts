@@ -1103,6 +1103,8 @@ export interface StreamingAnalysisCallbacks {
   ) => void;
   onError?: (error: Error, chunkIndex: number) => void;
   signal?: AbortSignal;
+  /** Pre-computed frame quality hints to help AI select better thumbnails */
+  frameQualityHints?: string;
 }
 
 /**
@@ -1138,7 +1140,7 @@ export async function analyzeProfileStreaming(
     try {
       switch (i) {
         case 0:
-          profile = await processChunk1Basics(chunkFrames, profile, callbacks?.signal);
+          profile = await processChunk1Basics(chunkFrames, profile, callbacks?.signal, callbacks?.frameQualityHints);
           break;
         case 1:
           profile = await processChunk2Impressions(chunkFrames, profile, callbacks?.signal);
@@ -1178,11 +1180,20 @@ export async function analyzeProfileStreaming(
 async function processChunk1Basics(
   frames: string[],
   profile: AccumulatedProfile,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  frameQualityHints?: string
 ): Promise<AccumulatedProfile> {
+  // Build prompt with frame quality hints if available
+  const hintsSection = frameQualityHints
+    ? `FRAME QUALITY HINTS (from automated analysis):
+${frameQualityHints}`
+    : '';
+
+  const prompt = CHUNK_1_BASICS_PROMPT.replace('{frame_quality_hints}', hintsSection);
+
   const messages: MessageContent[] = [
     ...frames.map((frame) => imageContent(frame)),
-    textContent(CHUNK_1_BASICS_PROMPT),
+    textContent(prompt),
   ];
 
   const result = await callAnthropicForObject<ChunkBasicsResult>({
@@ -1377,3 +1388,315 @@ export function accumulatedToProfileAnalysis(accumulated: AccumulatedProfile): P
     },
   };
 }
+
+// --- USER PROFILE STREAMING ANALYSIS ---
+
+import {
+  USER_CHUNK_1_BASICS_PROMPT,
+  USER_CHUNK_2_IMPRESSIONS_PROMPT,
+  USER_CHUNK_3_OBSERVATIONS_PROMPT,
+  USER_CHUNK_4_SYNTHESIS_PROMPT,
+} from './prompts';
+import {
+  type AccumulatedUserProfile,
+  type UserChunkBasicsResult,
+  type UserChunkImpressionsResult,
+  type UserChunkObservationsResult,
+  type UserChunkSynthesisResult,
+  createInitialAccumulatedUserProfile,
+  mergeUserChunkBasics,
+  mergeUserChunkImpressions,
+  mergeUserChunkObservations,
+  mergeUserChunkSynthesis,
+} from './streaming/userTypes';
+
+export interface UserStreamingCallbacks {
+  onChunkComplete?: (chunkIndex: number, profile: AccumulatedUserProfile, latency: number) => void;
+  onError?: (error: Error, chunkIndex: number) => void;
+  signal?: AbortSignal;
+  frameQualityHints?: string;
+}
+
+/**
+ * Streaming analysis for USER profile (self-analysis)
+ * Processes frames in 4 chunks for progressive UI updates
+ */
+export async function analyzeUserProfileStreaming(
+  frameChunks: string[][],
+  callbacks?: UserStreamingCallbacks
+): Promise<AccumulatedUserProfile> {
+  console.log(`ai.ts: Starting user streaming analysis with ${frameChunks.length} chunks`);
+
+  let profile = createInitialAccumulatedUserProfile();
+  profile.meta.totalChunks = frameChunks.length;
+
+  // Process each chunk sequentially (context builds on previous chunks)
+  for (let i = 0; i < frameChunks.length; i++) {
+    // Check for abort
+    if (callbacks?.signal?.aborted) {
+      console.log('ai.ts: User streaming analysis aborted');
+      break;
+    }
+
+    const chunkFrames = frameChunks[i];
+    const startTime = Date.now();
+
+    console.log(`ai.ts: Processing user chunk ${i + 1}/${frameChunks.length} with ${chunkFrames.length} frames`);
+
+    try {
+      switch (i) {
+        case 0:
+          profile = await processUserChunk1Basics(chunkFrames, profile, callbacks?.signal, callbacks?.frameQualityHints);
+          break;
+        case 1:
+          profile = await processUserChunk2Impressions(chunkFrames, profile, callbacks?.signal);
+          break;
+        case 2:
+          profile = await processUserChunk3Observations(chunkFrames, profile, callbacks?.signal);
+          break;
+        case 3:
+        default:
+          profile = await processUserChunk4Synthesis(chunkFrames, profile, callbacks?.signal);
+          break;
+      }
+
+      const latency = Date.now() - startTime;
+      console.log(`ai.ts: User chunk ${i + 1} complete in ${latency}ms`);
+
+      if (callbacks?.onChunkComplete) {
+        callbacks.onChunkComplete(i, profile, latency);
+      }
+    } catch (error) {
+      console.error(`ai.ts: User chunk ${i + 1} failed:`, error);
+      if (callbacks?.onError) {
+        callbacks.onError(error instanceof Error ? error : new Error(String(error)), i);
+      }
+      // Continue with remaining chunks even if one fails
+    }
+  }
+
+  // Mark as quick analysis complete
+  profile.meta.phase = 'quick';
+
+  return profile;
+}
+
+// --- User Chunk Processing Functions ---
+
+async function processUserChunk1Basics(
+  frames: string[],
+  profile: AccumulatedUserProfile,
+  signal?: AbortSignal,
+  frameQualityHints?: string
+): Promise<AccumulatedUserProfile> {
+  const hintsSection = frameQualityHints
+    ? `FRAME QUALITY HINTS (from automated analysis):
+${frameQualityHints}`
+    : '';
+
+  const prompt = USER_CHUNK_1_BASICS_PROMPT.replace('{frame_quality_hints}', hintsSection);
+
+  const messages: MessageContent[] = [
+    ...frames.map((frame) => imageContent(frame)),
+    textContent(prompt),
+  ];
+
+  const result = await callAnthropicForObject<UserChunkBasicsResult>({
+    messages,
+    maxTokens: 600,
+    signal,
+    timeout: 30000,
+  });
+
+  return mergeUserChunkBasics(profile, result);
+}
+
+async function processUserChunk2Impressions(
+  frames: string[],
+  profile: AccumulatedUserProfile,
+  signal?: AbortSignal
+): Promise<AccumulatedUserProfile> {
+  const basicsContext = `
+Name: ${profile.identity.name || 'Unknown'}
+Age: ${profile.identity.age || 'Unknown'}
+Location: ${profile.identity.location || 'Unknown'}
+Occupation: ${profile.identity.occupation || 'Unknown'}
+Initial Vibes: ${profile.photos.vibesSummary.join(', ') || 'None observed yet'}
+`.trim();
+
+  const prompt = USER_CHUNK_2_IMPRESSIONS_PROMPT.replace('{basics_context}', basicsContext);
+
+  const messages: MessageContent[] = [
+    ...frames.map((frame) => imageContent(frame)),
+    textContent(prompt),
+  ];
+
+  const result = await callAnthropicForObject<UserChunkImpressionsResult>({
+    messages,
+    maxTokens: 800,
+    signal,
+    timeout: 30000,
+  });
+
+  return mergeUserChunkImpressions(profile, result);
+}
+
+async function processUserChunk3Observations(
+  frames: string[],
+  profile: AccumulatedUserProfile,
+  signal?: AbortSignal
+): Promise<AccumulatedUserProfile> {
+  const accumulatedContext = `
+IDENTITY:
+- Name: ${profile.identity.name || 'Unknown'}
+- Age: ${profile.identity.age || 'Unknown'}
+- Location: ${profile.identity.location || 'Unknown'}
+- Occupation: ${profile.identity.occupation || 'Unknown'}
+
+VIBES OBSERVED:
+${profile.photos.vibesSummary.map(v => `- ${v}`).join('\n') || '- None yet'}
+
+EMERGING ARCHETYPE:
+${profile.psychological.archetype || 'Still forming...'}
+
+STRENGTHS IDENTIFIED:
+${profile.behavioral.strengths.map(s => `- ${s}`).join('\n') || '- None yet'}
+`.trim();
+
+  const prompt = USER_CHUNK_3_OBSERVATIONS_PROMPT.replace('{accumulated_context}', accumulatedContext);
+
+  const messages: MessageContent[] = [
+    ...frames.map((frame) => imageContent(frame)),
+    textContent(prompt),
+  ];
+
+  const result = await callAnthropicForObject<UserChunkObservationsResult>({
+    messages,
+    maxTokens: 1500,
+    signal,
+    timeout: 45000,
+  });
+
+  return mergeUserChunkObservations(profile, result);
+}
+
+async function processUserChunk4Synthesis(
+  frames: string[],
+  profile: AccumulatedUserProfile,
+  signal?: AbortSignal
+): Promise<AccumulatedUserProfile> {
+  const fullContext = `
+IDENTITY:
+- Name: ${profile.identity.name || 'Unknown'}
+- Age: ${profile.identity.age || 'Unknown'}
+- Location: ${profile.identity.location || 'Unknown'}
+- Occupation: ${profile.identity.occupation || 'Unknown'}
+
+VIBES:
+${profile.photos.vibesSummary.map(v => `- ${v}`).join('\n') || '- None observed'}
+
+ARCHETYPE (so far):
+${profile.psychological.archetype || 'Unknown'}
+
+PRESENTATION TACTICS USED:
+${profile.psychological.presentationTactics.map(t => `- ${t}`).join('\n') || '- None identified'}
+
+PHOTOS ANALYZED:
+${profile.photos.analyses.map((p, i) => `${i + 1}. ${p.vibe}: ${p.description}`).join('\n') || 'None'}
+
+SUBTEXT ANALYSIS:
+- Sexual signaling: ${profile.psychological.subtextAnalysis.sexual_signaling || 'Not assessed'}
+- Power dynamics: ${profile.psychological.subtextAnalysis.power_dynamics || 'Not assessed'}
+- Vulnerability: ${profile.psychological.subtextAnalysis.vulnerability_indicators || 'Not assessed'}
+- Disconnect: ${profile.psychological.subtextAnalysis.disconnect || 'None noted'}
+
+STRENGTHS IDENTIFIED:
+${profile.behavioral.strengths.map(s => `- ${s}`).join('\n') || '- None yet'}
+
+COMMUNICATION HINTS:
+${profile.behavioral.communicationStyle || 'Not assessed'}
+`.trim();
+
+  const prompt = USER_CHUNK_4_SYNTHESIS_PROMPT.replace('{full_context}', fullContext);
+
+  const messages: MessageContent[] = [
+    ...frames.map((frame) => imageContent(frame)),
+    textContent(prompt),
+  ];
+
+  const result = await callAnthropicForObject<UserChunkSynthesisResult>({
+    messages,
+    maxTokens: 2000,
+    signal,
+    timeout: 60000,
+  });
+
+  return mergeUserChunkSynthesis(profile, result);
+}
+
+/**
+ * Convert accumulated user profile to UserSynthesis format for storage
+ */
+export function accumulatedUserToSynthesis(accumulated: AccumulatedUserProfile): {
+  basics: { name?: string; age?: number; occupation?: string; location?: string };
+  photos: Array<{ description: string; vibe: string; subtext: string; attractiveness_notes?: string }>;
+  psychological_profile: {
+    agendas: Array<{ type: string; evidence: string; priority: 'primary' | 'secondary' }>;
+    presentation_tactics: string[];
+    predicted_tactics: string[];
+    subtext_analysis: {
+      sexual_signaling: string;
+      power_dynamics: string;
+      vulnerability_indicators: string;
+      disconnect: string;
+    };
+    archetype_summary: string;
+  };
+  behavioral_insights: {
+    communication_style: string;
+    attachment_patterns: string;
+    attachment_confidence: number;
+    growth_areas: string[];
+    strengths: string[];
+  };
+  dating_strategy: {
+    ideal_partner_profile: string;
+    what_to_look_for: string[];
+    what_to_avoid: string[];
+    bio_suggestions: string[];
+    opener_style_recommendations: string[];
+  };
+} {
+  return {
+    basics: {
+      name: accumulated.identity.name || undefined,
+      age: accumulated.identity.age || undefined,
+      occupation: accumulated.identity.occupation || undefined,
+      location: accumulated.identity.location || undefined,
+    },
+    photos: accumulated.photos.analyses,
+    psychological_profile: {
+      agendas: accumulated.psychological.agendas,
+      presentation_tactics: accumulated.psychological.presentationTactics,
+      predicted_tactics: accumulated.psychological.predictedTactics,
+      subtext_analysis: accumulated.psychological.subtextAnalysis,
+      archetype_summary: accumulated.psychological.archetype || 'Analysis in progress...',
+    },
+    behavioral_insights: {
+      communication_style: accumulated.behavioral.communicationStyle || '',
+      attachment_patterns: accumulated.behavioral.attachmentPatterns || '',
+      attachment_confidence: accumulated.behavioral.attachmentConfidence,
+      growth_areas: accumulated.behavioral.growthAreas,
+      strengths: accumulated.behavioral.strengths,
+    },
+    dating_strategy: {
+      ideal_partner_profile: accumulated.dating.idealPartnerProfile || '',
+      what_to_look_for: accumulated.dating.whatToLookFor,
+      what_to_avoid: accumulated.dating.whatToAvoid,
+      bio_suggestions: accumulated.dating.bioSuggestions,
+      opener_style_recommendations: accumulated.dating.openerStyleRecommendations,
+    },
+  };
+}
+
+export { createInitialAccumulatedUserProfile, type AccumulatedUserProfile };

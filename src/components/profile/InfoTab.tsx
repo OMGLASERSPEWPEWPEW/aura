@@ -1,19 +1,23 @@
-// src/components/profile/ManualEntryTab.tsx
-import { User, Plus, X, Sparkles, Heart } from 'lucide-react';
+// src/components/profile/InfoTab.tsx
+// Consolidated tab: Goals + Profile Info (formerly ManualEntryTab + GoalsTab)
+// Note: Attachment style removed - AI determines with confidence
+import { User, Plus, X, Sparkles, Heart, Target } from 'lucide-react';
 import { useState } from 'react';
-import type { ManualEntry } from '../../lib/db';
+import type { ManualEntry, DatingGoals } from '../../lib/db';
 
-interface ManualEntryTabProps {
+interface InfoTabProps {
   manualEntry: ManualEntry;
   onManualEntryChange: (entry: ManualEntry) => void;
+  goals: DatingGoals | undefined;
+  onGoalsChange: (goals: DatingGoals) => void;
 }
 
-const ATTACHMENT_STYLES = [
-  { value: 'secure', label: 'Secure', description: 'Comfortable with intimacy and independence' },
-  { value: 'anxious', label: 'Anxious', description: 'Seeks closeness, worries about abandonment' },
-  { value: 'avoidant', label: 'Avoidant', description: 'Values independence, uncomfortable with too much closeness' },
-  { value: 'fearful-avoidant', label: 'Fearful-Avoidant', description: 'Desires closeness but fears getting hurt' },
-  { value: 'unsure', label: 'Not Sure', description: 'Still figuring it out' },
+const GOAL_OPTIONS: Array<{ value: DatingGoals['type']; label: string; emoji: string; description: string }> = [
+  { value: 'casual', label: 'Casual', emoji: '🎉', description: 'Fun without commitment' },
+  { value: 'short-term', label: 'Short-term', emoji: '💫', description: 'Open to something real' },
+  { value: 'long-term', label: 'Long-term', emoji: '💕', description: 'Looking for a partner' },
+  { value: 'marriage', label: 'Marriage', emoji: '💍', description: 'Ready for commitment' },
+  { value: 'exploring', label: 'Exploring', emoji: '🤔', description: 'Figuring it out' },
 ];
 
 const RELATIONSHIP_STYLES = [
@@ -39,11 +43,24 @@ const ZODIAC_SIGNS = [
   { value: 'pisces', label: 'Pisces', symbol: '\u2653', dates: 'Feb 19 - Mar 20' },
 ];
 
-export default function ManualEntryTab({ manualEntry, onManualEntryChange }: ManualEntryTabProps) {
+export default function InfoTab({ manualEntry, onManualEntryChange, goals, onGoalsChange }: InfoTabProps) {
   const [newInterest, setNewInterest] = useState('');
 
   const updateField = <K extends keyof ManualEntry>(field: K, value: ManualEntry[K]) => {
     onManualEntryChange({ ...manualEntry, [field]: value });
+  };
+
+  const handleGoalSelect = (type: DatingGoals['type']) => {
+    onGoalsChange({
+      type,
+      description: goals?.description || ''
+    });
+  };
+
+  const handleDescriptionChange = (description: string) => {
+    if (goals) {
+      onGoalsChange({ ...goals, description });
+    }
   };
 
   const addInterest = () => {
@@ -71,6 +88,52 @@ export default function ManualEntryTab({ manualEntry, onManualEntryChange }: Man
 
   return (
     <div className="space-y-6">
+      {/* Dating Goals Section */}
+      <div className="bg-white p-4 rounded-xl shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <Target className="text-indigo-600" size={20} />
+          <h2 className="font-semibold text-gray-800">Relationship Timeline</h2>
+        </div>
+        <p className="text-sm text-slate-500 mb-4">
+          How fast are you looking to move? (This is about commitment pace, not structure)
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          {GOAL_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => handleGoalSelect(option.value)}
+              className={`p-4 rounded-xl border-2 text-left transition-all ${
+                goals?.type === option.value
+                  ? 'border-indigo-500 bg-indigo-50'
+                  : 'border-slate-200 hover:border-slate-300 bg-white'
+              }`}
+            >
+              <div className="text-2xl mb-1">{option.emoji}</div>
+              <div className={`font-medium ${goals?.type === option.value ? 'text-indigo-700' : 'text-slate-800'}`}>
+                {option.label}
+              </div>
+              <div className="text-xs text-slate-500 mt-0.5">{option.description}</div>
+            </button>
+          ))}
+        </div>
+
+        {/* Optional description */}
+        {goals?.type && (
+          <div className="mt-4 animate-in fade-in slide-in-from-bottom-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Want to add more detail? (Optional)
+            </label>
+            <textarea
+              value={goals.description || ''}
+              onChange={(e) => handleDescriptionChange(e.target.value)}
+              placeholder="e.g., Looking for someone who shares my love of hiking..."
+              className="w-full h-20 p-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+            />
+          </div>
+        )}
+      </div>
+
       {/* Basic Info */}
       <div className="bg-white p-4 rounded-xl shadow-sm">
         <div className="flex items-center gap-2 mb-4">
@@ -159,7 +222,7 @@ export default function ManualEntryTab({ manualEntry, onManualEntryChange }: Man
         {manualEntry.zodiac_sign && (
           <button
             onClick={() => updateField('zodiac_sign', undefined)}
-            className="mt-3 text-sm text-slate-500 hover:text-slate-700"
+            className="mt-3 py-2 min-h-[44px] text-sm text-slate-500 hover:text-slate-700"
           >
             Clear selection
           </button>
@@ -182,7 +245,8 @@ export default function ManualEntryTab({ manualEntry, onManualEntryChange }: Man
           <button
             onClick={addInterest}
             disabled={!newInterest.trim()}
-            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-3 py-2 min-w-[44px] min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            aria-label="Add interest"
           >
             <Plus size={18} />
           </button>
@@ -193,12 +257,13 @@ export default function ManualEntryTab({ manualEntry, onManualEntryChange }: Man
             {manualEntry.interests.map((interest) => (
               <span
                 key={interest}
-                className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm"
               >
                 {interest}
                 <button
                   onClick={() => removeInterest(interest)}
-                  className="hover:text-blue-600"
+                  className="p-1.5 -mr-1.5 hover:text-blue-600 hover:bg-blue-200 rounded-full min-w-[28px] min-h-[28px] flex items-center justify-center"
+                  aria-label={`Remove ${interest}`}
                 >
                   <X size={14} />
                 </button>
@@ -208,41 +273,14 @@ export default function ManualEntryTab({ manualEntry, onManualEntryChange }: Man
         )}
       </div>
 
-      {/* Attachment Style */}
+      {/* Relationship Structure */}
       <div className="bg-white p-4 rounded-xl shadow-sm">
-        <h3 className="font-semibold text-gray-800 mb-3">Attachment Style</h3>
-        <p className="text-sm text-slate-500 mb-4">
-          How do you typically relate to partners in relationships?
-        </p>
-
-        <div className="space-y-2">
-          {ATTACHMENT_STYLES.map((style) => (
-            <button
-              key={style.value}
-              onClick={() => updateField('attachmentStyle', style.value)}
-              className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
-                manualEntry.attachmentStyle === style.value
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <div className={`font-medium ${manualEntry.attachmentStyle === style.value ? 'text-blue-700' : 'text-slate-800'}`}>
-                {style.label}
-              </div>
-              <div className="text-xs text-slate-500">{style.description}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Relationship Style */}
-      <div className="bg-white p-4 rounded-xl shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-2">
           <Heart className="text-rose-500" size={20} />
-          <h3 className="font-semibold text-gray-800">Relationship Style</h3>
+          <h3 className="font-semibold text-gray-800">Relationship Structure</h3>
         </div>
         <p className="text-sm text-slate-500 mb-4">
-          What type of relationship structure are you open to? Select all that apply.
+          What type of relationship format works for you? (This is about exclusivity, not timeline)
         </p>
 
         <div className="space-y-2">
@@ -305,6 +343,14 @@ export default function ManualEntryTab({ manualEntry, onManualEntryChange }: Man
           placeholder="e.g., 'Tend to date people who are emotionally unavailable', 'Last relationship ended because of communication issues'..."
           className="w-full h-28 p-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
         />
+      </div>
+
+      {/* Note about attachment style */}
+      <div className="bg-slate-50 p-4 rounded-xl">
+        <p className="text-sm text-slate-600">
+          <span className="font-medium">Note:</span> Your attachment style will be determined by AI analysis
+          based on your video, text, and other inputs. This provides a more objective assessment than self-reporting.
+        </p>
       </div>
     </div>
   );
