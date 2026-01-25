@@ -460,6 +460,7 @@ export default function MyProfile() {
             isAnalyzingLegacy={isAnalyzingLegacy}
             analysisError={analysisError}
             hasAnyInput={hasAnyInput()}
+            videoAnalysis={userIdentity?.videoAnalysis}
             onRunAnalysisLegacy={runLegacySynthesis}
             onClearError={() => setAnalysisError(null)}
             onAbort={abort}

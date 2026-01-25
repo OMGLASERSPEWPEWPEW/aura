@@ -29,6 +29,7 @@ import ExpandableInsight, { type FeedbackRating, createInsightFeedback } from '.
 interface UserProfileDisplayProps {
   synthesis: UserSynthesis;
   photos?: PhotoEntry[];
+  videoFrames?: string[];
   onRerunSynthesis?: () => void;
 }
 
@@ -40,7 +41,7 @@ function getConfidenceBadge(confidence: number): { label: string; colorClass: st
   return { label: 'Strong signal', colorClass: 'bg-green-100 text-green-700' };
 }
 
-export default function UserProfileDisplay({ synthesis, photos: userPhotos, onRerunSynthesis }: UserProfileDisplayProps) {
+export default function UserProfileDisplay({ synthesis, photos: userPhotos, videoFrames, onRerunSynthesis }: UserProfileDisplayProps) {
   const { basics, photos: photoAnalysis, psychological_profile: psych, dating_strategy, behavioral_insights, partner_virtues, neurodivergence, aspect_profile } = synthesis;
   const subtext = psych?.subtext_analysis || {};
   const [showNdHelp, setShowNdHelp] = useState(false);
@@ -133,30 +134,37 @@ export default function UserProfileDisplay({ synthesis, photos: userPhotos, onRe
         <section>
           <h3 className="text-lg font-bold text-slate-900 mb-3">Photo Analysis</h3>
           <div className="space-y-4">
-            {photoAnalysis.map((analysis, i) => (
-              <div key={i} className="flex gap-4 bg-slate-50 p-3 rounded-lg">
-                {/* Actual photo thumbnail */}
-                {userPhotos && userPhotos[i] && (
-                  <img
-                    src={userPhotos[i].base64}
-                    alt={`Photo ${i + 1}`}
-                    className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                  />
-                )}
-                {/* Analysis text */}
-                <div className="flex-1">
-                  <span className="inline-block bg-pink-100 text-pink-800 text-xs font-bold px-2 py-0.5 rounded mr-2">
-                    {analysis.vibe}
-                  </span>
-                  <span className="text-sm text-slate-600">{analysis.subtext}</span>
-                  {analysis.attractiveness_notes && (
-                    <p className="text-xs text-slate-500 mt-1 italic">
-                      Tip: {analysis.attractiveness_notes}
-                    </p>
+            {photoAnalysis.map((analysis, i) => {
+              // Use video frames for thumbnails: frames 0, 4, 8, 12 (first frame of each chunk)
+              // Fallback to userPhotos for legacy data
+              const frameIndex = i * 4; // Chunk boundary frames
+              const thumbnailSrc = videoFrames?.[frameIndex] || userPhotos?.[i]?.base64;
+
+              return (
+                <div key={i} className="flex gap-4 bg-slate-50 p-3 rounded-lg">
+                  {/* Frame thumbnail */}
+                  {thumbnailSrc && (
+                    <img
+                      src={thumbnailSrc}
+                      alt={`Frame ${frameIndex + 1}`}
+                      className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                    />
                   )}
+                  {/* Analysis text */}
+                  <div className="flex-1">
+                    <span className="inline-block bg-pink-100 text-pink-800 text-xs font-bold px-2 py-0.5 rounded mr-2">
+                      {analysis.vibe}
+                    </span>
+                    <span className="text-sm text-slate-600">{analysis.subtext}</span>
+                    {analysis.attractiveness_notes && (
+                      <p className="text-xs text-slate-500 mt-1 italic">
+                        Tip: {analysis.attractiveness_notes}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}

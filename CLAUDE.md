@@ -138,6 +138,19 @@ Tests live alongside the code they cover (`*.test.ts` files). When making code c
 
 Always run `npm run test:run` after implementation to catch regressions before considering work complete.
 
+### Documentation Maintenance
+After completing any feature work, consider whether documentation needs updating. Check:
+- **This file (CLAUDE.md)**: Update if architecture, patterns, or key files change
+- **Code comments**: Update inline comments if behavior changes significantly
+- **Reference docs**: If changing features based on `.claude/docs/` designs, note any deviations
+
+Triggers for documentation review:
+- Completing a new feature
+- Removing or deprecating a feature
+- Changing core architecture or data flow
+- Adding new files/directories to the structure
+- Modifying database schema
+
 ## Important Constraints
 
 1. **Privacy**: User data never leaves device except anonymous frames sent to LLM
@@ -174,3 +187,14 @@ Always run `npm run test:run` after implementation to catch regressions before c
 - `vercel logs <deployment-url>` - View runtime logs
 - `vercel list` - See recent deployments
 - Supabase MCP - Query database and Edge Function logs directly
+
+## Reference Documentation
+
+Design documents in `.claude/docs/` informed the implementation but are NOT runtime dependencies:
+
+| Document | Implemented In | Purpose |
+|----------|---------------|---------|
+| `virtue_system.md` | `src/lib/virtues/aspects.ts` | 23 Aspects system (realms, virtues, wounds, match considerations) |
+| `12152025 - Scene & Dialogue Basics 2025 - With Agendas & Tactics.md` | `src/lib/prompts.ts` | Agendas & Tactics framework for psychological analysis |
+
+These docs define the **conceptual framework**. The actual implementation lives in code. If updating the framework, modify the source code files, not just the docs.

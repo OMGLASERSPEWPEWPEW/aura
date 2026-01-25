@@ -4,7 +4,7 @@
 
 import { Sparkles, Loader2, RefreshCw, CheckCircle, XCircle, User, MapPin, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { UserSynthesis } from '../../lib/db';
+import type { UserSynthesis, VideoAnalysis } from '../../lib/db';
 import type { UserStreamingAnalysisState } from '../../hooks/useUserStreamingAnalysis';
 import UserProfileDisplay from '../UserProfileDisplay';
 import {
@@ -25,6 +25,7 @@ interface InsightsTabProps {
   isAnalyzingLegacy: boolean;
   analysisError: string | null;
   hasAnyInput: boolean;
+  videoAnalysis?: VideoAnalysis;
   onRunAnalysisLegacy: () => void;
   onClearError: () => void;
   onAbort: () => void;
@@ -45,6 +46,7 @@ export default function InsightsTab({
   isAnalyzingLegacy,
   analysisError,
   hasAnyInput,
+  videoAnalysis,
   onRunAnalysisLegacy,
   onClearError,
   onAbort,
@@ -67,7 +69,8 @@ export default function InsightsTab({
     profile.behavioral.growthAreas.length;
 
   // Determine what to show
-  const showStreaming = phase !== 'idle';
+  // Hide streaming cards when complete AND synthesis exists (full profile will show instead)
+  const showStreaming = phase !== 'idle' && !(phase === 'complete' && synthesis);
   const showLegacyLoading = isAnalyzingLegacy && !isStreamingActive;
   const showResults = synthesis && !isStreamingActive && !isAnalyzingLegacy && phase !== 'error';
   const showEmptyState = !synthesis && !isStreamingActive && !isAnalyzingLegacy && !isError && phase === 'idle';
@@ -396,7 +399,7 @@ export default function InsightsTab({
           </div>
 
           {/* Full profile display */}
-          <UserProfileDisplay synthesis={synthesis} />
+          <UserProfileDisplay synthesis={synthesis} videoFrames={videoAnalysis?.frames} />
         </motion.div>
       )}
     </div>
