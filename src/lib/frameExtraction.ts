@@ -54,16 +54,17 @@ export async function extractFramesFromVideo(
 
     console.log("frameExtraction: Created video element");
 
-    // Create a URL for the video file so the browser can play it
-    const videoUrl = URL.createObjectURL(videoFile);
-    video.src = videoUrl;
-
     // Essential for iOS/Safari to allow processing without playing on screen
     video.playsInline = true;
     video.muted = true;
     video.crossOrigin = 'anonymous';
 
-    // Wait for video to load metadata (duration, dimensions)
+    // Create a URL for the video file so the browser can play it
+    const videoUrl = URL.createObjectURL(videoFile);
+
+    // CRITICAL: Attach event listeners BEFORE setting src
+    // Setting src triggers loading immediately - if metadata loads fast (cached/small file),
+    // the event fires before listener is attached, causing a hang
     video.onloadedmetadata = async () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -90,12 +91,20 @@ export async function extractFramesFromVideo(
 
         console.log("frameExtraction: Capturing frame at", currentTime, "seconds");
 
-        // Seek the video to the specific time
+        // Seek the video to the specific time with timeout
         video.currentTime = currentTime;
 
-        // Wait for the video to seek
-        await new Promise<void>((r) => {
-          video.onseeked = () => r();
+        // Wait for the video to seek (with 5 second timeout)
+        await new Promise<void>((r, rej) => {
+          const timeout = setTimeout(() => {
+            video.onseeked = null;
+            console.warn("frameExtraction: Seek timeout at", currentTime, "- skipping frame");
+            r(); // Continue rather than fail completely
+          }, 5000);
+          video.onseeked = () => {
+            clearTimeout(timeout);
+            r();
+          };
         });
 
         // Draw the current video frame onto the canvas
@@ -130,6 +139,13 @@ export async function extractFramesFromVideo(
       URL.revokeObjectURL(videoUrl); // Clean up memory
       reject(new Error("Error loading video. Please try a different file format."));
     };
+
+    // Set src AFTER attaching listeners, then trigger load
+    video.src = videoUrl;
+    // Explicitly trigger load for iOS Safari (check exists for test environment)
+    if (typeof video.load === 'function') {
+      video.load();
+    }
   });
 }
 
@@ -157,12 +173,14 @@ export async function extractFramesChunked(
 
     console.log("frameExtraction: Created video element for chunked extraction");
 
-    const videoUrl = URL.createObjectURL(videoFile);
-    video.src = videoUrl;
+    // Essential for iOS/Safari to allow processing without playing on screen
     video.playsInline = true;
     video.muted = true;
     video.crossOrigin = 'anonymous';
 
+    const videoUrl = URL.createObjectURL(videoFile);
+
+    // CRITICAL: Attach event listeners BEFORE setting src
     video.onloadedmetadata = async () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -198,10 +216,18 @@ export async function extractFramesChunked(
         // Calculate the time for this frame
         const currentTime = currentFrameIndex * intervalSeconds;
 
-        // Seek to the time
+        // Seek to the time (with 5 second timeout)
         video.currentTime = currentTime;
         await new Promise<void>((r) => {
-          video.onseeked = () => r();
+          const timeout = setTimeout(() => {
+            video.onseeked = null;
+            console.warn("frameExtraction (chunked): Seek timeout at", currentTime, "- skipping frame");
+            r(); // Continue rather than fail completely
+          }, 5000);
+          video.onseeked = () => {
+            clearTimeout(timeout);
+            r();
+          };
         });
 
         // Capture the frame
@@ -253,5 +279,12 @@ export async function extractFramesChunked(
       URL.revokeObjectURL(videoUrl);
       reject(new Error("Error loading video. Please try a different file format."));
     };
+
+    // Set src AFTER attaching listeners, then trigger load
+    video.src = videoUrl;
+    // Explicitly trigger load for iOS Safari (check exists for test environment)
+    if (typeof video.load === 'function') {
+      video.load();
+    }
   });
 }
