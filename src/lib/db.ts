@@ -371,6 +371,12 @@ interface InsightFeedback {
 interface UserIdentity {
   id: number; // usually just 1, we only have one user
 
+  // Auth fields (linked to Supabase)
+  supabaseUserId?: string;
+  email?: string;
+  authProvider?: string;  // 'email' | 'google' | 'apple'
+  linkedAt?: Date;
+
   // Legacy fields (preserved for migration)
   source?: 'tinder' | 'hinge' | 'bumble';
   rawStats?: RawStats;
@@ -515,6 +521,15 @@ db.version(8).stores({
     }
   });
 });
+
+// Version 9: Add auth fields for Supabase authentication
+db.version(9).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase',
+  userIdentity: '++id, lastUpdated, supabaseUserId',
+  coachingSessions: '++id, profileId, timestamp',
+  matchChats: '++id, profileId, timestamp'
+});
+// No upgrade needed - auth fields start as undefined and are set when user signs in
 
 export { db };
 // Re-export aspect types for convenience

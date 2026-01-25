@@ -1,10 +1,16 @@
 // src/pages/Settings.tsx
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
-import { ArrowLeft, Settings as SettingsIcon, Zap } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import DeleteAccountModal from '../components/auth/DeleteAccountModal';
+import { ArrowLeft, Settings as SettingsIcon, Zap, User, LogOut, Trash2, Mail, Shield } from 'lucide-react';
 
 export default function Settings() {
+  const { user, signOut } = useAuth();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   // Load user identity to get/set settings
   const userIdentity = useLiveQuery(() => db.userIdentity.get(1));
 
@@ -38,6 +44,20 @@ export default function Settings() {
     }
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  // Get auth provider display name
+  const getProviderName = (provider?: string) => {
+    switch (provider) {
+      case 'google': return 'Google';
+      case 'apple': return 'Apple';
+      case 'email': return 'Email';
+      default: return provider || 'Unknown';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-6 pb-24">
       {/* Header */}
@@ -62,6 +82,75 @@ export default function Settings() {
       </div>
 
       <div className="max-w-md mx-auto space-y-4">
+        {/* Account Section - Only show when logged in */}
+        {user && (
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <User size={18} className="text-violet-500" />
+              <h3 className="font-semibold text-slate-900">Account</h3>
+            </div>
+
+            {/* User Info */}
+            <div className="space-y-3 mb-4">
+              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                <Mail size={16} className="text-slate-400" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-500">Email</p>
+                  <p className="text-sm font-medium text-slate-900 truncate">{user.email}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                <Shield size={16} className="text-slate-400" />
+                <div className="flex-1">
+                  <p className="text-xs text-slate-500">Sign-in method</p>
+                  <p className="text-sm font-medium text-slate-900">
+                    {getProviderName(userIdentity?.authProvider)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Account Actions */}
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+              >
+                <LogOut size={16} className="text-slate-400" />
+                Sign out
+              </button>
+
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 size={16} />
+                Delete account
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Sign In Prompt - Only show when not logged in */}
+        {!user && (
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <User size={18} className="text-violet-500" />
+              <h3 className="font-semibold text-slate-900">Account</h3>
+            </div>
+            <p className="text-sm text-slate-500 mb-4">
+              Sign in to analyze new profiles and sync your data.
+            </p>
+            <Link
+              to="/login"
+              className="block w-full py-2.5 bg-slate-900 text-white text-center rounded-lg font-medium hover:bg-slate-800 transition-colors"
+            >
+              Sign in
+            </Link>
+          </div>
+        )}
+
         {/* Auto-Compatibility Toggle */}
         <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
           <div className="flex items-start justify-between gap-4">
@@ -100,9 +189,12 @@ export default function Settings() {
             </div>
           )}
         </div>
-
-        {/* Future settings sections can go here */}
       </div>
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <DeleteAccountModal onClose={() => setShowDeleteModal(false)} />
+      )}
     </div>
   );
 }

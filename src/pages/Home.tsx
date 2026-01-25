@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
-import { Plus, User, Trash2, Flame, Brain, Settings, Zap, Star } from 'lucide-react';
+import { Plus, User, Trash2, Flame, Brain, Zap, Star } from 'lucide-react';
 import type { VirtueScore } from '../lib/db';
+import UserMenu from '../components/auth/UserMenu';
 
 export default function Home() {
   const profiles = useLiveQuery(() => db.profiles.orderBy('timestamp').reverse().toArray());
@@ -64,15 +65,7 @@ export default function Home() {
           </h1>
           <p className="text-slate-500 text-sm">Your dating intelligence</p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Settings Button */}
-          <Link
-            to="/settings"
-            className="p-2 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 hover:text-slate-700 transition-colors"
-            title="Settings"
-          >
-            <Settings size={20} />
-          </Link>
+        <div className="flex items-center gap-3">
           {/* My Profile Button */}
           <Link
             to="/my-profile"
@@ -81,6 +74,8 @@ export default function Home() {
             <Brain size={20} />
             <span className="text-sm font-medium hidden sm:inline">My Profile</span>
           </Link>
+          {/* User Menu */}
+          <UserMenu />
         </div>
       </div>
 
