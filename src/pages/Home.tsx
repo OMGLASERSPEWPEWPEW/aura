@@ -12,6 +12,10 @@ import { deleteProfileFromServer } from '../lib/sync';
 export default function Home() {
   const profiles = useLiveQuery(() => db.profiles.orderBy('timestamp').reverse().toArray());
 
+  // Treat undefined as empty array during initial IndexedDB load
+  // This prevents blank page while query executes
+  const profileList = profiles ?? [];
+
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.preventDefault(); // Stop the link from opening
     e.stopPropagation();
@@ -99,7 +103,7 @@ export default function Home() {
 
       <div className="max-w-md mx-auto">
         {/* Empty State */}
-        {profiles?.length === 0 && (
+        {profileList.length === 0 && (
           <div className="text-center py-12">
             <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
                 <Plus className="text-slate-400" size={32} />
@@ -111,7 +115,7 @@ export default function Home() {
 
         {/* Grid of Profiles */}
         <div className="grid grid-cols-1 gap-4">
-          {profiles?.map((profile) => (
+          {profileList.map((profile) => (
             <Link 
               key={profile.id} 
               to={`/profile/${profile.id}`}
