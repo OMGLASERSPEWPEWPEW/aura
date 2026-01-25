@@ -10,7 +10,7 @@ import {
   createInitialAccumulatedProfile,
   type AccumulatedProfile,
 } from '../lib/ai';
-import { db } from '../lib/db';
+import { db, type Profile } from '../lib/db';
 import type { StreamingPhase, FrameQualityScore } from '../lib/streaming/types';
 import {
   scoreAllFrames,
@@ -18,6 +18,8 @@ import {
   validateThumbnailChoice,
   findBestFrameIndex,
 } from '../lib/frameQuality';
+import { supabase } from '../lib/supabase';
+import { pushProfile, updateProfileOnServer } from '../lib/sync';
 
 export interface StreamingAnalysisState {
   phase: StreamingPhase;
@@ -106,6 +108,31 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
     setState(INITIAL_STATE);
   }, []);
 
+  // Sync a profile to the server (non-blocking, logs errors)
+  const syncProfileToServer = useCallback(async (localProfile: Profile) => {
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log('useStreamingAnalysis: No user, skipping server sync');
+        return;
+      }
+
+      if (localProfile.serverId) {
+        // Update existing server record
+        await updateProfileOnServer(localProfile, user.id);
+        console.log(`useStreamingAnalysis: Updated profile ${localProfile.id} on server`);
+      } else {
+        // Push new profile to server
+        const serverId = await pushProfile(localProfile, user.id);
+        console.log(`useStreamingAnalysis: Pushed profile ${localProfile.id} to server, serverId: ${serverId}`);
+      }
+    } catch (error) {
+      console.error('useStreamingAnalysis: Server sync failed (will retry on next full sync):', error);
+      // Don't throw - local save succeeded, server sync is non-critical
+    }
+  }, []);
+
   // Save current progress to database
   const saveToDatabase = useCallback(async (
     profile: AccumulatedProfile,
@@ -119,7 +146,7 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
     const thumbnailIndex = profile.photos.thumbnailIndex;
     const thumbnail = allFrames[thumbnailIndex] || allFrames[0] || '';
 
-    // Save to database
+    // Save to local database first (fast)
     const profileId = await db.profiles.add({
       name: profile.identity.name || 'Unknown Match',
       age: profile.identity.age || undefined,
@@ -130,8 +157,44 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
       analysisPhase: phase,
     });
 
+    // Get the full profile for server sync
+    const fullProfile = await db.profiles.get(profileId);
+    if (fullProfile) {
+      // Sync to server in background (non-blocking)
+      syncProfileToServer(fullProfile);
+    }
+
     return profileId;
-  }, []);
+  }, [syncProfileToServer]);
+
+  // Update existing profile in database
+  const updateProfile = useCallback(async (
+    profileId: number,
+    profile: AccumulatedProfile,
+    allFrames: string[]
+  ): Promise<number> => {
+    const analysis = accumulatedToProfileAnalysis(profile);
+    const thumbnailIndex = profile.photos.thumbnailIndex;
+    const thumbnail = allFrames[thumbnailIndex] || allFrames[0] || '';
+
+    await db.profiles.update(profileId, {
+      name: profile.identity.name || 'Unknown Match',
+      age: profile.identity.age || undefined,
+      appName: profile.identity.app || 'Unknown App',
+      analysis: analysis,
+      thumbnail: thumbnail,
+      analysisPhase: 'quick',
+    });
+
+    // Get the full profile for server sync
+    const fullProfile = await db.profiles.get(profileId);
+    if (fullProfile) {
+      // Sync to server in background (non-blocking)
+      syncProfileToServer(fullProfile);
+    }
+
+    return profileId;
+  }, [syncProfileToServer]);
 
   // Start streaming analysis
   const startAnalysis = useCallback(async (file: File) => {
@@ -360,29 +423,7 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
     } finally {
       abortControllerRef.current = null;
     }
-  }, [safeSetState, saveToDatabase, state.savedProfileId]);
-
-  // Update existing profile in database
-  const updateProfile = async (
-    profileId: number,
-    profile: AccumulatedProfile,
-    allFrames: string[]
-  ): Promise<number> => {
-    const analysis = accumulatedToProfileAnalysis(profile);
-    const thumbnailIndex = profile.photos.thumbnailIndex;
-    const thumbnail = allFrames[thumbnailIndex] || allFrames[0] || '';
-
-    await db.profiles.update(profileId, {
-      name: profile.identity.name || 'Unknown Match',
-      age: profile.identity.age || undefined,
-      appName: profile.identity.app || 'Unknown App',
-      analysis: analysis,
-      thumbnail: thumbnail,
-      analysisPhase: 'quick',
-    });
-
-    return profileId;
-  };
+  }, [safeSetState, saveToDatabase, updateProfile, state.savedProfileId]);
 
   // Abort analysis
   const abort = useCallback(async (saveProgress: boolean) => {

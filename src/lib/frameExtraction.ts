@@ -95,7 +95,7 @@ export async function extractFramesFromVideo(
         video.currentTime = currentTime;
 
         // Wait for the video to seek (with 5 second timeout)
-        await new Promise<void>((r, rej) => {
+        await new Promise<void>((r) => {
           const timeout = setTimeout(() => {
             video.onseeked = null;
             console.warn("frameExtraction: Seek timeout at", currentTime, "- skipping frame");

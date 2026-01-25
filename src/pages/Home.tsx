@@ -6,6 +6,8 @@ import { extractAnalysisFields } from '../lib/utils/profileHelpers';
 import { Plus, User, Trash2, Flame, Brain, Zap, Star } from 'lucide-react';
 import type { VirtueScore } from '../lib/db';
 import UserMenu from '../components/auth/UserMenu';
+import { SyncIndicator } from '../components/SyncIndicator';
+import { deleteProfileFromServer } from '../lib/sync';
 
 export default function Home() {
   const profiles = useLiveQuery(() => db.profiles.orderBy('timestamp').reverse().toArray());
@@ -14,6 +16,20 @@ export default function Home() {
     e.preventDefault(); // Stop the link from opening
     e.stopPropagation();
     if (confirm("Are you sure you want to delete this profile?")) {
+      // Get the profile to check for serverId and thumbnailPath
+      const profile = await db.profiles.get(id);
+
+      // Delete from server first (if synced)
+      if (profile?.serverId) {
+        try {
+          await deleteProfileFromServer(profile.serverId, profile.thumbnailPath);
+        } catch (error) {
+          console.error('Failed to delete from server:', error);
+          // Continue with local delete even if server fails
+        }
+      }
+
+      // Delete locally
       await db.profiles.delete(id);
     }
   };
@@ -66,6 +82,8 @@ export default function Home() {
           <p className="text-slate-500 text-sm">Your dating intelligence</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Sync Status */}
+          <SyncIndicator variant="badge" />
           {/* My Profile Button */}
           <Link
             to="/my-profile"
