@@ -129,6 +129,7 @@ export function useUserStreamingAnalysis(): UseUserStreamingAnalysisReturn {
       behavioral_insights: {
         communication_style: synthesisData.behavioral_insights.communication_style,
         attachment_patterns: synthesisData.behavioral_insights.attachment_patterns,
+        attachment_confidence: synthesisData.behavioral_insights.attachment_confidence,
         growth_areas: synthesisData.behavioral_insights.growth_areas,
         strengths: synthesisData.behavioral_insights.strengths,
       },

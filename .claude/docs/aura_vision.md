@@ -1,9 +1,5 @@
-# Aura: Product Vision & Philosophy
 
-## The Mission
-Aura is not a tool to "get laid." It is an institution for **Emotional Literacy**.
-We are not building a score calculator; we are building a teacher.
-Our goal is to help users read subtext, identify behavioral patterns (green/red flags), and weed out toxic actors (narcissism, love bombing) before they get hurt.
+
 
 ## The "Antivirus" Architecture (Privacy Strategy)
 To comply with Apple's strict privacy rules and our own moral compass, we use a **Local-First** approach:
