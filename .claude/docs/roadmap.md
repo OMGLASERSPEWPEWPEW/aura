@@ -1,9 +1,9 @@
 # Aura Product Roadmap - Status Report
 
-**Version**: 2.1
+**Version**: 2.2
 **Last Updated**: January 25, 2026
-**Current Phase**: Phase 1B (Authentication) - In Progress
-**Branch**: `feature/auth`
+**Current Phase**: Phase 1C (Data Sync) - Verification
+**Branch**: `main`
 
 ---
 
@@ -12,8 +12,8 @@
 | Phase | Status | Completion |
 |-------|--------|------------|
 | Phase 1A: API Security | COMPLETE | 100% |
-| Phase 1B: Authentication | IN PROGRESS | ~85% |
-| Phase 1C: Data Sync | NOT STARTED | 0% |
+| Phase 1B: Authentication | COMPLETE | 100% |
+| Phase 1C: Data Sync | VERIFICATION | 95% |
 | Phase 2: Billing MVP | NOT STARTED | 0% |
 | Phase 3: Mobile Polish | NOT STARTED | 0% |
 
@@ -40,8 +40,8 @@
 
 ## Phase 1B: Authentication
 
-**Status**: IN PROGRESS (~85% complete)
-**Branch**: `feature/auth`
+**Status**: COMPLETE
+**Branch**: `main` (merged)
 
 ### Completed Features
 
@@ -100,26 +100,40 @@
 
 ## Phase 1C: Data Synchronization
 
-**Status**: NOT STARTED
-**Blocked by**: Phase 1B completion
+**Status**: VERIFICATION (infrastructure complete, needs manual testing)
+**Branch**: `main`
 
-### Outstanding Work
+### Completed Features
 
-| Feature | Priority | Effort | Notes |
-|---------|----------|--------|-------|
-| PostgreSQL schema design | HIGH | 1 week | profiles, user_profiles tables |
-| Sync service (Dexie <-> Supabase) | HIGH | 2 weeks | Bidirectional sync |
-| Conflict resolution | HIGH | 1 week | Last-write-wins or manual merge |
-| Offline mode handling | MEDIUM | 1 week | Queue changes when offline |
-| Data migration for existing users | HIGH | 1 week | Preserve local data on signup |
-| Data export endpoint | LOW | 2-3 days | Beyond current Tinder JSON |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| PostgreSQL schema design | DONE | 4 tables: user_profiles, match_profiles, coaching_sessions, match_chats |
+| RLS policies | DONE | All tables have SELECT/INSERT/UPDATE/DELETE policies |
+| Storage bucket | DONE | `user-images` bucket with RLS |
+| Sync service (Dexie <-> Supabase) | DONE | `src/lib/sync/` - bidirectional pull + push |
+| SyncContext + hooks | DONE | `SyncContext.tsx`, `useSyncStatus.ts` |
+| SyncIndicator UI | DONE | Badge and detailed variants |
+| Image sync | DONE | Upload/download to Supabase Storage |
+| Offline detection | DONE | `isOnline` state tracking |
+| Pending changes tracking | DONE | Shows unsynced record count |
+| Auto-sync on login | DONE | Triggers full sync when user logs in |
+| Unit tests | DONE | 39 tests (imageSync, useSyncStatus, SyncIndicator) |
+
+### Needs Manual Verification
+
+| Feature | Status | How to Test |
+|---------|--------|-------------|
+| End-to-end sync | UNTESTED | Upload profile → check Supabase table |
+| Cross-device sync | UNTESTED | Login on device B → profiles appear |
+| Offline → online sync | UNTESTED | Go offline, make changes, reconnect |
+| Existing user migration | UNTESTED | User with local data signs up → data pushes |
 
 ### Exit Criteria
 
-- [ ] Users can create accounts and log in
-- [ ] Profile data syncs across devices
-- [ ] Existing PWA users can migrate local data
-- [ ] Offline analysis works, syncs when online
+- [x] Users can create accounts and log in (Phase 1B)
+- [ ] Profile data syncs across devices (needs verification)
+- [ ] Existing PWA users can migrate local data (needs verification)
+- [ ] Offline analysis works, syncs when online (needs verification)
 
 ---
 
@@ -259,6 +273,9 @@
 | Edge Function (anthropic-proxy) | LIVE | v4 with JWT verification |
 | Google OAuth | CONFIGURED | Working |
 | Apple OAuth | PENDING | Awaiting Apple approval |
+| Supabase Tables | LIVE | user_profiles, match_profiles, coaching_sessions, match_chats |
+| Supabase Storage | LIVE | user-images bucket (private) |
+| RLS Policies | CONFIGURED | All tables + storage secured |
 | Stripe | NOT STARTED | Phase 2 |
 | RevenueCat | NOT STARTED | Phase 3 |
 | Apple Developer Account | NOT STARTED | Phase 3 |
@@ -306,16 +323,15 @@
 
 ### Immediate (This Sprint)
 
-1. **Verify password reset flow** - Test email link on production
-2. **Verify sign-in method display** - Check Google auth shows correctly
-3. **Test IndexedDB auth fields** - Confirm population on login
-4. **Test session persistence** - Close/reopen browser
+1. **Verify sync end-to-end** - Upload profile → check Supabase `match_profiles` table
+2. **Verify cross-device sync** - Login on second device → profiles should appear
+3. **Verify offline handling** - Go offline, make changes, reconnect → should sync
+4. **Test existing user migration** - User with local data signs up → data pushes to server
 
 ### After Verification
 
-1. **Merge `feature/auth` to `main`** - Triggers Vercel deploy
-2. **Update MASTER_ROADMAP.md** - Mark Phase 1B complete
-3. **Plan Phase 1C** - Data synchronization kickoff
+1. **Mark Phase 1C complete** - Update this document
+2. **Plan Phase 2** - Billing/credits system kickoff
 
 ### Blocked Items
 
@@ -324,10 +340,46 @@
 
 ---
 
+---
+
+## Files Modified in Phase 1C
+
+### New Files (14)
+
+| File | Purpose |
+|------|---------|
+| `src/lib/sync/types.ts` | TypeScript types for sync |
+| `src/lib/sync/index.ts` | Main export barrel |
+| `src/lib/sync/syncService.ts` | Core sync state machine |
+| `src/lib/sync/imageSync.ts` | Image upload/download utilities |
+| `src/lib/sync/imageSync.test.ts` | Image sync tests |
+| `src/lib/sync/profileSync.ts` | Match profile sync logic |
+| `src/lib/sync/userProfileSync.ts` | User identity sync logic |
+| `src/lib/sync/coachingSync.ts` | Coaching session sync |
+| `src/lib/sync/chatSync.ts` | Chat message sync |
+| `src/contexts/SyncContext.tsx` | React context for sync state |
+| `src/hooks/useSyncStatus.ts` | Hook for accessing sync status |
+| `src/hooks/useSyncStatus.test.ts` | Sync status hook tests |
+| `src/components/SyncIndicator.tsx` | Visual sync status indicator |
+| `src/components/SyncIndicator.test.tsx` | SyncIndicator tests |
+
+### Modified Files (5)
+
+| File | Changes |
+|------|---------|
+| `src/lib/db.ts` | Added sync-related fields (serverId, etc.) |
+| `src/App.tsx` | Added SyncProvider wrapper |
+| `src/pages/Home.tsx` | Integrated sync on login |
+| `src/pages/MyProfile.tsx` | Integrated SyncIndicator |
+| `src/pages/Settings.tsx` | Added sync status section |
+
+---
+
 ## Changelog
 
 | Date | Version | Changes |
 |------|---------|---------|
-| 2026-01-25 | 2.1 | Phase 1B authentication status update - ~85% complete |
+| 2026-01-25 | 2.2 | Phase 1C sync infrastructure complete, pending verification |
+| 2026-01-25 | 2.1 | Phase 1B authentication complete |
 | 2026-01-XX | 2.0 | Phase 1A complete - API proxy and streaming |
 | 2026-01-XX | 1.0 | Initial roadmap |

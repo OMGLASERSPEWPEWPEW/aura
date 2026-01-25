@@ -1,18 +1,21 @@
 # Phase 1C Sync - Verification Checklist
 
-## Implementation Status: COMPLETE (Pending Verification)
+## Implementation Status: INFRASTRUCTURE COMPLETE
 
-All code has been implemented. This document tracks manual verification.
+All code and Supabase infrastructure has been implemented. Manual verification in progress.
+
+### Supabase Dashboard
+**URL:** https://supabase.com/dashboard/project/qaueoxubnifmtdirnxgz
 
 ---
 
 ## 1. Sync UI Components
 
 ### SyncIndicator (Badge Variant)
-- [ ] Green dot + "Synced" when synced
-- [ ] Blue pulsing dot + "Syncing" when syncing
+- [ x] Green dot + "Synced" when synced
+- [ x] Blue pulsing dot + "Syncing" when syncing
 - [ ] Gray dot + "Offline" when offline
-- [ ] Clickable to trigger manual sync
+- [x ] Clickable to trigger manual sync
 
 ### SyncIndicator (Detailed Variant)
 - [ ] Shows full status message
@@ -25,7 +28,7 @@ All code has been implemented. This document tracks manual verification.
 - [ ] SyncIndicator visible on MyProfile page
 - [ ] Syncs automatically on profile changes
 - [ ] Shows pending changes before sync completes
-
+    --no sync indicator on my profile page... do we need one? whats normal?
 ---
 
 ## 2. Sync Flows
@@ -37,9 +40,9 @@ All code has been implemented. This document tracks manual verification.
 - [ ] Local data pushed to server
 
 ### Manual Sync
-- [ ] Click SyncIndicator triggers sync
-- [ ] Sync button shows loading state
-- [ ] Success updates "Synced Xm ago" message
+- [x ] Click SyncIndicator triggers sync
+- [x ] Sync button shows loading state
+- [x ] Success updates "Synced Xm ago" message
 
 ### Profile Changes
 - [ ] Edit profile data -> marked as pending
@@ -68,30 +71,43 @@ All code has been implemented. This document tracks manual verification.
 
 ---
 
-## 4. Database Verification
+## 4. Database Verification (VERIFIED VIA MCP)
 
 ### User Profiles Table
-Check in Supabase Dashboard: `user_profiles`
-- [ ] `id` - UUID primary key
-- [ ] `user_id` - References auth.users
-- [ ] `dating_goals`, `text_inputs`, `manual_entry` - JSONB columns
-- [ ] `video_analysis`, `synthesis` - JSONB columns
-- [ ] `created_at`, `updated_at` - Timestamps
+Check in Supabase Dashboard: Table Editor > `user_profiles`
+- [x] `id` - UUID primary key
+- [x] `user_id` - References auth.users
+- [x] `dating_goals`, `text_inputs`, `manual_entry` - JSONB columns
+- [x] `video_analysis`, `synthesis` - JSONB columns
+- [x] `created_at`, `updated_at` - Timestamps
+- [x] RLS enabled with 4 policies (SELECT, INSERT, UPDATE, DELETE)
 
 ### Match Profiles Table
-Check in Supabase Dashboard: `match_profiles`
-- [ ] `id` - UUID primary key
-- [ ] `user_id` - References auth.users
-- [ ] `name`, `age`, `app_name` - Basic fields
-- [ ] `analysis`, `thumbnail_path` - Analysis data
-- [ ] RLS policy: users can only access own profiles
+Check in Supabase Dashboard: Table Editor > `match_profiles`
+- [x] `id` - UUID primary key
+- [x] `user_id` - References auth.users
+- [x] `name`, `age`, `app_name` - Basic fields
+- [x] `analysis`, `thumbnail_path` - Analysis data
+- [x] RLS enabled with 4 policies (SELECT, INSERT, UPDATE, DELETE)
+
+### Coaching Sessions Table
+Check in Supabase Dashboard: Table Editor > `coaching_sessions`
+- [x] `id` - UUID primary key
+- [x] `user_id`, `match_profile_id` - Foreign keys
+- [x] RLS enabled with 4 policies
+
+### Match Chats Table
+Check in Supabase Dashboard: Table Editor > `match_chats`
+- [x] `id` - UUID primary key
+- [x] `user_id`, `match_profile_id` - Foreign keys
+- [x] RLS enabled with 4 policies
 
 ### Storage Bucket
 Check in Supabase Dashboard: Storage > `user-images`
-- [ ] Bucket exists
-- [ ] RLS policies configured
-- [ ] Users can upload to `{user_id}/*`
-- [ ] Users can read own images
+- [x] Bucket exists (private)
+- [x] RLS policies configured (4 policies: upload, download, update, delete)
+- [x] Users can upload to `{user_id}/*`
+- [x] Users can read own images
 
 ---
 
