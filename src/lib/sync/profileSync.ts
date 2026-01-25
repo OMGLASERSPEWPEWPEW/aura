@@ -3,7 +3,7 @@
 
 import { supabase } from '../supabase';
 import { db, type Profile } from '../db';
-import { uploadImage, deleteImage, isStoragePath } from './imageSync';
+import { uploadImage, deleteImage, isStoragePath, downloadImage } from './imageSync';
 import type { ServerMatchProfile } from './types';
 
 /**
@@ -202,6 +202,9 @@ export async function syncProfilesFromServer(userId: string): Promise<void> {
     }
   }
 
+  // Track profiles that need thumbnail downloads
+  const profilesToDownloadThumbnails: Array<{ id: number; thumbnailPath: string }> = [];
+
   // Process each server profile
   for (const [serverId, serverProfile] of serverProfiles) {
     const existingLocal = localByServerId.get(serverId);
@@ -214,10 +217,26 @@ export async function syncProfilesFromServer(userId: string): Promise<void> {
         localData.thumbnail = existingLocal.thumbnail;
       }
       await db.profiles.update(existingLocal.id!, localData);
+
+      // If we don't have a thumbnail but have a path, queue for download
+      if (!existingLocal.thumbnail && serverProfile.thumbnail_path) {
+        profilesToDownloadThumbnails.push({
+          id: existingLocal.id!,
+          thumbnailPath: serverProfile.thumbnail_path,
+        });
+      }
     } else {
       // Insert new local record
       const localData = serverToLocal(serverProfile);
-      await db.profiles.add(localData as Profile);
+      const newId = await db.profiles.add(localData as Profile);
+
+      // If we have a thumbnail path, queue for download
+      if (serverProfile.thumbnail_path) {
+        profilesToDownloadThumbnails.push({
+          id: newId,
+          thumbnailPath: serverProfile.thumbnail_path,
+        });
+      }
     }
   }
 
@@ -226,6 +245,22 @@ export async function syncProfilesFromServer(userId: string): Promise<void> {
     if (local.serverId && !serverProfiles.has(local.serverId)) {
       await db.profiles.delete(local.id!);
     }
+  }
+
+  // Download thumbnails for profiles that need them
+  // Do this in parallel for better performance
+  if (profilesToDownloadThumbnails.length > 0) {
+    await Promise.all(
+      profilesToDownloadThumbnails.map(async ({ id, thumbnailPath }) => {
+        try {
+          const base64 = await downloadImage(thumbnailPath);
+          await db.profiles.update(id, { thumbnail: base64 });
+        } catch (error) {
+          console.warn(`Failed to download thumbnail for profile ${id}:`, error);
+          // Don't throw - continue with other profiles even if one fails
+        }
+      })
+    );
   }
 }
 
