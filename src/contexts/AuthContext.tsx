@@ -4,6 +4,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { db } from '../lib/db';
+import { clearAllLocalData } from '../lib/sync';
 import type { User, Session, AuthError } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -128,6 +129,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signOut = async () => {
     setError(null);
+    try {
+      // Clear all local data before signing out
+      await clearAllLocalData();
+    } catch (err) {
+      console.error('Failed to clear local data:', err);
+    }
     const { error: signOutError } = await supabase.auth.signOut();
     if (signOutError) {
       setError(signOutError);

@@ -5,7 +5,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
 import { useAuth } from '../contexts/AuthContext';
 import DeleteAccountModal from '../components/auth/DeleteAccountModal';
-import { ArrowLeft, Settings as SettingsIcon, Zap, User, LogOut, Trash2, Mail, Shield } from 'lucide-react';
+import { SyncIndicator } from '../components/SyncIndicator';
+import { ArrowLeft, Settings as SettingsIcon, Zap, User, LogOut, Trash2, Mail, Shield, Cloud } from 'lucide-react';
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -148,6 +149,20 @@ export default function Settings() {
             >
               Sign in
             </Link>
+          </div>
+        )}
+
+        {/* Data Sync Section - Only show when logged in */}
+        {user && (
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Cloud size={18} className="text-blue-500" />
+              <h3 className="font-semibold text-slate-900">Data Sync</h3>
+            </div>
+            <p className="text-sm text-slate-500 mb-4">
+              Your data syncs automatically across all your devices.
+            </p>
+            <SyncIndicator variant="detailed" />
           </div>
         )}
 

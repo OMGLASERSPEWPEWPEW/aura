@@ -18,6 +18,7 @@ import {
   findBestFrameIndex,
   type FrameQualityScore,
 } from '../lib/frameQuality';
+import { saveUserIdentityWithSync } from '../lib/sync';
 
 export interface UserStreamingAnalysisState {
   phase: StreamingPhase;
@@ -31,6 +32,11 @@ export interface UserStreamingAnalysisState {
   thumbnailFrame: string | null;
   frameScores: FrameQualityScore[];
   thumbnailOverridden: boolean;
+}
+
+export interface UseUserStreamingAnalysisOptions {
+  /** User ID for syncing to server. If provided, saves will sync to Supabase. */
+  userId?: string;
 }
 
 export interface UseUserStreamingAnalysisReturn {
@@ -57,7 +63,8 @@ const INITIAL_STATE: UserStreamingAnalysisState = {
   thumbnailOverridden: false,
 };
 
-export function useUserStreamingAnalysis(): UseUserStreamingAnalysisReturn {
+export function useUserStreamingAnalysis(options: UseUserStreamingAnalysisOptions = {}): UseUserStreamingAnalysisReturn {
+  const { userId } = options;
   const [state, setState] = useState<UserStreamingAnalysisState>(INITIAL_STATE);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
@@ -157,7 +164,21 @@ export function useUserStreamingAnalysis(): UseUserStreamingAnalysisReturn {
     }
 
     console.log('useUserStreamingAnalysis: Saved synthesis to database');
-  }, []);
+
+    // Sync to server if user is logged in
+    if (userId) {
+      try {
+        await saveUserIdentityWithSync({
+          videoAnalysis,
+          synthesis,
+        }, userId);
+        console.log('useUserStreamingAnalysis: Synced to server');
+      } catch (syncError) {
+        console.error('useUserStreamingAnalysis: Server sync failed:', syncError);
+        // Don't throw - local save succeeded, sync can retry later
+      }
+    }
+  }, [userId]);
 
   // Start streaming analysis
   const startAnalysis = useCallback(async (file: File) => {

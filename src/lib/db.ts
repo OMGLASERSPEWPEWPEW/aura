@@ -197,7 +197,7 @@ interface MatchCoachingAnalysis {
 
 interface CoachingSession {
   id?: number;
-  profileId: number;              // Link to match profile
+  profileId: number;              // Link to match profile (local ID)
   timestamp: Date;
   conversationImages: string[];   // Base64 screenshots
   matchAnalysis: MatchCoachingAnalysis;
@@ -205,16 +205,25 @@ interface CoachingSession {
   userActualResponse?: string;    // What user actually sent
   responseScore?: number;         // 1-10 AI rating
   scoreExplanation?: string;
+
+  // Sync fields - links to Supabase
+  serverId?: string; // UUID from Supabase coaching_sessions table
+  serverProfileId?: string; // UUID of the match_profile in Supabase
+  conversationImagePaths?: string[]; // Storage paths (replaces base64 after sync)
 }
 
 // --- Match Chat Messages (for Ask About Match feature) ---
 
 interface MatchChatMessage {
   id?: number;
-  profileId: number;
+  profileId: number;              // Link to match profile (local ID)
   timestamp: Date;
   role: 'user' | 'assistant';
   content: string;
+
+  // Sync fields - links to Supabase
+  serverId?: string; // UUID from Supabase match_chats table
+  serverProfileId?: string; // UUID of the match_profile in Supabase
 }
 
 // --- App Settings ---
@@ -252,6 +261,10 @@ interface Profile {
 
   // 23 Aspects scores (new system - takes precedence over virtue_scores when present)
   aspect_scores?: MatchAspectScores;
+
+  // Sync fields - links to Supabase
+  serverId?: string; // UUID from Supabase match_profiles table
+  thumbnailPath?: string; // Storage path (replaces base64 thumbnail after sync)
 }
 
 // Type definitions for UserIdentity sub-structures
@@ -376,6 +389,9 @@ interface UserIdentity {
   email?: string;
   authProvider?: string;  // 'email' | 'google' | 'apple'
   linkedAt?: Date;
+
+  // Sync fields - links to Supabase user_profiles table
+  serverId?: string; // UUID from Supabase user_profiles table
 
   // Legacy fields (preserved for migration)
   source?: 'tinder' | 'hinge' | 'bumble';
@@ -530,6 +546,15 @@ db.version(9).stores({
   matchChats: '++id, profileId, timestamp'
 });
 // No upgrade needed - auth fields start as undefined and are set when user signs in
+
+// Version 10: Add serverId fields for Supabase sync
+db.version(10).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase, serverId',
+  userIdentity: '++id, lastUpdated, supabaseUserId, serverId',
+  coachingSessions: '++id, profileId, timestamp, serverId',
+  matchChats: '++id, profileId, timestamp, serverId'
+});
+// No upgrade needed - sync fields start as undefined and are set when synced to server
 
 export { db };
 // Re-export aspect types for convenience

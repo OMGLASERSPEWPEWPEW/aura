@@ -17,6 +17,8 @@ import {
 import { db, type UserIdentity, type DatingGoals, type TextInput, type VideoAnalysis, type PhotoEntry, type ManualEntry, type UserSynthesis } from '../lib/db';
 import { analyzeUserSelf, extractPartnerVirtues, analyzeNeurodivergence, extractUserAspects } from '../lib/ai';
 import { useUserStreamingAnalysis } from '../hooks/useUserStreamingAnalysis';
+import { useAuth } from '../contexts/AuthContext';
+import { saveUserIdentityWithSync } from '../lib/sync';
 
 // Type for user self-analysis result
 interface UserSelfAnalysisResult {
@@ -115,6 +117,9 @@ export default function MyProfile() {
   const [isAnalyzingLegacy, setIsAnalyzingLegacy] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
+  // Get auth state for syncing
+  const { user } = useAuth();
+
   // Live query for user identity
   const userIdentity = useLiveQuery(() => db.userIdentity.get(1));
 
@@ -128,13 +133,14 @@ export default function MyProfile() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
 
   // Streaming analysis hook - lives at page level like Upload.tsx
+  // Pass userId for server sync
   const {
     state: streamingState,
     startAnalysis,
     abort,
     reset: resetStreaming,
     isProcessing: isStreamingProcessing,
-  } = useUserStreamingAnalysis();
+  } = useUserStreamingAnalysis({ userId: user?.id });
 
   useEffect(() => {
     return () => {
@@ -174,6 +180,7 @@ export default function MyProfile() {
 
   // Save to DB whenever local state changes (debounced effect)
   // Uses update() to only modify specified fields, preserving synthesis
+  // Also syncs to server when user is logged in
   const saveToDb = useCallback(async () => {
     try {
       const fieldsToUpdate = {
@@ -201,10 +208,21 @@ export default function MyProfile() {
       }
 
       console.log("MyProfile: Save successful");
+
+      // Sync to server if user is logged in
+      if (user?.id) {
+        try {
+          await saveUserIdentityWithSync(fieldsToUpdate, user.id);
+          console.log("MyProfile: Synced to server");
+        } catch (syncError) {
+          console.error("MyProfile: Server sync failed:", syncError);
+          // Don't throw - local save succeeded, sync can retry later
+        }
+      }
     } catch (error) {
       console.error("MyProfile: Failed to save to DB:", error);
     }
-  }, [localGoals, localTextInputs, localVideoAnalysis, localPhotos, localManualEntry]);
+  }, [localGoals, localTextInputs, localVideoAnalysis, localPhotos, localManualEntry, user?.id]);
 
   // Auto-save on changes (with debounce)
   useEffect(() => {
@@ -398,6 +416,17 @@ export default function MyProfile() {
 
       // Save synthesis to DB
       await db.userIdentity.update(1, { synthesis, lastUpdated: new Date() });
+
+      // Sync to server if user is logged in
+      if (user?.id) {
+        try {
+          await saveUserIdentityWithSync({ synthesis }, user.id);
+          console.log("MyProfile: Synthesis synced to server");
+        } catch (syncError) {
+          console.error("MyProfile: Server sync failed:", syncError);
+          // Don't throw - local save succeeded
+        }
+      }
 
       // Switch to Insights tab to show results
       if (isMounted.current) {
