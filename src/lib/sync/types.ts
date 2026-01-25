@@ -11,7 +11,8 @@ export interface ServerUserProfile {
   dating_goals: DatingGoalsJSON | null;
   data_exports: DataExportJSON[];
   text_inputs: TextInputJSON[];
-  video_analysis: VideoAnalysisJSON | null;
+  video_analysis: VideoAnalysisMetadataJSON | null; // Metadata only, frames in Storage
+  video_frame_paths: string[] | null; // Storage paths for video frames
   manual_entry: ManualEntryJSON;
   synthesis: SynthesisJSON | null;
   insight_feedback: InsightFeedbackJSON[];
@@ -88,8 +89,8 @@ interface TextInputJSON {
   addedAt: string; // ISO date string
 }
 
-interface VideoAnalysisJSON {
-  frames: string[]; // URLs to Storage
+// Video analysis metadata only - frames stored separately in Storage via video_frame_paths
+interface VideoAnalysisMetadataJSON {
   thumbnailIndex?: number;
   extractedAt?: string;
   analyzedAt?: string;

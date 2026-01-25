@@ -4,13 +4,16 @@
 import { supabase } from '../supabase';
 import { db, type UserIdentity } from '../db';
 import type { ServerUserProfile } from './types';
+import { uploadImage, downloadImage, isStoragePath } from './imageSync';
 
 /**
  * Converts a local UserIdentity to server format
+ * Note: Frames are NOT included in video_analysis - they're handled separately via Storage
  */
 function localToServer(
   identity: UserIdentity,
-  userId: string
+  userId: string,
+  videoFramePaths?: string[]
 ): Omit<ServerUserProfile, 'id' | 'created_at' | 'updated_at'> {
   return {
     user_id: userId,
@@ -28,12 +31,13 @@ function localToServer(
       label: input.label,
       addedAt: input.addedAt.toISOString(),
     })),
+    // Store only metadata - frames go to Storage via video_frame_paths
     video_analysis: identity.videoAnalysis ? {
-      frames: identity.videoAnalysis.frames,
       thumbnailIndex: identity.videoAnalysis.thumbnailIndex,
       extractedAt: identity.videoAnalysis.extractedAt?.toISOString(),
       analyzedAt: identity.videoAnalysis.analyzedAt?.toISOString(),
     } : null,
+    video_frame_paths: videoFramePaths ?? null,
     manual_entry: identity.manualEntry || {},
     synthesis: identity.synthesis ? {
       meta: {
@@ -60,6 +64,7 @@ function localToServer(
 
 /**
  * Converts server data to local UserIdentity format
+ * Note: Frames are NOT populated here - they're downloaded separately via downloadUserFrames()
  */
 function serverToLocal(
   server: ServerUserProfile,
@@ -83,8 +88,9 @@ function serverToLocal(
       label: input.label,
       addedAt: new Date(input.addedAt),
     })),
+    // Metadata only - frames will be populated via downloadUserFrames()
     videoAnalysis: server.video_analysis ? {
-      frames: server.video_analysis.frames,
+      frames: existingLocal?.videoAnalysis?.frames || [], // Preserve existing or empty until download
       thumbnailIndex: server.video_analysis.thumbnailIndex,
       extractedAt: parseDate(server.video_analysis.extractedAt),
       analyzedAt: parseDate(server.video_analysis.analyzedAt),
@@ -148,13 +154,91 @@ export async function fetchUserProfile(userId: string): Promise<ServerUserProfil
 }
 
 /**
+ * Uploads user video frames to Storage
+ * @returns Array of storage paths
+ */
+async function uploadUserFrames(
+  userId: string,
+  frames: string[]
+): Promise<string[]> {
+  const paths: string[] = [];
+
+  // Upload frames in parallel for better performance
+  const uploadPromises = frames.map(async (frame, index) => {
+    // Skip if already a storage path (already uploaded)
+    if (isStoragePath(frame)) {
+      return { index, path: frame };
+    }
+
+    try {
+      const result = await uploadImage(
+        userId,
+        frame,
+        `user-frames/frame-${index}.jpg`
+      );
+      return { index, path: result.path };
+    } catch (error) {
+      console.warn(`Failed to upload frame ${index}:`, error);
+      return { index, path: null };
+    }
+  });
+
+  const results = await Promise.all(uploadPromises);
+
+  // Build paths array in order, filtering out failed uploads
+  for (const result of results.sort((a, b) => a.index - b.index)) {
+    if (result.path) {
+      paths.push(result.path);
+    }
+  }
+
+  return paths;
+}
+
+/**
+ * Downloads user video frames from Storage
+ * @returns Array of base64 strings
+ */
+async function downloadUserFrames(paths: string[]): Promise<string[]> {
+  const frames: string[] = [];
+
+  // Download frames in parallel for better performance
+  const downloadPromises = paths.map(async (path, index) => {
+    try {
+      const base64 = await downloadImage(path);
+      return { index, base64 };
+    } catch (error) {
+      console.warn(`Failed to download frame ${index} from ${path}:`, error);
+      return { index, base64: null };
+    }
+  });
+
+  const results = await Promise.all(downloadPromises);
+
+  // Build frames array in order, filtering out failed downloads
+  for (const result of results.sort((a, b) => a.index - b.index)) {
+    if (result.base64) {
+      frames.push(result.base64);
+    }
+  }
+
+  return frames;
+}
+
+/**
  * Creates a new user profile on the server
  */
 export async function createUserProfileOnServer(
   identity: UserIdentity,
   userId: string
 ): Promise<string> {
-  const serverData = localToServer(identity, userId);
+  // Upload frames to Storage if they exist
+  let videoFramePaths: string[] | undefined;
+  if (identity.videoAnalysis?.frames && identity.videoAnalysis.frames.length > 0) {
+    videoFramePaths = await uploadUserFrames(userId, identity.videoAnalysis.frames);
+  }
+
+  const serverData = localToServer(identity, userId, videoFramePaths);
 
   const { data, error } = await supabase
     .from('user_profiles')
@@ -183,7 +267,17 @@ export async function updateUserProfileOnServer(
     throw new Error('Cannot update user profile without serverId');
   }
 
-  const serverData = localToServer(identity, userId);
+  // Upload frames to Storage if they exist and are base64 (not already uploaded)
+  let videoFramePaths: string[] | undefined;
+  if (identity.videoAnalysis?.frames && identity.videoAnalysis.frames.length > 0) {
+    // Check if any frames need uploading (are base64, not storage paths)
+    const hasBase64Frames = identity.videoAnalysis.frames.some(f => !isStoragePath(f));
+    if (hasBase64Frames) {
+      videoFramePaths = await uploadUserFrames(userId, identity.videoAnalysis.frames);
+    }
+  }
+
+  const serverData = localToServer(identity, userId, videoFramePaths);
 
   const { error } = await supabase
     .from('user_profiles')
@@ -219,9 +313,31 @@ export async function syncUserProfileFromServer(userId: string): Promise<void> {
   }
 
   if (serverProfile) {
-    // Update local with server data
+    // Update local with server data (metadata only, frames downloaded separately)
     const localData = serverToLocal(serverProfile, localIdentity);
     await db.userIdentity.update(1, localData);
+
+    // Download frames from Storage if paths exist
+    if (serverProfile.video_frame_paths && serverProfile.video_frame_paths.length > 0) {
+      try {
+        const frames = await downloadUserFrames(serverProfile.video_frame_paths);
+        if (frames.length > 0) {
+          // Update videoAnalysis with downloaded frames
+          const currentIdentity = await db.userIdentity.get(1);
+          if (currentIdentity?.videoAnalysis) {
+            await db.userIdentity.update(1, {
+              videoAnalysis: {
+                ...currentIdentity.videoAnalysis,
+                frames,
+              },
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to download user frames:', error);
+        // Don't throw - continue with sync even if frames fail
+      }
+    }
   } else if (localIdentity && hasUserData(localIdentity)) {
     // No server profile but local has data - push it
     await createUserProfileOnServer(localIdentity, userId);
