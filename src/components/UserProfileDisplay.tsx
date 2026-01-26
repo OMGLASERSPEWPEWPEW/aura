@@ -84,7 +84,8 @@ export default function UserProfileDisplay({ synthesis, photos: userPhotos, vide
         console.log(`Feedback saved: ${insightKey} = ${rating}`);
       }
     } catch (error) {
-      console.error('Failed to save feedback:', error);
+      // Non-critical: feedback not saved but UI continues working
+      console.log('UserProfileDisplay: Feedback save failed:', error instanceof Error ? error.message : String(error));
     }
   }, []);
 

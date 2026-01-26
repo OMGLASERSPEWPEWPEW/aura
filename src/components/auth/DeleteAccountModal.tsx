@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { db } from '../../lib/db';
 import { X, AlertTriangle, Loader2 } from 'lucide-react';
+import { StorageError, ApiError } from '../../lib/errors';
 
 interface DeleteAccountModalProps {
   onClose: () => void;
@@ -46,19 +47,24 @@ export default function DeleteAccountModal({ onClose }: DeleteAccountModalProps)
           body: { userId: user.id },
         });
         if (deleteError) {
-          console.warn('Account deletion endpoint not available:', deleteError);
-          // Continue anyway - local data is cleared
+          // Non-critical: endpoint not available, but local data is cleared
+          console.log('DeleteAccountModal: delete-account endpoint not available');
         }
       } catch {
         // Edge function might not exist yet - that's OK
-        console.warn('delete-account function not available');
+        console.log('DeleteAccountModal: delete-account function not available');
       }
 
       // Navigate to home
       navigate('/', { replace: true });
     } catch (err) {
-      console.error('Failed to delete account:', err);
-      setError('Failed to delete account. Please try again.');
+      const storageError = new StorageError(
+        `Failed to delete account: ${err instanceof Error ? err.message : String(err)}`,
+        'local',
+        { cause: err instanceof Error ? err : undefined }
+      );
+      console.log('DeleteAccountModal:', storageError.code, storageError.message);
+      setError(storageError.getUserMessage());
       setIsDeleting(false);
     }
   };

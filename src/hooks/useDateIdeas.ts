@@ -80,7 +80,8 @@ export function useDateIdeas(
         setWeatherForecast(weather);
         setLocalEvents(events);
       } catch (err) {
-        console.error('Weather/events fetch error:', err);
+        // Non-critical: weather/events are optional, continue without them
+        console.log('useDateIdeas: Weather/events fetch failed (non-critical)');
       } finally {
         setIsLoadingWeather(false);
       }
@@ -127,10 +128,10 @@ export function useDateIdeas(
         },
       });
     } catch (err) {
-      console.error('Date suggestions error:', err);
       const auraError = err instanceof AuraError
         ? err
-        : new ApiError(err instanceof Error ? err.message : 'Failed to get date ideas');
+        : new ApiError(err instanceof Error ? err.message : 'Failed to get date ideas', { cause: err instanceof Error ? err : undefined });
+      console.log('useDateIdeas:', auraError.code, auraError.message);
       setError(auraError);
       showError(auraError);
     } finally {

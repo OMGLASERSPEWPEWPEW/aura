@@ -54,10 +54,10 @@ export function useOpenerRefresh(
 
       await db.profiles.update(profile.id, { analysis: updatedAnalysis });
     } catch (err) {
-      console.error('Refresh openers error:', err);
       const auraError = err instanceof AuraError
         ? err
-        : new ApiError(err instanceof Error ? err.message : 'Failed to refresh openers');
+        : new ApiError(err instanceof Error ? err.message : 'Failed to refresh openers', { cause: err instanceof Error ? err : undefined });
+      console.log('useOpenerRefresh:', auraError.code, auraError.message);
       setError(auraError);
       showError(auraError);
     } finally {
@@ -96,10 +96,10 @@ export function useOpenerRefresh(
 
         await db.profiles.update(profile.id, { analysis: updatedAnalysis });
       } catch (err) {
-        console.error('Refresh prompt opener error:', err);
         const auraError = err instanceof AuraError
           ? err
-          : new ApiError(err instanceof Error ? err.message : 'Failed to refresh opener');
+          : new ApiError(err instanceof Error ? err.message : 'Failed to refresh opener', { cause: err instanceof Error ? err : undefined });
+        console.log('useOpenerRefresh:', auraError.code, auraError.message);
         setError(auraError);
         showError(auraError);
       } finally {

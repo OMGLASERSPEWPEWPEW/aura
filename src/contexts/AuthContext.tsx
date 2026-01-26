@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { db } from '../lib/db';
 import { clearAllLocalData } from '../lib/sync';
 import type { User, Session, AuthError } from '@supabase/supabase-js';
+import { StorageError } from '../lib/errors';
 
 interface AuthContextType {
   user: User | null;
@@ -64,7 +65,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         });
       }
     } catch (err) {
-      console.error('Failed to link user to identity:', err);
+      // Non-critical: linking failed, user can still use the app
+      const storageError = new StorageError(
+        `Failed to link user to identity: ${err instanceof Error ? err.message : String(err)}`,
+        'local',
+        { cause: err instanceof Error ? err : undefined }
+      );
+      console.log('AuthContext:', storageError.code, storageError.message);
     }
   }, []);
 
@@ -133,7 +140,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Clear all local data before signing out
       await clearAllLocalData();
     } catch (err) {
-      console.error('Failed to clear local data:', err);
+      // Non-critical: continue with sign out even if local clear fails
+      const storageError = new StorageError(
+        `Failed to clear local data: ${err instanceof Error ? err.message : String(err)}`,
+        'local',
+        { cause: err instanceof Error ? err : undefined }
+      );
+      console.log('AuthContext:', storageError.code, storageError.message);
     }
     const { error: signOutError } = await supabase.auth.signOut();
     if (signOutError) {

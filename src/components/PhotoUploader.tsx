@@ -76,7 +76,8 @@ export default function PhotoUploader({ photos, onPhotosChange, maxPhotos = 6 }:
       );
       onPhotosChange([...photos, ...compressedImages]);
     } catch (error) {
-      console.error("Error processing images:", error);
+      // User gets feedback via alert, just log for debugging
+      console.log("PhotoUploader: Image processing failed:", error instanceof Error ? error.message : String(error));
       alert("Failed to process some images. Please try again.");
     } finally {
       setIsProcessing(false);

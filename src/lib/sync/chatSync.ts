@@ -4,6 +4,7 @@
 import { supabase } from '../supabase';
 import { db, type MatchChatMessage } from '../db';
 import type { ServerMatchChat } from './types';
+import { SyncError } from '../errors';
 
 /**
  * Converts a local MatchChatMessage to server format
@@ -174,8 +175,16 @@ export async function pushUnsyncedChatMessages(userId: string): Promise<void> {
     try {
       await pushChatMessage(chat, userId);
     } catch (error) {
-      console.error(`Failed to push chat message ${chat.id}:`, error);
-      // Don't throw - continue with other messages
+      // Non-critical: log typed error but continue with other messages
+      const syncError = new SyncError(
+        `Failed to push chat message ${chat.id}: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          operation: 'push',
+          context: { chatId: chat.id },
+          cause: error instanceof Error ? error : undefined,
+        }
+      );
+      console.log('chatSync:', syncError.code, syncError.message);
     }
   }
 }

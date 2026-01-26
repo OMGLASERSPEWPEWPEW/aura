@@ -67,10 +67,10 @@ export function useZodiacCompatibility(
         zodiac_compatibility: result,
       });
     } catch (err) {
-      console.error('Zodiac compatibility error:', err);
       const auraError = err instanceof AuraError
         ? err
-        : new ApiError(err instanceof Error ? err.message : 'Failed to generate zodiac compatibility');
+        : new ApiError(err instanceof Error ? err.message : 'Failed to generate zodiac compatibility', { cause: err instanceof Error ? err : undefined });
+      console.log('useZodiacCompatibility:', auraError.code, auraError.message);
       setError(auraError);
       showError(auraError);
     } finally {

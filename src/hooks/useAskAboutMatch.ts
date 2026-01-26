@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type ProfileAnalysis, type ProfileCompatibility } from '../lib/db';
 import { askAboutMatch } from '../lib/ai';
+import { ApiError, StorageError, AuraError } from '../lib/errors';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -74,16 +75,20 @@ export function useAskAboutMatch(
         content: response,
       });
     } catch (err) {
-      console.error('Failed to ask about match:', err);
-      const errorMessage = "Sorry, I couldn't process that question. Please try again.";
-      setError(err instanceof Error ? err.message : errorMessage);
+      const auraError = err instanceof AuraError
+        ? err
+        : new ApiError(err instanceof Error ? err.message : 'Failed to process question', { cause: err instanceof Error ? err : undefined });
+      console.log('useAskAboutMatch:', auraError.code, auraError.message);
+
+      const errorMessage = auraError.getUserMessage();
+      setError(errorMessage);
 
       // Still add error response to DB for consistency
       await db.matchChats.add({
         profileId,
         timestamp: new Date(),
         role: 'assistant',
-        content: errorMessage,
+        content: "Sorry, I couldn't process that question. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -95,8 +100,13 @@ export function useAskAboutMatch(
       // Delete all messages for this profile
       await db.matchChats.where('profileId').equals(profileId).delete();
     } catch (err) {
-      console.error('Failed to clear chat history:', err);
-      setError('Failed to clear history');
+      const storageError = new StorageError(
+        `Failed to clear chat history: ${err instanceof Error ? err.message : String(err)}`,
+        'local',
+        { cause: err instanceof Error ? err : undefined }
+      );
+      console.log('useAskAboutMatch:', storageError.code, storageError.message);
+      setError(storageError.getUserMessage());
     }
   }, [profileId]);
 

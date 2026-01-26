@@ -1,6 +1,8 @@
 // src/lib/weather.ts
 // Weather forecast utility using Open-Meteo API (free, no API key required)
 
+import { NetworkError, ApiError } from './errors';
+
 export interface WeatherForecast {
   date: Date;
   temp_high: number;  // Fahrenheit
@@ -70,7 +72,11 @@ export async function geocodeLocation(locationString: string): Promise<GeoLocati
     );
 
     if (!response.ok) {
-      console.error('Geocoding API error:', response.statusText);
+      const apiError = new ApiError(`Geocoding API error: ${response.statusText}`, {
+        statusCode: response.status,
+        context: { location: locationString },
+      });
+      console.log('weather.ts:', apiError.code, apiError.message);
       return null;
     }
 
@@ -86,7 +92,11 @@ export async function geocodeLocation(locationString: string): Promise<GeoLocati
     console.log(`weather.ts: No geocoding results for "${locationString}"`);
     return null;
   } catch (error) {
-    console.error('Geocoding error:', error);
+    const networkError = new NetworkError(
+      `Geocoding failed: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error instanceof Error ? error : undefined }
+    );
+    console.log('weather.ts:', networkError.code, networkError.message);
     return null;
   }
 }
@@ -107,7 +117,11 @@ export async function getWeatherForecast(
     const response = await fetch(url);
 
     if (!response.ok) {
-      console.error('Weather API error:', response.statusText);
+      const apiError = new ApiError(`Weather API error: ${response.statusText}`, {
+        statusCode: response.status,
+        context: { latitude, longitude, date: targetDate.toISOString() },
+      });
+      console.log('weather.ts:', apiError.code, apiError.message);
       return null;
     }
 
@@ -128,7 +142,11 @@ export async function getWeatherForecast(
       precipitation_probability: data.daily.precipitation_probability_max?.[0] ?? 0
     };
   } catch (error) {
-    console.error('Weather fetch error:', error);
+    const networkError = new NetworkError(
+      `Weather fetch failed: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error instanceof Error ? error : undefined }
+    );
+    console.log('weather.ts:', networkError.code, networkError.message);
     return null;
   }
 }

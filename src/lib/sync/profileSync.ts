@@ -5,6 +5,7 @@ import { supabase } from '../supabase';
 import { db, type Profile } from '../db';
 import { uploadImage, deleteImage, isStoragePath, downloadImage } from './imageSync';
 import type { ServerMatchProfile } from './types';
+import { ImageSyncError, SyncError } from '../errors';
 
 /**
  * Converts a local Profile to server format for insert/update
@@ -149,7 +150,12 @@ export async function deleteProfileFromServer(
     try {
       await deleteImage(thumbnailPath);
     } catch (e) {
-      console.warn('Failed to delete thumbnail:', e);
+      // Non-critical: log typed error but continue with profile deletion
+      const imageError = new ImageSyncError('delete', {
+        imagePath: thumbnailPath,
+        cause: e instanceof Error ? e : undefined,
+      });
+      console.log('profileSync:', imageError.code, imageError.message);
     }
   }
 
@@ -256,8 +262,13 @@ export async function syncProfilesFromServer(userId: string): Promise<void> {
           const base64 = await downloadImage(thumbnailPath);
           await db.profiles.update(id, { thumbnail: base64 });
         } catch (error) {
-          console.warn(`Failed to download thumbnail for profile ${id}:`, error);
-          // Don't throw - continue with other profiles even if one fails
+          // Non-critical: log typed error but continue with other profiles
+          const imageError = new ImageSyncError('download', {
+            imagePath: thumbnailPath,
+            context: { profileId: id },
+            cause: error instanceof Error ? error : undefined,
+          });
+          console.log('profileSync:', imageError.code, imageError.message);
         }
       })
     );
@@ -277,8 +288,16 @@ export async function pushUnsyncedProfiles(userId: string): Promise<void> {
     try {
       await pushProfile(profile, userId);
     } catch (error) {
-      console.error(`Failed to push profile ${profile.id}:`, error);
-      throw error;
+      const syncError = new SyncError(
+        `Failed to push profile ${profile.id}: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          operation: 'push',
+          context: { profileId: profile.id },
+          cause: error instanceof Error ? error : undefined,
+        }
+      );
+      console.log('profileSync:', syncError.code, syncError.message);
+      throw syncError;
     }
   }
 }

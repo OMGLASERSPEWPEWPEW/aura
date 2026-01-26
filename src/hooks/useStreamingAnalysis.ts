@@ -20,6 +20,13 @@ import {
 } from '../lib/frameQuality';
 import { supabase } from '../lib/supabase';
 import { pushProfile, updateProfileOnServer } from '../lib/sync';
+import {
+  SyncError,
+  StorageError,
+  FrameExtractionError,
+  ChunkAnalysisError,
+  AuraError,
+} from '../lib/errors';
 
 export interface StreamingAnalysisState {
   phase: StreamingPhase;
@@ -128,8 +135,17 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
         console.log(`useStreamingAnalysis: Pushed profile ${localProfile.id} to server, serverId: ${serverId}`);
       }
     } catch (error) {
-      console.error('useStreamingAnalysis: Server sync failed (will retry on next full sync):', error);
-      // Don't throw - local save succeeded, server sync is non-critical
+      // Create typed error for debugging context but don't throw - server sync is non-critical
+      const syncError = new SyncError(
+        `Server sync failed: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          operation: localProfile.serverId ? 'update' : 'push',
+          context: { profileId: localProfile.id },
+          cause: error instanceof Error ? error : undefined,
+        }
+      );
+      // Log structured error for debugging - will retry on next full sync
+      console.log('useStreamingAnalysis: Server sync deferred:', syncError.code, syncError.message);
     }
   }, []);
 
@@ -259,7 +275,13 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
             frameScores: frameQualityScores,
           }));
         } catch (error) {
-          console.error('useStreamingAnalysis: Frame scoring failed, continuing without hints:', error);
+          // Non-critical: frame scoring failed, continue analysis without quality hints
+          const frameError = new FrameExtractionError('canvas_failed', {
+            message: 'Frame scoring failed, continuing without quality hints',
+            context: { frameCount: firstChunkFrames.length },
+            cause: error instanceof Error ? error : undefined,
+          });
+          console.log('useStreamingAnalysis:', frameError.code, frameError.message);
         }
       }
 
@@ -311,7 +333,14 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
                 allFrameScoresRef.current = [...allFrameScoresRef.current, ...adjustedScores];
                 console.log(`useStreamingAnalysis: Scored chunk ${chunkIndex + 1} frames, total scores: ${allFrameScoresRef.current.length}`);
               }).catch(err => {
-                console.error(`useStreamingAnalysis: Failed to score chunk ${chunkIndex + 1} frames:`, err);
+                // Non-critical: chunk frame scoring failed, thumbnail selection continues with partial data
+                const frameError = new FrameExtractionError('canvas_failed', {
+                  message: `Failed to score chunk ${chunkIndex + 1} frames`,
+                  frameIndex: chunkIndex * 4,
+                  context: { chunkIndex },
+                  cause: err instanceof Error ? err : undefined,
+                });
+                console.log('useStreamingAnalysis:', frameError.code, frameError.message);
               });
             }
           }
@@ -340,20 +369,30 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
                 return id;
               })
               .catch(err => {
-                console.error('Auto-save failed:', err);
-                throw err;
+                const storageError = new StorageError(
+                  `Auto-save failed: ${err instanceof Error ? err.message : String(err)}`,
+                  'local',
+                  { cause: err instanceof Error ? err : undefined }
+                );
+                console.log('useStreamingAnalysis: Auto-save deferred:', storageError.code);
+                throw storageError;
               });
             autoSavePromiseRef.current = savePromise;
           }
         },
         onError: (error, chunkIndex) => {
-          console.error(`useStreamingAnalysis: Chunk ${chunkIndex + 1} error:`, error);
+          const chunkError = new ChunkAnalysisError(chunkIndex, 4, {
+            message: error instanceof Error ? error.message : String(error),
+            cause: error instanceof Error ? error : undefined,
+            context: { phase: `chunk-${chunkIndex + 1}` },
+          });
+          console.log('useStreamingAnalysis:', chunkError.code, chunkError.message);
 
           // If chunk 1 fails, we can't continue (no basic info)
           if (chunkIndex === 0) {
             safeSetState({
               phase: 'error',
-              error: error instanceof Error ? error.message : String(error),
+              error: chunkError.getUserMessage(),
             });
             return;
           }
@@ -428,16 +467,21 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
       });
 
     } catch (error) {
-      console.error('useStreamingAnalysis: Error:', error);
-
       if (error instanceof Error && error.message === 'The user aborted a request.') {
         // Handled by abort function
         return;
       }
 
+      // Wrap in typed error if not already one
+      const auraError = error instanceof AuraError
+        ? error
+        : AuraError.from(error, 'STREAMING_ANALYSIS_ERROR', 'media');
+
+      console.log('useStreamingAnalysis: Analysis failed:', auraError.code, auraError.message);
+
       safeSetState({
         phase: 'error',
-        error: error instanceof Error ? error.message : String(error),
+        error: auraError.getUserMessage(),
       });
     } finally {
       abortControllerRef.current = null;
@@ -469,7 +513,12 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
           // Navigate to the saved profile
           navigate(`/profile/${profileId}`);
         } catch (error) {
-          console.error('Failed to save progress:', error);
+          const storageError = new StorageError(
+            `Failed to save progress: ${error instanceof Error ? error.message : String(error)}`,
+            'local',
+            { cause: error instanceof Error ? error : undefined }
+          );
+          console.log('useStreamingAnalysis: Abort save failed:', storageError.code);
           safeSetState({ phase: 'aborted' });
         }
       } else if (existingProfileId) {

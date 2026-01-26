@@ -19,6 +19,7 @@ import { useUserStreamingAnalysis } from '../hooks/useUserStreamingAnalysis';
 import { useAuth } from '../contexts/AuthContext';
 import { saveUserIdentityWithSync } from '../lib/sync';
 import Logo from '../components/ui/Logo';
+import { SyncError, StorageError, ApiError, AuraError } from '../lib/errors';
 
 // Type for user self-analysis result
 interface UserSelfAnalysisResult {
@@ -214,20 +215,31 @@ export default function MyProfile() {
         try {
           await saveUserIdentityWithSync(fieldsToUpdate, user.id);
           console.log("MyProfile: Synced to server");
-        } catch (syncError) {
-          console.error("MyProfile: Server sync failed:", syncError);
-          // Don't throw - local save succeeded, sync can retry later
+        } catch (error) {
+          // Non-critical: create typed error for debugging but don't throw
+          const syncError = new SyncError(
+            `Server sync failed: ${error instanceof Error ? error.message : String(error)}`,
+            { operation: 'push', cause: error instanceof Error ? error : undefined }
+          );
+          console.log("MyProfile: Server sync deferred:", syncError.code);
         }
       }
     } catch (error) {
-      console.error("MyProfile: Failed to save to DB:", error);
+      const storageError = new StorageError(
+        `Failed to save to DB: ${error instanceof Error ? error.message : String(error)}`,
+        'local',
+        { cause: error instanceof Error ? error : undefined }
+      );
+      console.log("MyProfile: Save failed:", storageError.code, storageError.message);
     }
   }, [localGoals, localTextInputs, localVideoAnalysis, localPhotos, localManualEntry, user?.id]);
 
   // Auto-save on changes (with debounce)
   useEffect(() => {
     const timer = setTimeout(() => {
-      saveToDb().catch(err => console.error("MyProfile: Auto-save error:", err));
+      saveToDb().catch(err => {
+        // Already logged in saveToDb, no additional logging needed
+      });
     }, 500);
     return () => clearTimeout(timer);
   }, [saveToDb]);
@@ -296,8 +308,13 @@ export default function MyProfile() {
           strengths: result.behavioral_insights?.strengths
         });
         console.log("MyProfile: Extracted", partnerVirtues?.length || 0, "partner virtues");
-      } catch (virtueError) {
-        console.error("MyProfile: Failed to extract partner virtues:", virtueError);
+      } catch (error) {
+        // Non-critical: virtue extraction failed, continue with synthesis
+        const apiError = new ApiError(
+          `Failed to extract partner virtues: ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error instanceof Error ? error : undefined }
+        );
+        console.log("MyProfile:", apiError.code, apiError.message);
       }
 
       if (!isMounted.current) return;
@@ -321,8 +338,13 @@ export default function MyProfile() {
           behavioral_patterns: result.psychological_profile?.subtext_analysis?.disconnect
         });
         console.log("MyProfile: Neurodivergence analysis complete:", neurodivergence?.traits?.length || 0, "traits identified");
-      } catch (ndError) {
-        console.error("MyProfile: Failed to analyze neurodivergence:", ndError);
+      } catch (error) {
+        // Non-critical: neurodivergence analysis failed, continue with synthesis
+        const apiError = new ApiError(
+          `Failed to analyze neurodivergence: ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error instanceof Error ? error : undefined }
+        );
+        console.log("MyProfile:", apiError.code, apiError.message);
       }
 
       if (!isMounted.current) return;
@@ -344,8 +366,13 @@ export default function MyProfile() {
           behavioral_data: undefined
         });
         console.log("MyProfile: Aspects profile extracted (legacy):", aspectProfile?.scores?.length || 0, "aspects scored");
-      } catch (aspectError) {
-        console.error("MyProfile: Failed to extract aspects profile:", aspectError);
+      } catch (error) {
+        // Non-critical: aspect extraction failed, continue with synthesis
+        const apiError = new ApiError(
+          `Failed to extract aspects profile: ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error instanceof Error ? error : undefined }
+        );
+        console.log("MyProfile:", apiError.code, apiError.message);
       }
 
       if (!isMounted.current) return;
@@ -422,9 +449,13 @@ export default function MyProfile() {
         try {
           await saveUserIdentityWithSync({ synthesis }, user.id);
           console.log("MyProfile: Synthesis synced to server");
-        } catch (syncError) {
-          console.error("MyProfile: Server sync failed:", syncError);
-          // Don't throw - local save succeeded
+        } catch (error) {
+          // Non-critical: create typed error for debugging but don't throw
+          const syncError = new SyncError(
+            `Server sync failed: ${error instanceof Error ? error.message : String(error)}`,
+            { operation: 'push', cause: error instanceof Error ? error : undefined }
+          );
+          console.log("MyProfile: Synthesis sync deferred:", syncError.code);
         }
       }
 
@@ -434,9 +465,15 @@ export default function MyProfile() {
       }
 
     } catch (error) {
-      console.error("MyProfile: Synthesis error:", error);
+      // Wrap in typed error if not already one
+      const auraError = error instanceof AuraError
+        ? error
+        : AuraError.from(error, 'USER_SYNTHESIS_ERROR', 'api');
+
+      console.log("MyProfile: Synthesis failed:", auraError.code, auraError.message);
+
       if (isMounted.current) {
-        setAnalysisError(error instanceof Error ? error.message : "Analysis failed. Please try again.");
+        setAnalysisError(auraError.getUserMessage());
       }
     } finally {
       if (isMounted.current) {

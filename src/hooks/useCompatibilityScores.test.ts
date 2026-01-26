@@ -262,7 +262,7 @@ describe('useCompatibilityScores', () => {
 
   it('should handle virtue generation errors', async () => {
     const { scoreMatchVirtues } = await import('../lib/ai');
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     vi.mocked(scoreMatchVirtues).mockRejectedValue(new Error('Virtue API Error'));
 
@@ -274,7 +274,8 @@ describe('useCompatibilityScores', () => {
       await result.current.generateVirtues();
     });
 
-    expect(result.current.virtueError).toBe('Virtue API Error');
+    // Error is now shown as user-friendly message from typed error
+    expect(result.current.virtueError).toBeTruthy();
     expect(result.current.isLoadingVirtues).toBe(false);
 
     consoleSpy.mockRestore();
@@ -282,7 +283,7 @@ describe('useCompatibilityScores', () => {
 
   it('should handle aspect generation errors', async () => {
     const { scoreMatchAspects } = await import('../lib/ai');
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     vi.mocked(scoreMatchAspects).mockRejectedValue(new Error('Aspect API Error'));
 
@@ -294,7 +295,8 @@ describe('useCompatibilityScores', () => {
       await result.current.generateAspects();
     });
 
-    expect(result.current.aspectError).toBe('Aspect API Error');
+    // Error is now shown as user-friendly message from typed error
+    expect(result.current.aspectError).toBeTruthy();
     expect(result.current.isLoadingAspects).toBe(false);
 
     consoleSpy.mockRestore();

@@ -76,7 +76,10 @@ export function SyncProvider({ children }: SyncProviderProps) {
   useEffect(() => {
     if (user && isOnline) {
       // Auto-sync on login
-      performFullSync(user.id).catch(console.error);
+      performFullSync(user.id).catch(err => {
+        // Non-critical: sync will retry on next opportunity
+        console.log('SyncContext: Auto-sync failed:', err instanceof Error ? err.message : String(err));
+      });
     }
   }, [user?.id, isOnline]);
 

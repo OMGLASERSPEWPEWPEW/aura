@@ -9,6 +9,7 @@ import type { VirtueScore } from '../lib/db';
 import UserMenu from '../components/auth/UserMenu';
 import { SyncIndicator } from '../components/SyncIndicator';
 import { deleteProfileFromServer } from '../lib/sync';
+import { SyncError } from '../lib/errors';
 
 export default function Home() {
   const profiles = useLiveQuery(() => db.profiles.orderBy('timestamp').reverse().toArray());
@@ -29,8 +30,12 @@ export default function Home() {
         try {
           await deleteProfileFromServer(profile.serverId, profile.thumbnailPath);
         } catch (error) {
-          console.error('Failed to delete from server:', error);
-          // Continue with local delete even if server fails
+          // Non-critical: continue with local delete even if server fails
+          const syncError = new SyncError(
+            `Server delete failed: ${error instanceof Error ? error.message : String(error)}`,
+            { operation: 'delete', cause: error instanceof Error ? error : undefined }
+          );
+          console.log('Home:', syncError.code, syncError.message);
         }
       }
 

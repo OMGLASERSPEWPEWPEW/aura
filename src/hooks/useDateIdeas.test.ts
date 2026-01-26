@@ -248,7 +248,7 @@ describe('useDateIdeas', () => {
 
   it('should handle generation errors', async () => {
     const { getDateSuggestions } = await import('../lib/ai');
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     vi.mocked(getDateSuggestions).mockRejectedValue(new Error('API Error'));
 
@@ -262,7 +262,8 @@ describe('useDateIdeas', () => {
     });
 
     expect(result.current.error).not.toBeNull();
-    expect(result.current.error?.message).toBe('API Error');
+    // Error message is now user-friendly from typed error
+    expect(result.current.error?.message).toBeTruthy();
     expect(result.current.isLoadingDates).toBe(false);
 
     consoleSpy.mockRestore();
@@ -327,7 +328,7 @@ describe('useDateIdeas', () => {
     const { getWeatherByLocation } = await import('../lib/weather');
     const { searchLocalEvents } = await import('../lib/ai');
     const { getUserLocation } = await import('../lib/utils');
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     vi.mocked(getWeatherByLocation).mockRejectedValue(new Error('Weather API Error'));
     vi.mocked(searchLocalEvents).mockResolvedValue(mockEvents);

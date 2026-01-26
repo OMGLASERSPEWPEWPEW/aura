@@ -12,6 +12,7 @@ import type {
   UserVirtueProfile,
   MatchVirtueCompatibility,
 } from '../lib/db';
+import { ApiError, AuraError } from '../lib/errors';
 
 interface UseCompatibilityScoresReturn {
   // Legacy systems (deprecated but still supported)
@@ -123,7 +124,12 @@ export function useCompatibilityScores(
 
         console.log('useCompatibilityScores: Migration complete, virtue_profile saved');
       } catch (err) {
-        console.error('useCompatibilityScores: Migration failed:', err);
+        // Non-critical: migration failed, legacy system still usable
+        const apiError = new ApiError(
+          `Migration failed: ${err instanceof Error ? err.message : String(err)}`,
+          { cause: err instanceof Error ? err : undefined }
+        );
+        console.log('useCompatibilityScores:', apiError.code, apiError.message);
       }
     };
 
@@ -174,8 +180,11 @@ export function useCompatibilityScores(
 
       console.log('Virtue scores saved:', scores);
     } catch (err) {
-      console.error('Virtue scoring error:', err);
-      setVirtueError(err instanceof Error ? err.message : 'Failed to generate virtue scores');
+      const apiError = err instanceof AuraError
+        ? err
+        : new ApiError(err instanceof Error ? err.message : 'Failed to generate virtue scores', { cause: err instanceof Error ? err : undefined });
+      console.log('useCompatibilityScores:', apiError.code, apiError.message);
+      setVirtueError(apiError.getUserMessage());
     } finally {
       setIsLoadingVirtues(false);
     }
@@ -204,8 +213,11 @@ export function useCompatibilityScores(
 
       console.log('Aspect scores saved:', scores);
     } catch (err) {
-      console.error('Aspect scoring error:', err);
-      setAspectError(err instanceof Error ? err.message : 'Failed to generate aspect scores');
+      const apiError = err instanceof AuraError
+        ? err
+        : new ApiError(err instanceof Error ? err.message : 'Failed to generate aspect scores', { cause: err instanceof Error ? err : undefined });
+      console.log('useCompatibilityScores:', apiError.code, apiError.message);
+      setAspectError(apiError.getUserMessage());
     } finally {
       setIsLoadingAspects(false);
     }
@@ -237,8 +249,11 @@ export function useCompatibilityScores(
 
       console.log('11 Virtues compatibility saved:', compatibility);
     } catch (err) {
-      console.error('11 Virtues scoring error:', err);
-      setVirtues11Error(err instanceof Error ? err.message : 'Failed to generate 11 Virtues compatibility');
+      const apiError = err instanceof AuraError
+        ? err
+        : new ApiError(err instanceof Error ? err.message : 'Failed to generate 11 Virtues compatibility', { cause: err instanceof Error ? err : undefined });
+      console.log('useCompatibilityScores:', apiError.code, apiError.message);
+      setVirtues11Error(apiError.getUserMessage());
     } finally {
       setIsLoadingVirtues11(false);
     }

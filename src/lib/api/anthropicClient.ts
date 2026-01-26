@@ -143,8 +143,11 @@ async function makeRequest(options: AnthropicRequestOptions, operationName?: str
     const accessToken = await getAccessToken();
     console.log('Access token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'NULL');
     if (!accessToken) {
-      console.error('No access token available - user may not be logged in');
-      throw new Error('Authentication required. Please sign in to analyze profiles.');
+      const authError = new AuthError('auth_required', {
+        message: 'No access token available - user may not be logged in',
+      });
+      console.log('anthropicClient:', authError.code, authError.message);
+      throw authError;
     }
     headers['Authorization'] = `Bearer ${accessToken}`;
   } else {
@@ -173,7 +176,6 @@ async function makeRequest(options: AnthropicRequestOptions, operationName?: str
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('API Error:', errorData);
 
       // Auto-save error info for debugging
       const debugInfo: ErrorDebugInfo = {
@@ -305,7 +307,9 @@ export async function callAnthropicForArraySafe<T>(options: AnthropicRequestOpti
   try {
     return await callAnthropicForArray<T>(options);
   } catch (error) {
-    console.error('API call failed, returning empty array:', error);
+    // Log typed error but return empty array as graceful fallback
+    const apiError = toAuraError(error, 'callAnthropicForArraySafe');
+    console.log('callAnthropicForArraySafe:', apiError.code, apiError.message);
     return [];
   }
 }

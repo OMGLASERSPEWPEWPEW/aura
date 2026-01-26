@@ -5,6 +5,7 @@ import { supabase } from '../supabase';
 import { db, type UserIdentity } from '../db';
 import type { ServerUserProfile } from './types';
 import { uploadImage, downloadImage, isStoragePath } from './imageSync';
+import { ImageSyncError } from '../errors';
 
 /**
  * Converts a local UserIdentity to server format
@@ -178,7 +179,13 @@ async function uploadUserFrames(
       );
       return { index, path: result.path };
     } catch (error) {
-      console.warn(`Failed to upload frame ${index}:`, error);
+      // Non-critical: log typed error but continue with other frames
+      const imageError = new ImageSyncError('upload', {
+        imagePath: `user-frames/frame-${index}.jpg`,
+        context: { frameIndex: index },
+        cause: error instanceof Error ? error : undefined,
+      });
+      console.log('userProfileSync:', imageError.code, imageError.message);
       return { index, path: null };
     }
   });
@@ -208,7 +215,13 @@ async function downloadUserFrames(paths: string[]): Promise<string[]> {
       const base64 = await downloadImage(path);
       return { index, base64 };
     } catch (error) {
-      console.warn(`Failed to download frame ${index} from ${path}:`, error);
+      // Non-critical: log typed error but continue with other frames
+      const imageError = new ImageSyncError('download', {
+        imagePath: path,
+        context: { frameIndex: index },
+        cause: error instanceof Error ? error : undefined,
+      });
+      console.log('userProfileSync:', imageError.code, imageError.message);
       return { index, base64: null };
     }
   });
@@ -334,8 +347,12 @@ export async function syncUserProfileFromServer(userId: string): Promise<void> {
           }
         }
       } catch (error) {
-        console.warn('Failed to download user frames:', error);
-        // Don't throw - continue with sync even if frames fail
+        // Non-critical: log typed error but continue with sync
+        const imageError = new ImageSyncError('download', {
+          context: { frameCount: serverProfile.video_frame_paths?.length },
+          cause: error instanceof Error ? error : undefined,
+        });
+        console.log('userProfileSync:', imageError.code, imageError.message);
       }
     }
   } else if (localIdentity && hasUserData(localIdentity)) {

@@ -5,6 +5,7 @@ import { supabase } from '../supabase';
 import { db, type CoachingSession } from '../db';
 import { uploadImages, deleteImage, isStoragePath } from './imageSync';
 import type { ServerCoachingSession } from './types';
+import { ImageSyncError, SyncError } from '../errors';
 
 /**
  * Converts a local CoachingSession to server format
@@ -151,7 +152,12 @@ export async function deleteCoachingSessionFromServer(
       try {
         await deleteImage(path);
       } catch (e) {
-        console.warn('Failed to delete coaching image:', e);
+        // Non-critical: log typed error but continue with session deletion
+        const imageError = new ImageSyncError('delete', {
+          imagePath: path,
+          cause: e instanceof Error ? e : undefined,
+        });
+        console.log('coachingSync:', imageError.code, imageError.message);
       }
     }
   }
@@ -217,8 +223,8 @@ export async function syncCoachingSessionsFromServer(userId: string): Promise<vo
   for (const [serverId, serverSession] of serverSessions) {
     const localProfileId = profileIdMap.get(serverSession.match_profile_id);
     if (!localProfileId) {
-      // Skip sessions for profiles we don't have locally
-      console.warn(`Skipping coaching session - profile ${serverSession.match_profile_id} not found locally`);
+      // Skip sessions for profiles we don't have locally - informational log
+      console.log(`coachingSync: Skipping session - profile ${serverSession.match_profile_id} not found locally`);
       continue;
     }
 
@@ -259,8 +265,16 @@ export async function pushUnsyncedCoachingSessions(userId: string): Promise<void
     try {
       await pushCoachingSession(session, userId);
     } catch (error) {
-      console.error(`Failed to push coaching session ${session.id}:`, error);
-      // Don't throw - continue with other sessions
+      // Non-critical: log typed error but continue with other sessions
+      const syncError = new SyncError(
+        `Failed to push coaching session ${session.id}: ${error instanceof Error ? error.message : String(error)}`,
+        {
+          operation: 'push',
+          context: { sessionId: session.id },
+          cause: error instanceof Error ? error : undefined,
+        }
+      );
+      console.log('coachingSync:', syncError.code, syncError.message);
     }
   }
 }

@@ -221,8 +221,8 @@ export async function scoreFrame(dataUrl: string, index: number): Promise<FrameQ
       isUsable,
     };
   } catch (error) {
-    console.error(`Error scoring frame ${index}:`, error);
-    // Return a neutral score on error
+    // Non-critical: return neutral score so frame can still be used
+    console.log(`frameQuality: Error scoring frame ${index}:`, error instanceof Error ? error.message : String(error));
     return {
       index,
       brightness: 128,

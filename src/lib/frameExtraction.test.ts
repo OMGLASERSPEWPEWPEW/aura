@@ -261,7 +261,7 @@ describe('frameExtraction', () => {
       }
 
       await expect(promise).rejects.toThrow(
-        'Error loading video. Please try a different file format.'
+        'Unsupported video format. Supported formats: MP4, MOV, WebM'
       );
     });
   });

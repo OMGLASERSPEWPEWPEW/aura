@@ -11,6 +11,7 @@ import {
   TIMEOUTS,
   type MessageContent,
 } from './api';
+import { ChunkAnalysisError } from './errors/media';
 import {
   PROFILE_ANALYSIS_PROMPT,
   PROFILE_BASICS_PROMPT,
@@ -1300,9 +1301,13 @@ export async function analyzeProfileStreaming(
         callbacks.onChunkComplete(i, profile, latency);
       }
     } catch (error) {
-      console.error(`ai.ts: Chunk ${i + 1} failed:`, error);
+      const chunkError = new ChunkAnalysisError(i + 1, {
+        cause: error instanceof Error ? error : undefined,
+        context: { chunkIndex: i, totalChunks: frames.length },
+      });
+      console.log('ai.ts:', chunkError.code, chunkError.message);
       if (callbacks?.onError) {
-        callbacks.onError(error instanceof Error ? error : new Error(String(error)), i);
+        callbacks.onError(chunkError, i);
       }
       // Continue with remaining chunks even if one fails
     }
@@ -1606,9 +1611,13 @@ export async function analyzeUserProfileStreaming(
         callbacks.onChunkComplete(i, profile, latency);
       }
     } catch (error) {
-      console.error(`ai.ts: User chunk ${i + 1} failed:`, error);
+      const chunkError = new ChunkAnalysisError(i + 1, {
+        cause: error instanceof Error ? error : undefined,
+        context: { chunkIndex: i, totalChunks: frames.length, isUserChunk: true },
+      });
+      console.log('ai.ts:', chunkError.code, chunkError.message);
       if (callbacks?.onError) {
-        callbacks.onError(error instanceof Error ? error : new Error(String(error)), i);
+        callbacks.onError(chunkError, i);
       }
       // Continue with remaining chunks even if one fails
     }

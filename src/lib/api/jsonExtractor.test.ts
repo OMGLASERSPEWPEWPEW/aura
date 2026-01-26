@@ -106,7 +106,7 @@ describe('jsonExtractor', () => {
 
     it('should throw error when no braces found', () => {
       const text = 'No JSON here, just plain text';
-      expect(() => extractJsonObject(text)).toThrow('AI did not return a valid JSON object');
+      expect(() => extractJsonObject(text)).toThrow('AI response did not contain valid JSON');
     });
 
     it('should throw error for truncated JSON', () => {
@@ -144,7 +144,7 @@ describe('jsonExtractor', () => {
 
     it('should throw error when no brackets found', () => {
       const text = 'No array here';
-      expect(() => extractJsonArray(text)).toThrow('AI did not return a valid JSON array');
+      expect(() => extractJsonArray(text)).toThrow('AI response did not contain valid JSON');
     });
 
     it('should handle nested arrays', () => {

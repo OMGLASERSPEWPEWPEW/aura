@@ -200,7 +200,7 @@ describe('useOpenerRefresh', () => {
 
   it('should handle refreshAll errors gracefully', async () => {
     const { regenerateOpeners } = await import('../lib/ai');
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     vi.mocked(regenerateOpeners).mockRejectedValue(new Error('API Error'));
 
@@ -221,7 +221,7 @@ describe('useOpenerRefresh', () => {
 
   it('should handle refreshPrompt errors gracefully', async () => {
     const { regeneratePromptOpener } = await import('../lib/ai');
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     vi.mocked(regeneratePromptOpener).mockRejectedValue(new Error('API Error'));
 

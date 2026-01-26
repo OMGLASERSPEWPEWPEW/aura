@@ -2,6 +2,8 @@
 // Purpose: Takes a video file, plays it internally, and snaps photos (frames)
 // Project relative path: src/lib/frameExtraction.ts
 
+import { VideoFormatError } from './errors';
+
 export interface FrameExtractionProgress {
   currentFrame: number;
   totalFrames: number;
@@ -134,10 +136,13 @@ export async function extractFramesFromVideo(
       captureFrame();
     };
 
-    video.onerror = (e) => {
-      console.error("frameExtraction: Error loading video:", e);
+    video.onerror = () => {
       URL.revokeObjectURL(videoUrl); // Clean up memory
-      reject(new Error("Error loading video. Please try a different file format."));
+      const videoError = new VideoFormatError({
+        supportedFormats: ['MP4', 'MOV', 'WebM'],
+      });
+      console.log('frameExtraction:', videoError.code, videoError.message);
+      reject(videoError);
     };
 
     // Set src AFTER attaching listeners, then trigger load
@@ -274,10 +279,13 @@ export async function extractFramesChunked(
       captureNextFrame();
     };
 
-    video.onerror = (e) => {
-      console.error("frameExtraction (chunked): Error loading video:", e);
+    video.onerror = () => {
       URL.revokeObjectURL(videoUrl);
-      reject(new Error("Error loading video. Please try a different file format."));
+      const videoError = new VideoFormatError({
+        supportedFormats: ['MP4', 'MOV', 'WebM'],
+      });
+      console.log('frameExtraction (chunked):', videoError.code, videoError.message);
+      reject(videoError);
     };
 
     // Set src AFTER attaching listeners, then trigger load
