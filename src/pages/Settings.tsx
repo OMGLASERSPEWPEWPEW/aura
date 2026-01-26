@@ -6,6 +6,7 @@ import { db } from '../lib/db';
 import { useAuth } from '../contexts/AuthContext';
 import DeleteAccountModal from '../components/auth/DeleteAccountModal';
 import { SyncIndicator } from '../components/SyncIndicator';
+import AIInsightsCard from '../components/settings/AIInsightsCard';
 import { ArrowLeft, Settings as SettingsIcon, Zap, User, LogOut, Trash2, Mail, Shield, Cloud } from 'lucide-react';
 
 export default function Settings() {
@@ -165,6 +166,9 @@ export default function Settings() {
             <SyncIndicator variant="detailed" />
           </div>
         )}
+
+        {/* AI Insights - Usage tracking with value pairing */}
+        <AIInsightsCard />
 
         {/* Auto-Compatibility Toggle */}
         <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">

@@ -2,6 +2,7 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { UserAspectProfile, MatchAspectScores, UserVirtueProfile, MatchVirtueCompatibility } from './virtues/types';
 import { migrateAspectProfileToVirtues, canMigrateAspectProfile, canMigrateAspectScores } from './virtues/migration';
+import { base64ToBlob } from './utils/thumbnailUtils';
 
 // --- Profile Analysis Types ---
 
@@ -243,7 +244,7 @@ interface Profile {
   appName?: string; // New field for "Hinge", "Tinder", etc.
   timestamp: Date;
   analysis: AnalysisData;
-  thumbnail: string;
+  thumbnail: string | Blob; // Blob preferred for storage efficiency (~33% savings)
 
   // Streaming analysis phase tracking
   analysisPhase?: AnalysisPhaseType; // 'quick' = partial, 'deep' = running deep, 'complete' = full
@@ -448,11 +449,15 @@ interface UserIdentity {
   lastUpdated: Date;
 }
 
+// Import inference types for the table
+import type { InferenceRecord } from './inference/types';
+
 const db = new Dexie('AuraDB') as Dexie & {
   profiles: EntityTable<Profile, 'id'>;
   userIdentity: EntityTable<UserIdentity, 'id'>;
   coachingSessions: EntityTable<CoachingSession, 'id'>;
   matchChats: EntityTable<MatchChatMessage, 'id'>;
+  inferenceHistory: EntityTable<InferenceRecord, 'id'>;
 };
 
 // Schema definition with migration
@@ -595,11 +600,47 @@ db.version(11).stores({
   });
 });
 
+// Version 12: Convert base64 thumbnails to Blob for ~33% storage savings
+db.version(12).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase, serverId',
+  userIdentity: '++id, lastUpdated, supabaseUserId, serverId',
+  coachingSessions: '++id, profileId, timestamp, serverId',
+  matchChats: '++id, profileId, timestamp, serverId'
+}).upgrade(async tx => {
+  // Migrate existing base64 thumbnails to Blob
+  // This reduces IndexedDB storage by ~33% per thumbnail
+  await tx.table('profiles').toCollection().modify((profile: Partial<Profile>) => {
+    if (profile.thumbnail && typeof profile.thumbnail === 'string' && profile.thumbnail.startsWith('data:')) {
+      try {
+        profile.thumbnail = base64ToBlob(profile.thumbnail);
+        console.log(`Migrated profile ${profile.id} thumbnail to Blob`);
+      } catch (error) {
+        // Non-critical: if conversion fails, keep the base64 string
+        console.log(`Failed to migrate profile ${profile.id} thumbnail:`, error);
+      }
+    }
+  });
+});
+
+// Version 13: Add inferenceHistory table for AI usage tracking
+// Stores token counts, costs, and context for each API call
+db.version(13).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase, serverId',
+  userIdentity: '++id, lastUpdated, supabaseUserId, serverId',
+  coachingSessions: '++id, profileId, timestamp, serverId',
+  matchChats: '++id, profileId, timestamp, serverId',
+  inferenceHistory: '++id, timestamp, feature, userId, success'
+});
+// No upgrade needed - new table starts empty
+
 export { db };
 // Re-export aspect types for convenience (legacy)
 export type { UserAspectProfile, MatchAspectScores, AspectScore } from './virtues/types';
 // Re-export 11 Virtues types
 export type { UserVirtueProfile, MatchVirtueCompatibility, VirtueScore as VirtueScore11, VirtueCompatibility } from './virtues/types';
+
+// Re-export inference types for convenience
+export type { InferenceRecord, InferenceFeature } from './inference/types';
 
 export type {
   Profile,

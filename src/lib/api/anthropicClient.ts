@@ -2,12 +2,15 @@
 // Centralized Anthropic API client
 
 import { ANTHROPIC_CONFIG, TIMEOUTS, getApiKey, isUsingProxy } from './config';
+import { z } from 'zod';
 import {
   extractJsonObject,
   extractJsonArray,
   extractJsonObjectWithDebug,
   extractJsonObjectSafe,
   extractJsonArraySafe,
+  extractAndValidate,
+  extractAndValidateArray,
 } from './jsonExtractor';
 import { saveErrorToFile, type ErrorDebugInfo } from '../utils/errorExport';
 import { getAccessToken } from '../supabase';
@@ -18,11 +21,13 @@ import {
   AuthError,
   RateLimitError,
   ParseError,
+  SchemaError,
   type Result,
   Ok,
   Err,
   type AuraError,
 } from '../errors';
+import { logInference, createLogParams, logFailedInference } from '../inference';
 
 // Content types for API messages
 export interface TextContent {
@@ -52,6 +57,10 @@ export interface AnthropicRequestOptions {
 
 interface AnthropicResponse {
   content: Array<{ type: string; text: string }>;
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+  };
 }
 
 /**
@@ -92,6 +101,17 @@ function isAbortError(error: unknown): boolean {
  */
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Calculate exponential backoff delay with jitter.
+ * Formula: min(baseMs * 2^attempt + jitter, maxMs)
+ * Jitter adds up to 30% randomness to prevent thundering herd.
+ */
+function calculateBackoffDelay(attempt: number, baseMs = 1000, maxMs = 10000): number {
+  const exponentialDelay = baseMs * Math.pow(2, attempt);
+  const jitter = Math.random() * exponentialDelay * 0.3; // Up to 30% jitter
+  return Math.min(exponentialDelay + jitter, maxMs);
 }
 
 /**
@@ -215,6 +235,20 @@ async function makeRequest(options: AnthropicRequestOptions, operationName?: str
       throw new Error('API returned unexpected response structure');
     }
 
+    // Log inference usage if available (non-blocking)
+    if (data.usage) {
+      const logParams = createLogParams(
+        data.usage.input_tokens,
+        data.usage.output_tokens,
+        ANTHROPIC_CONFIG.MODEL,
+        operationName,
+        true // success
+      );
+      logInference(logParams);
+    } else {
+      console.warn('[InferenceTracker] API response missing usage field');
+    }
+
     return data.content[0].text;
   } finally {
     cleanup();
@@ -223,14 +257,13 @@ async function makeRequest(options: AnthropicRequestOptions, operationName?: str
 
 /**
  * Make a request with automatic retry on transient failures.
- * Exponential backoff: 1s, 3s delays between retries.
+ * Uses exponential backoff with jitter: ~1s, ~2s, ~4s, etc. (max 10s)
  */
 async function makeRequestWithRetry(
   options: AnthropicRequestOptions,
   operationName?: string
 ): Promise<string> {
   const maxRetries = options.retries ?? 2;
-  const backoffDelays = [1000, 3000]; // 1s, 3s
 
   let lastError: Error | null = null;
 
@@ -256,16 +289,19 @@ async function makeRequestWithRetry(
         throw error;
       }
 
+      // Calculate exponential backoff with jitter
+      const delayMs = calculateBackoffDelay(attempt);
+
       // Notify about retry
       const nextAttempt = attempt + 1;
-      console.log(`Request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${backoffDelays[attempt]}ms...`);
+      console.log(`Request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${Math.round(delayMs)}ms...`);
 
       if (options.onRetry) {
         options.onRetry(nextAttempt, lastError);
       }
 
       // Wait before retry
-      await sleep(backoffDelays[attempt] || backoffDelays[backoffDelays.length - 1]);
+      await sleep(delayMs);
     }
   }
 
@@ -275,40 +311,64 @@ async function makeRequestWithRetry(
 
 /**
  * Call Anthropic API and return raw text response (no JSON parsing).
+ *
+ * @param options - Request options
+ * @param operationName - Optional operation name for inference tracking
  */
-export async function callAnthropicForText(options: AnthropicRequestOptions): Promise<string> {
-  const rawText = await makeRequestWithRetry(options);
+export async function callAnthropicForText(
+  options: AnthropicRequestOptions,
+  operationName?: string
+): Promise<string> {
+  const rawText = await makeRequestWithRetry(options, operationName);
   console.log('AI Raw Text Response:', rawText.substring(0, 500) + '...');
   return rawText;
 }
 
 /**
  * Call Anthropic API and parse response as JSON object.
+ *
+ * @param options - Request options
+ * @param operationName - Optional operation name for inference tracking
  */
-export async function callAnthropicForObject<T>(options: AnthropicRequestOptions): Promise<T> {
-  const rawText = await makeRequestWithRetry(options);
+export async function callAnthropicForObject<T>(
+  options: AnthropicRequestOptions,
+  operationName?: string
+): Promise<T> {
+  const rawText = await makeRequestWithRetry(options, operationName);
   console.log('AI Raw Response:', rawText);
   return extractJsonObject<T>(rawText);
 }
 
 /**
  * Call Anthropic API and parse response as JSON array.
+ *
+ * @param options - Request options
+ * @param operationName - Optional operation name for inference tracking
  */
-export async function callAnthropicForArray<T>(options: AnthropicRequestOptions): Promise<T[]> {
-  const rawText = await makeRequestWithRetry(options);
+export async function callAnthropicForArray<T>(
+  options: AnthropicRequestOptions,
+  operationName?: string
+): Promise<T[]> {
+  const rawText = await makeRequestWithRetry(options, operationName);
   console.log('AI Raw Response:', rawText);
   return extractJsonArray<T>(rawText);
 }
 
 /**
  * Call Anthropic API and parse response as JSON array, returning empty array on failure.
+ *
+ * @param options - Request options
+ * @param operationName - Optional operation name for inference tracking
  */
-export async function callAnthropicForArraySafe<T>(options: AnthropicRequestOptions): Promise<T[]> {
+export async function callAnthropicForArraySafe<T>(
+  options: AnthropicRequestOptions,
+  operationName?: string
+): Promise<T[]> {
   try {
-    return await callAnthropicForArray<T>(options);
+    return await callAnthropicForArray<T>(options, operationName);
   } catch (error) {
     // Log typed error but return empty array as graceful fallback
-    const apiError = toAuraError(error, 'callAnthropicForArraySafe');
+    const apiError = toAuraError(error, operationName || 'callAnthropicForArraySafe');
     console.log('callAnthropicForArraySafe:', apiError.code, apiError.message);
     return [];
   }
@@ -525,13 +585,13 @@ function toAuraError(error: unknown, operationName?: string): AuraError {
 
 /**
  * Make a request with retry, returning a Result instead of throwing.
+ * Uses exponential backoff with jitter: ~1s, ~2s, ~4s, etc. (max 10s)
  */
 async function makeRequestWithRetrySafe(
   options: AnthropicRequestOptions,
   operationName?: string
 ): Promise<Result<string, AuraError>> {
   const maxRetries = options.retries ?? 2;
-  const backoffDelays = [1000, 3000];
 
   let lastError: AuraError | null = null;
 
@@ -560,16 +620,19 @@ async function makeRequestWithRetrySafe(
         return Err(lastError);
       }
 
+      // Calculate exponential backoff with jitter
+      const delayMs = calculateBackoffDelay(attempt);
+
       // Notify about retry
       const nextAttempt = attempt + 1;
-      console.log(`Request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${backoffDelays[attempt]}ms...`);
+      console.log(`Request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${Math.round(delayMs)}ms...`);
 
       if (options.onRetry) {
         options.onRetry(nextAttempt, lastError);
       }
 
       // Wait before retry
-      await sleep(backoffDelays[attempt] || backoffDelays[backoffDelays.length - 1]);
+      await sleep(delayMs);
     }
   }
 
@@ -580,9 +643,12 @@ async function makeRequestWithRetrySafe(
  * Call Anthropic API and parse response as JSON object.
  * Returns a Result instead of throwing.
  *
+ * @param options - Request options
+ * @param operationName - Optional operation name for inference tracking
+ *
  * @example
  * ```typescript
- * const result = await callAnthropicForObjectSafe<Profile>(options);
+ * const result = await callAnthropicForObjectSafe<Profile>(options, 'analyzeChunk1');
  * if (result.ok) {
  *   console.log(result.value);
  * } else {
@@ -591,11 +657,14 @@ async function makeRequestWithRetrySafe(
  * ```
  */
 export async function callAnthropicForObjectSafe<T>(
-  options: AnthropicRequestOptions
+  options: AnthropicRequestOptions,
+  operationName?: string
 ): Promise<Result<T, ApiError | ParseError>> {
-  const requestResult = await makeRequestWithRetrySafe(options, 'callAnthropicForObjectSafe');
+  const opName = operationName || 'callAnthropicForObjectSafe';
+  const requestResult = await makeRequestWithRetrySafe(options, opName);
 
   if (!requestResult.ok) {
+    logFailedInference(opName, ANTHROPIC_CONFIG.MODEL, requestResult.error.code);
     return requestResult as Result<T, ApiError>;
   }
 
@@ -608,13 +677,19 @@ export async function callAnthropicForObjectSafe<T>(
 /**
  * Call Anthropic API and parse response as JSON array.
  * Returns a Result instead of throwing.
+ *
+ * @param options - Request options
+ * @param operationName - Optional operation name for inference tracking
  */
 export async function callAnthropicForArrayResultSafe<T>(
-  options: AnthropicRequestOptions
+  options: AnthropicRequestOptions,
+  operationName?: string
 ): Promise<Result<T[], ApiError | ParseError>> {
-  const requestResult = await makeRequestWithRetrySafe(options, 'callAnthropicForArrayResultSafe');
+  const opName = operationName || 'callAnthropicForArrayResultSafe';
+  const requestResult = await makeRequestWithRetrySafe(options, opName);
 
   if (!requestResult.ok) {
+    logFailedInference(opName, ANTHROPIC_CONFIG.MODEL, requestResult.error.code);
     return requestResult as Result<T[], ApiError>;
   }
 
@@ -627,15 +702,95 @@ export async function callAnthropicForArrayResultSafe<T>(
 /**
  * Call Anthropic API and return raw text response.
  * Returns a Result instead of throwing.
+ *
+ * @param options - Request options
+ * @param operationName - Optional operation name for inference tracking
  */
 export async function callAnthropicForTextSafe(
-  options: AnthropicRequestOptions
+  options: AnthropicRequestOptions,
+  operationName?: string
 ): Promise<Result<string, AuraError>> {
-  const result = await makeRequestWithRetrySafe(options, 'callAnthropicForTextSafe');
+  const opName = operationName || 'callAnthropicForTextSafe';
+  const result = await makeRequestWithRetrySafe(options, opName);
 
   if (result.ok) {
     console.log('AI Raw Text Response:', result.value.substring(0, 500) + '...');
+  } else {
+    logFailedInference(opName, ANTHROPIC_CONFIG.MODEL, result.error.code);
   }
 
   return result;
+}
+
+// ============================================
+// Zod-validated API functions
+// ============================================
+
+/**
+ * Call Anthropic API and validate response against a Zod schema.
+ * Returns a Result with the validated data or a typed error.
+ *
+ * @param options - Request options
+ * @param schema - Zod schema for validation
+ * @param operationName - Optional operation name for inference tracking (required for proper attribution)
+ *
+ * @example
+ * ```typescript
+ * import { VirtueScoreResultSchema } from '../schemas';
+ *
+ * const result = await callAnthropicForObjectValidated(options, VirtueScoreResultSchema, 'calculateCompatibility');
+ * if (result.ok) {
+ *   // result.value is fully typed and validated
+ *   console.log(result.value.virtue_scores);
+ * } else {
+ *   console.error(result.error.getUserMessage());
+ * }
+ * ```
+ */
+export async function callAnthropicForObjectValidated<T>(
+  options: AnthropicRequestOptions,
+  schema: z.ZodSchema<T>,
+  operationName?: string
+): Promise<Result<T, ApiError | ParseError | SchemaError>> {
+  const opName = operationName || 'callAnthropicForObjectValidated';
+  const requestResult = await makeRequestWithRetrySafe(options, opName);
+
+  if (!requestResult.ok) {
+    // Log failed inference
+    logFailedInference(opName, ANTHROPIC_CONFIG.MODEL, requestResult.error.code);
+    return requestResult as Result<T, ApiError>;
+  }
+
+  const rawText = requestResult.value;
+  console.log('AI Raw Response:', rawText);
+
+  return extractAndValidate<T>(rawText, schema);
+}
+
+/**
+ * Call Anthropic API and validate response as an array against a Zod schema.
+ * Returns a Result with the validated array or a typed error.
+ *
+ * @param options - Request options
+ * @param itemSchema - Zod schema for array item validation
+ * @param operationName - Optional operation name for inference tracking
+ */
+export async function callAnthropicForArrayValidated<T>(
+  options: AnthropicRequestOptions,
+  itemSchema: z.ZodSchema<T>,
+  operationName?: string
+): Promise<Result<T[], ApiError | ParseError | SchemaError>> {
+  const opName = operationName || 'callAnthropicForArrayValidated';
+  const requestResult = await makeRequestWithRetrySafe(options, opName);
+
+  if (!requestResult.ok) {
+    // Log failed inference
+    logFailedInference(opName, ANTHROPIC_CONFIG.MODEL, requestResult.error.code);
+    return requestResult as Result<T[], ApiError>;
+  }
+
+  const rawText = requestResult.value;
+  console.log('AI Raw Response:', rawText);
+
+  return extractAndValidateArray<T>(rawText, itemSchema);
 }
