@@ -73,6 +73,14 @@ This ensures fast initial display while ultimately selecting the optimal thumbna
 
 ### Directory Structure
 
+- `public/` - Static assets and PWA configuration
+  - `manifest.json` - PWA manifest (icons, theme, display mode)
+  - `logo-full.png` - Primary logo asset (1024x1024)
+  - `favicon-16.png`, `favicon-32.png` - Browser favicons
+  - `apple-touch-icon.png` - iOS home screen icon (180x180)
+  - `icon-192.png`, `icon-512.png` - PWA icons
+  - `og-image.png` - Open Graph social sharing image (1200x630)
+
 - `src/lib/` - Core business logic
   - `api/` - Anthropic API client (`anthropicClient.ts`, `config.ts`, `jsonExtractor.ts`)
   - `utils/` - Shared utilities (`userContext.ts`, `profileHelpers.ts`)
@@ -98,7 +106,7 @@ This ensures fast initial display while ultimately selecting the optimal thumbna
   - `profileDetail/` - Section components for ProfileDetail page
   - `profile/` - Tab components for MyProfile page
   - `upload/` - Progressive analysis UI (ProgressiveHeader, InsightCard)
-  - `ui/` - Reusable UI components
+  - `ui/` - Reusable UI components (Logo, buttons, cards, etc.)
 
 ### Key Patterns
 
@@ -111,6 +119,8 @@ This ensures fast initial display while ultimately selecting the optimal thumbna
 **Local-First**: All persistence via Dexie (IndexedDB). No backend database. Schema changes require new `db.version()` with migration.
 
 **Direct Browser API Calls**: Frontend calls Anthropic directly with `anthropic-dangerous-direct-browser-access` header. API key from `.env` as `VITE_ANTHROPIC_API_KEY`.
+
+**Logo Component**: Use `<Logo />` from `src/components/ui/Logo.tsx` for consistent branding. Supports sizes (`sm`, `md`, `lg`, `xl`) and optional `showText`/`showTagline` props.
 
 ### Database Schema (Dexie)
 

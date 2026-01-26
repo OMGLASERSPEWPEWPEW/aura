@@ -25,8 +25,9 @@
 | Neurodivergence analysis | ✅ Working | Analysis output | AI analysis | Generated but minimal display |
 | Settings | 🟡 MVP-only | `pages/Settings.tsx` | None | Single toggle currently |
 | Data export | 🟡 MVP-only | MyProfile | Tinder API | Only Tinder JSON supported |
-| PWA install | ✅ Working | manifest.json | Service worker | Installable on mobile |
+| PWA install | ✅ Working | `public/manifest.json` | Service worker | Full icon set, OG meta tags |
 | Offline mode | ⚠️ Partial | Service worker | Cache strategy | Only cached assets, not full offline |
+| Logo/branding | ✅ Working | `components/ui/Logo.tsx` | Static assets | Consistent branding across app |
 
 ---
 
@@ -203,6 +204,49 @@ userIdentity: 'id'      // Single record at id=1
 
 Each virtue scored 1-10 with narrative explanation.
 
+### PWA & Branding
+
+#### Logo Component
+**File**: `src/components/ui/Logo.tsx`
+
+**Features**:
+- Reusable logo with size variants (`sm`, `md`, `lg`, `xl`)
+- Optional text display (`showText` prop)
+- Optional tagline display (`showTagline` prop)
+- Gradient text styling for brand consistency
+
+**Usage**:
+```tsx
+<Logo size="lg" showText={true} showTagline={false} />
+```
+
+#### PWA Configuration
+**File**: `public/manifest.json`
+
+**Assets**:
+| Asset | Size | Purpose |
+|-------|------|---------|
+| `logo-full.png` | 1024x1024 | Source logo |
+| `favicon-16.png` | 16x16 | Browser tab icon |
+| `favicon-32.png` | 32x32 | Browser tab icon (retina) |
+| `apple-touch-icon.png` | 180x180 | iOS home screen |
+| `icon-192.png` | 192x192 | PWA icon (standard) |
+| `icon-512.png` | 512x512 | PWA icon (splash/maskable) |
+| `og-image.png` | 1200x630 | Social sharing preview |
+
+**Manifest Settings**:
+- `name`: "Aura"
+- `short_name`: "Aura"
+- `description`: "Decode Emotions. Navigate Life."
+- `theme_color`: `#7c3aed` (purple)
+- `background_color`: `#f8fafc` (slate-50)
+- `display`: `standalone`
+
+**Meta Tags** (in `index.html`):
+- Open Graph (og:title, og:description, og:image)
+- Twitter Card (twitter:card, twitter:title, twitter:description, twitter:image)
+- Apple-specific (apple-touch-icon, apple-mobile-web-app-capable)
+
 ---
 
 ## Feature Gaps
@@ -280,6 +324,9 @@ export function useFeature(profile: Profile) {
 - `VirtuesDisplay.tsx`
 - `ZodiacCompatibility.tsx`
 
+**Reusable UI Components** (`src/components/ui/`):
+- `Logo.tsx` - Brand logo with variants
+
 ---
 
 ## Metrics & Analytics (Not Implemented)
@@ -307,7 +354,8 @@ export function useFeature(profile: Profile) {
 | 0.3 | User profile | +1 month |
 | 0.4 | Compatibility scoring | +2 months |
 | 0.5 | Coach tab features | +3 months |
-| 0.6 | 23 Aspects + Virtues | Current |
+| 0.6 | 23 Aspects + Virtues | +4 months |
+| 0.7 | Logo/branding + PWA polish | Current |
 
 ---
 
@@ -316,6 +364,7 @@ export function useFeature(profile: Profile) {
 ```
 App.tsx
 ├── Home.tsx
+│   ├── Logo.tsx
 │   └── ProfileCard.tsx
 ├── Upload.tsx
 │   ├── VideoUploader.tsx
@@ -334,6 +383,7 @@ App.tsx
 │       ├── OpenerSuggestions.tsx
 │       └── ConversationCoach.tsx
 ├── MyProfile.tsx
+│   ├── Logo.tsx
 │   ├── BasicInfoTab.tsx
 │   ├── DatingProfileTab.tsx
 │   ├── ValuesTab.tsx
@@ -341,4 +391,7 @@ App.tsx
 │   ├── HistoryTab.tsx
 │   └── ImportTab.tsx
 └── Settings.tsx
+
+Shared UI Components (src/components/ui/):
+└── Logo.tsx
 ```
