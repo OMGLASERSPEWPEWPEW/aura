@@ -55,19 +55,20 @@ interface AnthropicResponse {
 }
 
 /**
- * Check if an error is retryable (network issues, timeouts, 5xx errors)
+ * Check if an error is retryable (network issues, timeouts, 5xx errors, truncated responses)
  */
 function isRetryableError(error: unknown): boolean {
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
-    // Retry on timeout, network errors, and 5xx server errors
+    // Retry on timeout, network errors, 5xx server errors, and truncated responses
     if (message.includes('timeout') ||
         message.includes('network') ||
         message.includes('fetch failed') ||
         message.includes('500') ||
         message.includes('502') ||
         message.includes('503') ||
-        message.includes('504')) {
+        message.includes('504') ||
+        message.includes('truncated')) {
       return true;
     }
   }
@@ -489,6 +490,14 @@ function toAuraError(error: unknown, operationName?: string): AuraError {
     if (message.includes('429') || message.includes('rate limit') ||
         message.includes('too many requests')) {
       return new RateLimitError({ cause: error });
+    }
+
+    // Check for truncated responses (retryable parse errors)
+    if (message.includes('truncated')) {
+      return new ParseError('truncated', {
+        message: error.message,
+        cause: error,
+      });
     }
 
     // Check for specific HTTP status codes
