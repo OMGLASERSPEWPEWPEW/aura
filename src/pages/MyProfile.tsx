@@ -327,8 +327,8 @@ export default function MyProfile() {
 
       if (!isMounted.current) return;
 
-      // Extract 23 Aspects profile
-      console.log("MyProfile: Extracting 23 Aspects profile...");
+      // Extract aspects profile (legacy - auto-migrates to 11 Virtues)
+      console.log("MyProfile: Extracting aspects profile (legacy)...");
       let aspectProfile = undefined;
       try {
         aspectProfile = await extractUserAspects({
@@ -343,9 +343,9 @@ export default function MyProfile() {
           photo_analysis: photoAnalysis,
           behavioral_data: undefined
         });
-        console.log("MyProfile: 23 Aspects profile extracted:", aspectProfile?.scores?.length || 0, "aspects scored");
+        console.log("MyProfile: Aspects profile extracted (legacy):", aspectProfile?.scores?.length || 0, "aspects scored");
       } catch (aspectError) {
-        console.error("MyProfile: Failed to extract 23 Aspects profile:", aspectError);
+        console.error("MyProfile: Failed to extract aspects profile:", aspectError);
       }
 
       if (!isMounted.current) return;

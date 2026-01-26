@@ -2,7 +2,7 @@
 // Tab for displaying progressive streaming analysis results
 // Uses the SAME UI components as Upload.tsx (match analysis)
 
-import { Sparkles, Loader2, RefreshCw, CheckCircle, XCircle, User, MapPin, Briefcase, Home } from 'lucide-react';
+import { Sparkles, Loader2, RefreshCw, CheckCircle, XCircle, User, MapPin, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { UserSynthesis, VideoAnalysis } from '../../lib/db';
 import type { UserStreamingAnalysisState } from '../../hooks/useUserStreamingAnalysis';
@@ -409,73 +409,6 @@ export default function InsightsTab({
             </button>
           </div>
 
-          {/* Identity Card - name, age, profession, location */}
-          {synthesis.basics && (synthesis.basics.name || synthesis.basics.age || synthesis.basics.occupation || synthesis.basics.location) && (
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-              <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <User size={18} className="text-indigo-600" />
-                Your Profile Snapshot
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                {synthesis.basics.name && (
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Name</p>
-                    <p className="font-medium text-slate-900">{synthesis.basics.name}</p>
-                  </div>
-                )}
-                {synthesis.basics.age && (
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Age</p>
-                    <p className="font-medium text-slate-900">{synthesis.basics.age}</p>
-                  </div>
-                )}
-                {synthesis.basics.occupation && (
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Profession</p>
-                    <p className="font-medium text-slate-900 flex items-center gap-1">
-                      <Briefcase size={14} className="text-slate-400" />
-                      {synthesis.basics.occupation}
-                    </p>
-                  </div>
-                )}
-                {synthesis.basics.location && (
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Neighborhood</p>
-                    <p className="font-medium text-slate-900 flex items-center gap-1">
-                      <MapPin size={14} className="text-slate-400" />
-                      {synthesis.basics.location}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Living Situation Input */}
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                <label className="text-xs text-slate-500 uppercase tracking-wide block mb-2">
-                  <Home size={12} className="inline mr-1" />
-                  Living Situation
-                </label>
-                <div className="flex gap-2 flex-wrap">
-                  {(['solo', 'roommates', 'caregiving'] as const).map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => onLivingSituationChange?.(option)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        livingSituation === option
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {option === 'solo' && 'Living Solo'}
-                      {option === 'roommates' && 'Roommates'}
-                      {option === 'caregiving' && 'Caregiving'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* 11 Virtues Profile Card - show if available */}
           {hasVirtueProfile && synthesis.virtue_profile && (
             <MyVirtuesCard
@@ -486,7 +419,12 @@ export default function InsightsTab({
           )}
 
           {/* Full profile display */}
-          <UserProfileDisplay synthesis={synthesis} videoFrames={videoAnalysis?.frames} />
+          <UserProfileDisplay
+            synthesis={synthesis}
+            videoFrames={videoAnalysis?.frames}
+            livingSituation={livingSituation}
+            onLivingSituationChange={onLivingSituationChange}
+          />
         </motion.div>
       )}
     </div>

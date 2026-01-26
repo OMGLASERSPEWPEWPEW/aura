@@ -20,17 +20,21 @@ import {
   Info,
   CheckCircle,
   Rocket,
+  Home,
 } from 'lucide-react';
 import type { UserSynthesis, PhotoEntry } from '../lib/db';
 import { db } from '../lib/db';
-import AspectConstellationCard from './profile/AspectConstellationCard';
 import ExpandableInsight, { type FeedbackRating, createInsightFeedback } from './ui/ExpandableInsight';
+
+type LivingSituation = 'solo' | 'roommates' | 'caregiving';
 
 interface UserProfileDisplayProps {
   synthesis: UserSynthesis;
   photos?: PhotoEntry[];
   videoFrames?: string[];
   onRerunSynthesis?: () => void;
+  livingSituation?: LivingSituation;
+  onLivingSituationChange?: (value: LivingSituation) => void;
 }
 
 // Helper function to get confidence badge label and color
@@ -41,8 +45,15 @@ function getConfidenceBadge(confidence: number): { label: string; colorClass: st
   return { label: 'Strong signal', colorClass: 'bg-green-100 text-green-700' };
 }
 
-export default function UserProfileDisplay({ synthesis, photos: userPhotos, videoFrames, onRerunSynthesis }: UserProfileDisplayProps) {
-  const { basics, photos: photoAnalysis, psychological_profile: psych, dating_strategy, behavioral_insights, partner_virtues, neurodivergence, aspect_profile } = synthesis;
+// Helper to truncate text to ~150 words with ellipsis
+function truncateToWords(text: string, wordCount: number): string {
+  const words = text.split(/\s+/);
+  if (words.length <= wordCount) return text;
+  return words.slice(0, wordCount).join(' ') + '...';
+}
+
+export default function UserProfileDisplay({ synthesis, photos: userPhotos, videoFrames, onRerunSynthesis, livingSituation, onLivingSituationChange }: UserProfileDisplayProps) {
+  const { basics, photos: photoAnalysis, psychological_profile: psych, dating_strategy, behavioral_insights, partner_virtues, neurodivergence } = synthesis;
   const subtext = psych?.subtext_analysis || {};
   const [showNdHelp, setShowNdHelp] = useState(false);
   const [expandedTrait, setExpandedTrait] = useState<number | null>(null);
@@ -108,7 +119,34 @@ export default function UserProfileDisplay({ synthesis, photos: userPhotos, vide
           )}
         </div>
 
-        <div className="text-xs text-indigo-200">
+        {/* Living Situation */}
+        {onLivingSituationChange && (
+          <div className="mt-4 pt-4 border-t border-white/20">
+            <label className="text-xs text-indigo-200 uppercase tracking-wide flex items-center gap-1 mb-2">
+              <Home size={12} />
+              Living Situation
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {(['solo', 'roommates', 'caregiving'] as const).map((option) => (
+                <button
+                  key={option}
+                  onClick={() => onLivingSituationChange(option)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    livingSituation === option
+                      ? 'bg-white text-indigo-700'
+                      : 'bg-white/20 hover:bg-white/30 text-white'
+                  }`}
+                >
+                  {option === 'solo' && 'Living Solo'}
+                  {option === 'roommates' && 'Roommates'}
+                  {option === 'caregiving' && 'Caregiving'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="text-xs text-indigo-200 mt-4">
           Last updated: {new Date(synthesis.meta.lastUpdated).toLocaleString()}
           <span className="mx-2">•</span>
           Inputs used: {synthesis.meta.inputsUsed.join(', ')}
@@ -116,18 +154,24 @@ export default function UserProfileDisplay({ synthesis, photos: userPhotos, vide
       </div>
 
       {/* Archetype Summary - Using ExpandableInsight */}
-      {psych?.archetype_summary && (
-        <ExpandableInsight
-          insightKey="archetype"
-          icon={<Eye size={18} className="text-purple-600" />}
-          title="Your Psychological Profile"
-          summary={psych.archetype_summary}
-          helpText="This is a synthesis of your dating profile, communication patterns, and presentation style. It identifies the core of who you are romantically."
-          currentFeedback={feedbackMap['archetype']}
-          onFeedback={handleFeedback}
-          className="bg-purple-50 border border-purple-100"
-        />
-      )}
+      {psych?.archetype_summary && (() => {
+        const fullText = psych.archetype_summary;
+        const truncated = truncateToWords(fullText, 150);
+        const needsExpand = truncated !== fullText;
+        return (
+          <ExpandableInsight
+            insightKey="archetype"
+            icon={<Eye size={18} className="text-purple-600" />}
+            title="Your Psychological Profile"
+            summary={truncated}
+            detail={needsExpand ? fullText : undefined}
+            helpText="This is a synthesis of your dating profile, communication patterns, and presentation style. It identifies the core of who you are romantically."
+            currentFeedback={feedbackMap['archetype']}
+            onFeedback={handleFeedback}
+            className="bg-purple-50 border border-purple-100"
+          />
+        );
+      })()}
 
       {/* Photo Analysis */}
       {photoAnalysis && photoAnalysis.length > 0 && (
@@ -450,10 +494,6 @@ export default function UserProfileDisplay({ synthesis, photos: userPhotos, vide
         </ExpandableInsight>
       )}
 
-      {/* 23 Aspects Profile */}
-      {aspect_profile && aspect_profile.scores && aspect_profile.scores.length > 0 && (
-        <AspectConstellationCard aspectProfile={aspect_profile} />
-      )}
 
       {/* Behavioral Insights - Using ExpandableInsight */}
       {behavioral_insights && (
