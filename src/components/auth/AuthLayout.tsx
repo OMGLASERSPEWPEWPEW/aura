@@ -2,7 +2,8 @@
 // Shared layout for authentication pages
 
 import { Link } from 'react-router-dom';
-import { Flame, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import Logo from '../ui/Logo';
 import type { ReactNode } from 'react';
 
 interface AuthLayoutProps {
@@ -29,9 +30,8 @@ export default function AuthLayout({ children, title, subtitle, showBackLink = t
 
         {/* Logo and branding */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <h1 className="text-3xl font-bold text-slate-900">Aura</h1>
-            <Flame className="text-orange-500 fill-orange-500" size={28} />
+          <div className="flex justify-center mb-4">
+            <Logo size="lg" showTagline />
           </div>
           <h2 className="text-xl font-semibold text-slate-800 mb-1">{title}</h2>
           {subtitle && (

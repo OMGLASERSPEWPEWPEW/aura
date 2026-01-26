@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
-import { Plus, User, Trash2, Flame, Brain, Zap, Star } from 'lucide-react';
+import { Plus, User, Trash2, Brain, Zap, Star } from 'lucide-react';
+import Logo from '../components/ui/Logo';
 import type { VirtueScore } from '../lib/db';
 import UserMenu from '../components/auth/UserMenu';
 import { SyncIndicator } from '../components/SyncIndicator';
@@ -80,10 +81,8 @@ export default function Home() {
       {/* Header */}
       <div className="max-w-md mx-auto mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center">
-             Aura <Flame className="ml-2 text-orange-500 fill-orange-500" size={24} />
-          </h1>
-          <p className="text-slate-500 text-sm">Your dating intelligence</p>
+          <Logo size="lg" showTagline={false} />
+          <p className="text-slate-500 text-sm mt-1">Decode Emotions. Navigate Life.</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Sync Status */}
