@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { db } from '../../lib/db';
 import { X, AlertTriangle, Loader2 } from 'lucide-react';
-import { StorageError, ApiError } from '../../lib/errors';
+import { StorageError } from '../../lib/errors';
 
 interface DeleteAccountModalProps {
   onClose: () => void;

@@ -143,7 +143,7 @@ async function makeRequest(options: AnthropicRequestOptions, operationName?: str
     const accessToken = await getAccessToken();
     console.log('Access token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'NULL');
     if (!accessToken) {
-      const authError = new AuthError('auth_required', {
+      const authError = new AuthError('missing', {
         message: 'No access token available - user may not be logged in',
       });
       console.log('anthropicClient:', authError.code, authError.message);

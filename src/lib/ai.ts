@@ -1301,9 +1301,8 @@ export async function analyzeProfileStreaming(
         callbacks.onChunkComplete(i, profile, latency);
       }
     } catch (error) {
-      const chunkError = new ChunkAnalysisError(i + 1, {
+      const chunkError = new ChunkAnalysisError(i, frameChunks.length, {
         cause: error instanceof Error ? error : undefined,
-        context: { chunkIndex: i, totalChunks: frames.length },
       });
       console.log('ai.ts:', chunkError.code, chunkError.message);
       if (callbacks?.onError) {
@@ -1611,9 +1610,8 @@ export async function analyzeUserProfileStreaming(
         callbacks.onChunkComplete(i, profile, latency);
       }
     } catch (error) {
-      const chunkError = new ChunkAnalysisError(i + 1, {
+      const chunkError = new ChunkAnalysisError(i, frameChunks.length, {
         cause: error instanceof Error ? error : undefined,
-        context: { chunkIndex: i, totalChunks: frames.length, isUserChunk: true },
       });
       console.log('ai.ts:', chunkError.code, chunkError.message);
       if (callbacks?.onError) {

@@ -237,7 +237,7 @@ export default function MyProfile() {
   // Auto-save on changes (with debounce)
   useEffect(() => {
     const timer = setTimeout(() => {
-      saveToDb().catch(err => {
+      saveToDb().catch(() => {
         // Already logged in saveToDb, no additional logging needed
       });
     }, 500);
