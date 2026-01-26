@@ -492,6 +492,8 @@ export default function MyProfile() {
             analysisError={analysisError}
             hasAnyInput={hasAnyInput()}
             videoAnalysis={userIdentity?.videoAnalysis}
+            livingSituation={localManualEntry.livingSituation}
+            onLivingSituationChange={(value) => setLocalManualEntry(prev => ({ ...prev, livingSituation: value }))}
             onRunAnalysisLegacy={runLegacySynthesis}
             onClearError={() => setAnalysisError(null)}
             onAbort={abort}

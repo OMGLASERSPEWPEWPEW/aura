@@ -86,6 +86,7 @@ export default function ProfileDetail() {
             profileId={profile.id}
             matchName={basics.name || profile.name}
             matchAnalysis={profile.analysis as import('../lib/db').ProfileAnalysis}
+            overallSummary={overall.summary}
             compatibility={profile.compatibility}
             // 11 Virtues system
             virtues11={compatibilityScores.virtues11}
@@ -101,15 +102,6 @@ export default function ProfileDetail() {
             matchZodiac={zodiac.matchZodiac}
             canGenerateZodiac={zodiac.canGenerate}
             onGenerateZodiac={zodiac.generate}
-            dateSuggestions={dateIdeas.suggestions}
-            dateTarget={dateIdeas.targetDate}
-            weatherForecast={dateIdeas.weatherForecast}
-            localEvents={dateIdeas.localEvents}
-            isLoadingWeather={dateIdeas.isLoadingWeather}
-            isLoadingDates={dateIdeas.isLoadingDates}
-            dateError={dateIdeas.error?.message ?? null}
-            onDateSelect={dateIdeas.handleDateSelect}
-            onGenerateDates={dateIdeas.generate}
             openers={openersList}
             copiedIndex={copiedIndex}
             isRefreshingOpeners={openers.isRefreshingOpeners}
@@ -142,6 +134,15 @@ export default function ProfileDetail() {
             matchName={basics.name || profile.name}
             copiedIndex={copiedIndex}
             onCopy={handleCopy}
+            dateSuggestions={dateIdeas.suggestions}
+            dateTarget={dateIdeas.targetDate}
+            weatherForecast={dateIdeas.weatherForecast}
+            localEvents={dateIdeas.localEvents}
+            isLoadingWeather={dateIdeas.isLoadingWeather}
+            isLoadingDates={dateIdeas.isLoadingDates}
+            dateError={dateIdeas.error?.message ?? null}
+            onDateSelect={dateIdeas.handleDateSelect}
+            onGenerateDates={dateIdeas.generate}
           />
         )}
       </div>

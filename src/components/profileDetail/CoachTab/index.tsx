@@ -1,24 +1,51 @@
 // src/components/profileDetail/CoachTab/index.tsx
 import { MessageCircle, AlertCircle, X } from 'lucide-react';
 import type { UseConversationCoachReturn } from '../../../hooks/useConversationCoach';
+import type { DateSuggestion } from '../../../lib/db';
+import type { WeatherForecast } from '../../../lib/weather';
 import { ConversationUploader } from './ConversationUploader';
 import { MatchTacticsCard } from './MatchTacticsCard';
 import { ResponseSuggestions } from './ResponseSuggestions';
 import { CoachingHistory } from './CoachingHistory';
 import { DateAskGenerator } from './DateAskGenerator';
 import { ResponseScorer } from './ResponseScorer';
+import { DateIdeasSection } from '../DateIdeasSection';
 
 interface CoachTabProps {
   coach: UseConversationCoachReturn;
   matchName?: string;
   copiedIndex: number | null;
   onCopy: (text: string, index: number) => void;
+  // Date Ideas props
+  dateSuggestions: DateSuggestion[] | null;
+  dateTarget: string;
+  weatherForecast: WeatherForecast | null;
+  localEvents: string[];
+  isLoadingWeather: boolean;
+  isLoadingDates: boolean;
+  dateError: string | null;
+  onDateSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onGenerateDates: () => void;
 }
 
 /**
  * Main Coach tab container component
  */
-export function CoachTab({ coach, matchName, copiedIndex, onCopy }: CoachTabProps) {
+export function CoachTab({
+  coach,
+  matchName,
+  copiedIndex,
+  onCopy,
+  dateSuggestions,
+  dateTarget,
+  weatherForecast,
+  localEvents,
+  isLoadingWeather,
+  isLoadingDates,
+  dateError,
+  onDateSelect,
+  onGenerateDates,
+}: CoachTabProps) {
   const {
     conversationImages,
     isAnalyzing,
@@ -51,6 +78,19 @@ export function CoachTab({ coach, matchName, copiedIndex, onCopy }: CoachTabProp
 
   return (
     <div className="space-y-6">
+      {/* Date Ideas Section */}
+      <DateIdeasSection
+        suggestions={dateSuggestions}
+        targetDate={dateTarget}
+        weatherForecast={weatherForecast}
+        localEvents={localEvents}
+        isLoadingWeather={isLoadingWeather}
+        isLoadingDates={isLoadingDates}
+        error={dateError}
+        onDateSelect={onDateSelect}
+        onGenerate={onGenerateDates}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">

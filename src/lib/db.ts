@@ -320,6 +320,7 @@ interface ManualEntry {
   relationshipHistory?: string;
   zodiac_sign?: string;  // "Aries" | "Taurus" | ... | "Pisces"
   relationshipStyle?: string[];  // Multi-select: ['monogamous', 'enm', 'polyamorous', 'open', 'exploring']
+  livingSituation?: 'solo' | 'roommates' | 'caregiving';  // Living arrangement
 }
 
 interface UserSynthesis {

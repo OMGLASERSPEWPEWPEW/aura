@@ -1,23 +1,20 @@
 // src/components/profileDetail/OverviewTab.tsx
 import { Link } from 'react-router-dom';
-import { User, Loader2, Sparkles } from 'lucide-react';
+import { User, Loader2, Sparkles, FileText } from 'lucide-react';
 
 import type {
   ProfileCompatibility,
   ZodiacCompatibility,
   RecommendedOpener,
-  DateSuggestion,
   ProfileAnalysis,
   TransactionalIndicators,
   MatchVirtueCompatibility,
   UserVirtueProfile,
 } from '../../lib/db';
-import type { WeatherForecast } from '../../lib/weather';
 import { CompatibilityCard } from './CompatibilityCard';
 import { TransactionalIndicatorsCard } from './TransactionalIndicatorsCard';
 import { AskAboutMatch } from './AskAboutMatch';
 import { ZodiacSection } from './ZodiacSection';
-import { DateIdeasSection } from './DateIdeasSection';
 import { OpenersSection } from './OpenersSection';
 import { VirtueCompatibilityCard } from '../ui/VirtueCompatibilityCard';
 
@@ -30,6 +27,9 @@ interface OverviewTabProps {
   profileId: number;
   matchName: string;
   matchAnalysis: ProfileAnalysis;
+
+  // Match summary (brief read on the match)
+  overallSummary?: string;
 
   // Compatibility
   compatibility?: ProfileCompatibility;
@@ -52,17 +52,6 @@ interface OverviewTabProps {
   canGenerateZodiac: boolean;
   onGenerateZodiac: () => void;
 
-  // Date Ideas
-  dateSuggestions: DateSuggestion[] | null;
-  dateTarget: string;
-  weatherForecast: WeatherForecast | null;
-  localEvents: string[];
-  isLoadingWeather: boolean;
-  isLoadingDates: boolean;
-  dateError: string | null;
-  onDateSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onGenerateDates: () => void;
-
   // Openers
   openers: RecommendedOpener[];
   copiedIndex: number | null;
@@ -80,6 +69,7 @@ export function OverviewTab({
   profileId,
   matchName,
   matchAnalysis,
+  overallSummary,
   compatibility,
   // 11 Virtues system
   virtues11,
@@ -95,15 +85,6 @@ export function OverviewTab({
   matchZodiac,
   canGenerateZodiac,
   onGenerateZodiac,
-  dateSuggestions,
-  dateTarget,
-  weatherForecast,
-  localEvents,
-  isLoadingWeather,
-  isLoadingDates,
-  dateError,
-  onDateSelect,
-  onGenerateDates,
   openers,
   copiedIndex,
   isRefreshingOpeners,
@@ -149,6 +130,19 @@ export function OverviewTab({
 
       {/* Compatibility Card */}
       {compatibility && <CompatibilityCard compatibility={compatibility} />}
+
+      {/* Match Summary - brief read on the match */}
+      {overallSummary && (
+        <section className="bg-slate-50 p-5 rounded-xl border border-slate-200">
+          <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+            <FileText size={18} className="text-slate-600" />
+            The Read on {matchName}
+          </h2>
+          <p className="text-sm text-slate-700 leading-relaxed">
+            {overallSummary}
+          </p>
+        </section>
+      )}
 
       {/* 11 Virtues Compatibility Card - show loading or results */}
       {isLoadingVirtues11 && (
@@ -200,19 +194,6 @@ export function OverviewTab({
         matchZodiac={matchZodiac}
         canGenerate={canGenerateZodiac}
         onGenerate={onGenerateZodiac}
-      />
-
-      {/* Date Ideas */}
-      <DateIdeasSection
-        suggestions={dateSuggestions}
-        targetDate={dateTarget}
-        weatherForecast={weatherForecast}
-        localEvents={localEvents}
-        isLoadingWeather={isLoadingWeather}
-        isLoadingDates={isLoadingDates}
-        error={dateError}
-        onDateSelect={onDateSelect}
-        onGenerate={onGenerateDates}
       />
 
       {/* Recommended Openers */}
