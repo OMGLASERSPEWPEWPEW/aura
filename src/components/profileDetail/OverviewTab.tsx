@@ -268,14 +268,24 @@ export function OverviewTab({
 
       {/* 11 Virtues Compatibility Card (PRIMARY) - show loading or results */}
       {isLoadingVirtues11 && (
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-5 rounded-xl border border-indigo-200 animate-pulse">
-          <div className="flex items-center gap-2 mb-4">
-            <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
-            <span className="font-medium text-indigo-800">Analyzing 11 Virtues compatibility...</span>
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-200">
+          <div className="flex flex-col items-center justify-center py-8">
+            <div className="relative mb-4">
+              <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center">
+                <Sparkles className="w-8 h-8 text-indigo-600 animate-pulse" />
+              </div>
+              <div className="absolute -bottom-1 -right-1">
+                <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
+              </div>
+            </div>
+            <h3 className="font-bold text-indigo-900 text-lg mb-1">Diving into Virtues...</h3>
+            <p className="text-sm text-indigo-600 text-center max-w-xs">
+              Analyzing compatibility across all 11 virtues
+            </p>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 mt-4">
             {[1, 2, 3].map((i) => (
-              <div key={i}>
+              <div key={i} className="animate-pulse">
                 <div className="h-4 bg-indigo-200/50 rounded w-1/3 mb-2" />
                 <div className="h-2.5 bg-indigo-200/50 rounded-full" />
               </div>
