@@ -28,7 +28,7 @@ export const ANTHROPIC_CONFIG = {
 } as const;
 
 export const TOKEN_LIMITS = {
-  PROFILE_ANALYSIS: 16384,   // Increased from 12288 to prevent truncation on complex profiles
+  PROFILE_ANALYSIS: 20000,   // Increased from 16384 to prevent truncation on complex profiles
   PROFILE_BASICS: 2048,      // Quick extraction of name, age, location, etc.
   PROFILE_DEEP: 12288,       // Increased from 10240 - Full psychological analysis
   USER_BACKSTORY: 4096,
