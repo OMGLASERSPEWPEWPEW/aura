@@ -1,7 +1,7 @@
 // src/components/profile/VideoTab.tsx
 // Simplified video upload - matches match flow (Upload.tsx)
 // Just shows the uploader - analysis auto-starts when file is selected
-import { Video, Loader2, CheckCircle } from 'lucide-react';
+import { Video, Loader2, CheckCircle, Sparkles } from 'lucide-react';
 import VideoUploader from '../VideoUploader';
 import type { VideoAnalysis } from '../../lib/db';
 
@@ -11,6 +11,8 @@ interface VideoTabProps {
   videoFile: File | null;
   onVideoFileChange: (file: File | null) => void;
   isAnalyzing: boolean;
+  hasAnyInput?: boolean;
+  onRunAnalysis?: () => void;
 }
 
 export default function VideoTab({
@@ -19,6 +21,8 @@ export default function VideoTab({
   videoFile,
   onVideoFileChange,
   isAnalyzing,
+  hasAnyInput = false,
+  onRunAnalysis,
 }: VideoTabProps) {
   const hasFrames = (videoAnalysis?.frames?.length ?? 0) > 0;
 
@@ -34,6 +38,27 @@ export default function VideoTab({
 
   return (
     <div className="space-y-6">
+      {/* Analyze Button - above Profile Video section */}
+      {hasAnyInput && !videoFile && onRunAnalysis && (
+        <button
+          onClick={onRunAnalysis}
+          disabled={isAnalyzing}
+          className="w-full px-4 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors shadow-sm"
+        >
+          {isAnalyzing ? (
+            <>
+              <Loader2 className="animate-spin" size={20} />
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <Sparkles size={20} />
+              Analyze My Profile
+            </>
+          )}
+        </button>
+      )}
+
       <div className="bg-white p-4 rounded-xl shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <Video className="text-purple-600" size={20} />

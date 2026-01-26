@@ -11,7 +11,6 @@ import {
   Video,
   User,
   Sparkles,
-  Loader2,
 } from 'lucide-react';
 
 import { db, type UserIdentity, type DatingGoals, type TextInput, type VideoAnalysis, type PhotoEntry, type ManualEntry, type UserSynthesis } from '../lib/db';
@@ -19,6 +18,7 @@ import { analyzeUserSelf, extractPartnerVirtues, analyzeNeurodivergence, extract
 import { useUserStreamingAnalysis } from '../hooks/useUserStreamingAnalysis';
 import { useAuth } from '../contexts/AuthContext';
 import { saveUserIdentityWithSync } from '../lib/sync';
+import Logo from '../components/ui/Logo';
 
 // Type for user self-analysis result
 interface UserSelfAnalysisResult {
@@ -468,6 +468,8 @@ export default function MyProfile() {
             videoFile={videoFile}
             onVideoFileChange={handleVideoFileSelect}
             isAnalyzing={isAnalyzing}
+            hasAnyInput={hasAnyInput()}
+            onRunAnalysis={runLegacySynthesis}
           />
         );
       case 'text':
@@ -513,32 +515,9 @@ export default function MyProfile() {
             >
               <ArrowLeft size={20} className="text-slate-600" />
             </Link>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900">My Profile</h1>
-              <p className="text-xs text-slate-500">Build your dating intelligence</p>
-            </div>
+            <Logo size="lg" showText={false} />
+            <p className="text-xs text-slate-500">Build your dating intelligence</p>
           </div>
-
-          {/* Quick analyze button in header - only show for legacy (non-video) analysis */}
-          {activeTab !== 'insights' && hasAnyInput() && !videoFile && (
-            <button
-              onClick={runLegacySynthesis}
-              disabled={isAnalyzing}
-              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="animate-spin" size={16} />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={16} />
-                  Analyze
-                </>
-              )}
-            </button>
-          )}
         </div>
       </div>
 

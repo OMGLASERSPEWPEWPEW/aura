@@ -79,24 +79,30 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 p-6 pb-24">
       {/* Header */}
-      <div className="max-w-md mx-auto mb-8 flex justify-between items-center">
-        <div>
-          <Logo size="lg" showTagline={false} />
-          <p className="text-slate-500 text-sm mt-1">Decode Emotions. Navigate Life.</p>
+      <div className="max-w-md mx-auto mb-8">
+        {/* Top row: Logo and buttons */}
+        <div className="flex justify-between items-center">
+          <Logo size="xl" showText={false} />
+          <div className="flex items-center gap-3">
+            {/* My Profile Button */}
+            <Link
+              to="/my-profile"
+              className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
+            >
+              <Brain size={20} />
+              <span className="text-sm font-medium hidden sm:inline">My Profile</span>
+            </Link>
+            {/* User Menu */}
+            <UserMenu />
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Sync Status */}
+
+        {/* Tagline - moved down with more spacing */}
+        <p className="text-slate-500 text-sm mt-4">Decode Emotions. Navigate Life.</p>
+
+        {/* Sync Status - below account button area */}
+        <div className="mt-3">
           <SyncIndicator variant="badge" />
-          {/* My Profile Button */}
-          <Link
-            to="/my-profile"
-            className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
-          >
-            <Brain size={20} />
-            <span className="text-sm font-medium hidden sm:inline">My Profile</span>
-          </Link>
-          {/* User Menu */}
-          <UserMenu />
         </div>
       </div>
 
@@ -115,8 +121,8 @@ export default function Home() {
         {/* Grid of Profiles */}
         <div className="grid grid-cols-1 gap-4">
           {profileList.map((profile) => (
-            <Link 
-              key={profile.id} 
+            <Link
+              key={profile.id}
               to={`/profile/${profile.id}`}
               className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-start space-x-4 hover:shadow-md transition-all active:scale-[0.98]"
             >
@@ -143,16 +149,16 @@ export default function Home() {
                         </div>
                         <span className="text-xs text-slate-400">{new Date(profile.timestamp).toLocaleDateString()}</span>
                     </div>
-                    
+
                     {/* Delete Button */}
-                    <button 
+                    <button
                         onClick={(e) => handleDelete(e, profile.id)}
                         className="p-2 text-slate-300 hover:text-red-500 transition-colors -mt-2 -mr-2"
                     >
                         <Trash2 size={18} />
                     </button>
                 </div>
-                
+
                 {(() => {
                   const { basics, overall } = extractAnalysisFields(profile.analysis);
                   return (
@@ -174,8 +180,8 @@ export default function Home() {
       </div>
 
       {/* FAB */}
-      <Link 
-        to="/upload" 
+      <Link
+        to="/upload"
         className="fixed bottom-8 right-8 w-14 h-14 bg-slate-900 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-slate-800 transition-colors z-50"
       >
         <Plus size={28} />
