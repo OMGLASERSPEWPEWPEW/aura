@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useOpenerRefresh } from './useOpenerRefresh';
 import type { Profile, UserIdentity } from '../lib/db';
+import { createWrapper } from '../test/testUtils';
 
 // Mock dependencies
 vi.mock('../lib/ai', () => ({
@@ -76,7 +77,8 @@ describe('useOpenerRefresh', () => {
 
   it('should initialize with correct default state', () => {
     const { result } = renderHook(() =>
-      useOpenerRefresh(undefined, undefined)
+      useOpenerRefresh(undefined, undefined),
+      { wrapper: createWrapper() }
     );
 
     expect(result.current.isRefreshingOpeners).toBe(false);
@@ -90,7 +92,8 @@ describe('useOpenerRefresh', () => {
     vi.mocked(regenerateOpeners).mockResolvedValue(mockNewOpeners);
 
     const { result } = renderHook(() =>
-      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -116,7 +119,8 @@ describe('useOpenerRefresh', () => {
     );
 
     const { result } = renderHook(() =>
-      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -139,7 +143,8 @@ describe('useOpenerRefresh', () => {
     vi.mocked(regeneratePromptOpener).mockResolvedValue(mockPromptOpener);
 
     const { result } = renderHook(() =>
-      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -161,7 +166,8 @@ describe('useOpenerRefresh', () => {
     );
 
     const { result } = renderHook(() =>
-      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -181,7 +187,8 @@ describe('useOpenerRefresh', () => {
     const { regenerateOpeners } = await import('../lib/ai');
 
     const { result } = renderHook(() =>
-      useOpenerRefresh(undefined, mockUserIdentity as UserIdentity)
+      useOpenerRefresh(undefined, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -198,7 +205,8 @@ describe('useOpenerRefresh', () => {
     vi.mocked(regenerateOpeners).mockRejectedValue(new Error('API Error'));
 
     const { result } = renderHook(() =>
-      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -218,7 +226,8 @@ describe('useOpenerRefresh', () => {
     vi.mocked(regeneratePromptOpener).mockRejectedValue(new Error('API Error'));
 
     const { result } = renderHook(() =>
-      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -242,7 +251,8 @@ describe('useOpenerRefresh', () => {
     });
 
     const { result } = renderHook(() =>
-      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useOpenerRefresh(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {

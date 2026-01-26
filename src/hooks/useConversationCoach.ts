@@ -6,6 +6,8 @@ import type { Profile, UserIdentity, CoachingSession, CoachingResponse, MatchCoa
 import { analyzeConversation, scoreUserResponse, generateDateAsk } from '../lib/ai';
 import type { CoachingAnalysisResult, DateAskSuggestion, ResponseScoreResult } from '../lib/ai';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
+import { AuraError, ApiError, ValidationError } from '../lib/errors';
+import { useErrorToast } from '../contexts/ToastContext';
 
 export interface UseConversationCoachReturn {
   // State
@@ -13,7 +15,7 @@ export interface UseConversationCoachReturn {
   isAnalyzing: boolean;
   isScoring: boolean;
   isGeneratingDateAsk: boolean;
-  error: string | null;
+  error: AuraError | null;
 
   // Current session data
   currentSession: CoachingSession | null;
@@ -53,7 +55,8 @@ export function useConversationCoach(
   const [isGeneratingDateAsk, setIsGeneratingDateAsk] = useState(false);
 
   // Error state
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AuraError | null>(null);
+  const showError = useErrorToast();
 
   // Current session state
   const [currentSession, setCurrentSession] = useState<CoachingSession | null>(null);
@@ -156,7 +159,9 @@ export function useConversationCoach(
   // Analyze conversation
   const doAnalyzeConversation = useCallback(async () => {
     if (!profile?.id || conversationImages.length === 0) {
-      setError('Please add conversation screenshots first.');
+      const validationError = new ValidationError('Please add conversation screenshots first.');
+      setError(validationError);
+      showError(validationError);
       return;
     }
 
@@ -187,16 +192,22 @@ export function useConversationCoach(
       setCurrentSession({ ...newSession, id: sessionId });
     } catch (err) {
       console.error('Conversation analysis error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to analyze conversation');
+      const auraError = err instanceof AuraError
+        ? err
+        : new ApiError(err instanceof Error ? err.message : 'Failed to analyze conversation');
+      setError(auraError);
+      showError(auraError);
     } finally {
       setIsAnalyzing(false);
     }
-  }, [profile?.id, conversationImages, buildUserContext, buildMatchContext]);
+  }, [profile?.id, conversationImages, buildUserContext, buildMatchContext, showError]);
 
   // Refresh responses (re-analyze with same images)
   const refreshResponses = useCallback(async () => {
     if (!profile?.id || conversationImages.length === 0) {
-      setError('No conversation to refresh.');
+      const validationError = new ValidationError('No conversation to refresh.');
+      setError(validationError);
+      showError(validationError);
       return;
     }
 
@@ -228,16 +239,22 @@ export function useConversationCoach(
       }
     } catch (err) {
       console.error('Refresh responses error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to refresh responses');
+      const auraError = err instanceof AuraError
+        ? err
+        : new ApiError(err instanceof Error ? err.message : 'Failed to refresh responses');
+      setError(auraError);
+      showError(auraError);
     } finally {
       setIsAnalyzing(false);
     }
-  }, [profile?.id, conversationImages, currentSession?.id, buildUserContext, buildMatchContext]);
+  }, [profile?.id, conversationImages, currentSession?.id, buildUserContext, buildMatchContext, showError]);
 
   // Score user's actual response
   const doScoreResponse = useCallback(async (userResponse: string): Promise<ResponseScoreResult | null> => {
     if (!matchAnalysis || suggestedResponses.length === 0) {
-      setError('No analysis to score against.');
+      const validationError = new ValidationError('No analysis to score against.');
+      setError(validationError);
+      showError(validationError);
       return null;
     }
 
@@ -282,17 +299,23 @@ export function useConversationCoach(
       return result;
     } catch (err) {
       console.error('Score response error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to score response');
+      const auraError = err instanceof AuraError
+        ? err
+        : new ApiError(err instanceof Error ? err.message : 'Failed to score response');
+      setError(auraError);
+      showError(auraError);
       return null;
     } finally {
       setIsScoring(false);
     }
-  }, [matchAnalysis, suggestedResponses, currentSession?.id, buildMatchContext, buildUserContext]);
+  }, [matchAnalysis, suggestedResponses, currentSession?.id, buildMatchContext, buildUserContext, showError]);
 
   // Generate date ask suggestions
   const doGenerateDateAsk = useCallback(async () => {
     if (conversationImages.length === 0) {
-      setError('Please add conversation screenshots first.');
+      const validationError = new ValidationError('Please add conversation screenshots first.');
+      setError(validationError);
+      showError(validationError);
       return;
     }
 
@@ -320,11 +343,15 @@ export function useConversationCoach(
       setDateAskSuggestions(suggestions);
     } catch (err) {
       console.error('Generate date ask error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate date suggestions');
+      const auraError = err instanceof AuraError
+        ? err
+        : new ApiError(err instanceof Error ? err.message : 'Failed to generate date suggestions');
+      setError(auraError);
+      showError(auraError);
     } finally {
       setIsGeneratingDateAsk(false);
     }
-  }, [conversationImages, buildMatchContext, buildUserContext]);
+  }, [conversationImages, buildMatchContext, buildUserContext, showError]);
 
   // Clear error after 5 seconds
   useEffect(() => {

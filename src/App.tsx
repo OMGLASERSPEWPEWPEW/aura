@@ -2,6 +2,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { SyncProvider } from './contexts/SyncContext';
+import { ToastProvider } from './contexts/ToastContext';
+import { ErrorBoundary, RouteErrorBoundary } from './components/errors';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Home from './pages/Home';
 import Upload from './pages/Upload';
@@ -15,29 +17,33 @@ import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <SyncProvider>
-          <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-            <Routes>
-              {/* Public auth routes - no login required */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
+    <ErrorBoundary level="page" componentName="App">
+      <BrowserRouter>
+        <AuthProvider>
+          <ToastProvider>
+            <SyncProvider>
+              <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+                <Routes>
+                  {/* Public auth routes - no login required */}
+                  <Route path="/login" element={<RouteErrorBoundary routeName="Login"><Login /></RouteErrorBoundary>} />
+                  <Route path="/signup" element={<RouteErrorBoundary routeName="Signup"><Signup /></RouteErrorBoundary>} />
+                  <Route path="/forgot-password" element={<RouteErrorBoundary routeName="ForgotPassword"><ForgotPassword /></RouteErrorBoundary>} />
+                  <Route path="/reset-password" element={<RouteErrorBoundary routeName="ResetPassword"><ResetPassword /></RouteErrorBoundary>} />
 
-              {/* Protected routes - require authentication */}
-              <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-              <Route path="/profile/:id" element={<ProtectedRoute><ProfileDetail /></ProtectedRoute>} />
-              <Route path="/my-profile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
-              <Route path="/mirror" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
-            </Routes>
-          </div>
-        </SyncProvider>
-      </AuthProvider>
-    </BrowserRouter>
+                  {/* Protected routes - require authentication */}
+                  <Route path="/" element={<ProtectedRoute><RouteErrorBoundary routeName="Home"><Home /></RouteErrorBoundary></ProtectedRoute>} />
+                  <Route path="/profile/:id" element={<ProtectedRoute><RouteErrorBoundary routeName="ProfileDetail"><ProfileDetail /></RouteErrorBoundary></ProtectedRoute>} />
+                  <Route path="/my-profile" element={<ProtectedRoute><RouteErrorBoundary routeName="MyProfile"><MyProfile /></RouteErrorBoundary></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><RouteErrorBoundary routeName="Settings"><Settings /></RouteErrorBoundary></ProtectedRoute>} />
+                  <Route path="/upload" element={<ProtectedRoute><RouteErrorBoundary routeName="Upload"><Upload /></RouteErrorBoundary></ProtectedRoute>} />
+                  <Route path="/mirror" element={<ProtectedRoute><RouteErrorBoundary routeName="Mirror"><MyProfile /></RouteErrorBoundary></ProtectedRoute>} />
+                </Routes>
+              </div>
+            </SyncProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

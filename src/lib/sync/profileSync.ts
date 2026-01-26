@@ -319,3 +319,75 @@ export async function saveProfileWithSync(
 
   return { localId, serverId };
 }
+
+// ============================================
+// Safe variants with Result pattern and retry
+// ============================================
+
+import { withRetry, wrapSync, type RetryOptions } from './syncUtils';
+import type { Result, AuraError } from '../errors';
+
+/**
+ * Push a profile to server with automatic retry.
+ * Returns a Result instead of throwing.
+ */
+export async function pushProfileSafe(
+  profile: Profile,
+  userId: string,
+  options?: RetryOptions
+): Promise<Result<string, AuraError>> {
+  return withRetry(() => pushProfile(profile, userId), {
+    ...options,
+    onRetry: (attempt, error) => {
+      console.log(`Retry ${attempt} for pushProfile: ${error.message}`);
+      options?.onRetry?.(attempt, error);
+    },
+  });
+}
+
+/**
+ * Update a profile on server with automatic retry.
+ * Returns a Result instead of throwing.
+ */
+export async function updateProfileOnServerSafe(
+  profile: Profile,
+  userId: string,
+  options?: RetryOptions
+): Promise<Result<void, AuraError>> {
+  return withRetry(() => updateProfileOnServer(profile, userId), options);
+}
+
+/**
+ * Delete a profile from server with automatic retry.
+ * Returns a Result instead of throwing.
+ */
+export async function deleteProfileFromServerSafe(
+  serverId: string,
+  thumbnailPath?: string,
+  options?: RetryOptions
+): Promise<Result<void, AuraError>> {
+  return withRetry(() => deleteProfileFromServer(serverId, thumbnailPath), options);
+}
+
+/**
+ * Sync profiles from server with automatic retry.
+ * Returns a Result instead of throwing.
+ */
+export async function syncProfilesFromServerSafe(
+  userId: string,
+  options?: RetryOptions
+): Promise<Result<void, AuraError>> {
+  return withRetry(() => syncProfilesFromServer(userId), options);
+}
+
+/**
+ * Save a profile with sync, wrapped to return Result.
+ * This is the recommended way to save profiles with error handling.
+ */
+export const saveProfileWithSyncSafe = wrapSync(
+  saveProfileWithSync,
+  'push'
+) as (
+  profile: Omit<Profile, 'id'> & { id?: number },
+  userId: string
+) => Promise<Result<{ localId: number; serverId: string }, AuraError>>;

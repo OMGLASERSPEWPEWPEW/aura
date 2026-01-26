@@ -101,7 +101,7 @@ export default function ProfileDetail() {
             transactionalIndicators={transactionalIndicators}
             zodiacCompatibility={zodiac.compatibility}
             zodiacIsLoading={zodiac.isLoading}
-            zodiacError={zodiac.error}
+            zodiacError={zodiac.error?.message ?? null}
             userZodiac={zodiac.userZodiac}
             matchZodiac={zodiac.matchZodiac}
             canGenerateZodiac={zodiac.canGenerate}
@@ -112,7 +112,7 @@ export default function ProfileDetail() {
             localEvents={dateIdeas.localEvents}
             isLoadingWeather={dateIdeas.isLoadingWeather}
             isLoadingDates={dateIdeas.isLoadingDates}
-            dateError={dateIdeas.error}
+            dateError={dateIdeas.error?.message ?? null}
             onDateSelect={dateIdeas.handleDateSelect}
             onGenerateDates={dateIdeas.generate}
             openers={openersList}

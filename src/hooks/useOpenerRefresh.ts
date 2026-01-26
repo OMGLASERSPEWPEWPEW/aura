@@ -5,10 +5,13 @@ import { db } from '../lib/db';
 import type { Profile, UserIdentity } from '../lib/db';
 import { buildUserContextForMatch } from '../lib/utils';
 import { extractAnalysisFields, getProfileContextForOpeners } from '../lib/utils/profileHelpers';
+import { AuraError, ApiError } from '../lib/errors';
+import { useErrorToast } from '../contexts/ToastContext';
 
 interface UseOpenerRefreshReturn {
   isRefreshingOpeners: boolean;
   refreshingPromptIndex: number | null;
+  error: AuraError | null;
   refreshAll: () => Promise<void>;
   refreshPrompt: (promptIndex: number) => Promise<void>;
 }
@@ -22,6 +25,8 @@ export function useOpenerRefresh(
 ): UseOpenerRefreshReturn {
   const [isRefreshingOpeners, setIsRefreshingOpeners] = useState(false);
   const [refreshingPromptIndex, setRefreshingPromptIndex] = useState<number | null>(null);
+  const [error, setError] = useState<AuraError | null>(null);
+  const showError = useErrorToast();
 
   // Refresh all openers
   const refreshAll = useCallback(async () => {
@@ -50,10 +55,15 @@ export function useOpenerRefresh(
       await db.profiles.update(profile.id, { analysis: updatedAnalysis });
     } catch (err) {
       console.error('Refresh openers error:', err);
+      const auraError = err instanceof AuraError
+        ? err
+        : new ApiError(err instanceof Error ? err.message : 'Failed to refresh openers');
+      setError(auraError);
+      showError(auraError);
     } finally {
       setIsRefreshingOpeners(false);
     }
-  }, [profile, userIdentity]);
+  }, [profile, userIdentity, showError]);
 
   // Refresh opener for a specific prompt
   const refreshPrompt = useCallback(
@@ -87,16 +97,22 @@ export function useOpenerRefresh(
         await db.profiles.update(profile.id, { analysis: updatedAnalysis });
       } catch (err) {
         console.error('Refresh prompt opener error:', err);
+        const auraError = err instanceof AuraError
+          ? err
+          : new ApiError(err instanceof Error ? err.message : 'Failed to refresh opener');
+        setError(auraError);
+        showError(auraError);
       } finally {
         setRefreshingPromptIndex(null);
       }
     },
-    [profile, userIdentity]
+    [profile, userIdentity, showError]
   );
 
   return {
     isRefreshingOpeners,
     refreshingPromptIndex,
+    error,
     refreshAll,
     refreshPrompt,
   };

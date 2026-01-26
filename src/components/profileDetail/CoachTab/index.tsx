@@ -72,7 +72,7 @@ export function CoachTab({ coach, matchName, copiedIndex, onCopy }: CoachTabProp
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg flex items-start gap-2">
           <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
-          <p className="text-sm">{error}</p>
+          <p className="text-sm">{error.getUserMessage()}</p>
         </div>
       )}
 

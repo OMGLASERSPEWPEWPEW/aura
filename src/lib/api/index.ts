@@ -6,6 +6,9 @@ export {
   extractJsonObject,
   extractJsonArray,
   extractJsonObjectWithDebug,
+  // Safe variants
+  extractJsonObjectSafe,
+  extractJsonArraySafe,
 } from './jsonExtractor';
 export {
   callAnthropicForObject,
@@ -15,6 +18,10 @@ export {
   callAnthropicWithDebug,
   textContent,
   imageContent,
+  // Safe variants
+  callAnthropicForObjectSafe,
+  callAnthropicForArrayResultSafe,
+  callAnthropicForTextSafe,
   type MessageContent,
   type TextContent,
   type ImageContent,

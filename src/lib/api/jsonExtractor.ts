@@ -2,6 +2,7 @@
 // Centralized JSON extraction from AI responses
 
 import { saveErrorToFile } from '../utils/errorExport';
+import { ParseError, type Result, Ok, Err } from '../errors';
 
 /**
  * Validates that a JSON string appears to be complete (not truncated mid-response).
@@ -240,5 +241,147 @@ export function extractJsonObjectWithDebug<T>(
     });
 
     throw new Error('Failed to parse AI response. Debug info saved - click "Download Debug" to see details.');
+  }
+}
+
+// ============================================
+// Safe variants that return Result<T, ParseError>
+// ============================================
+
+/**
+ * Extract a JSON object from text, returning a Result instead of throwing.
+ *
+ * @example
+ * ```typescript
+ * const result = extractJsonObjectSafe<Profile>(text);
+ * if (result.ok) {
+ *   console.log(result.value);
+ * } else {
+ *   console.error(result.error.getUserMessage());
+ * }
+ * ```
+ */
+export function extractJsonObjectSafe<T>(text: string): Result<T, ParseError> {
+  const startIndex = text.indexOf('{');
+  const endIndex = text.lastIndexOf('}');
+
+  if (startIndex === -1 || endIndex === -1) {
+    saveErrorToFile({
+      timestamp: new Date().toISOString(),
+      operation: 'extractJsonObjectSafe',
+      inputSummary: { textLength: text.length },
+      rawResponse: text.substring(0, 3000),
+      parseError: 'AI did not return a valid JSON object - no { or } found',
+    });
+
+    return Err(new ParseError('no_json', {
+      rawText: text.substring(0, 500),
+      context: { textLength: text.length },
+    }));
+  }
+
+  const jsonString = text.substring(startIndex, endIndex + 1);
+
+  const validation = validateJsonCompleteness(jsonString);
+  if (!validation.valid) {
+    console.error('JSON appears truncated:', validation.reason);
+    saveErrorToFile({
+      timestamp: new Date().toISOString(),
+      operation: 'extractJsonObjectSafe',
+      inputSummary: { textLength: text.length, jsonStringLength: jsonString.length },
+      rawResponse: text.substring(0, 1500),
+      extractedJson: jsonString.substring(jsonString.length - 500),
+      parseError: `Truncated response: ${validation.reason}`,
+    });
+
+    return Err(new ParseError('truncated', {
+      message: validation.reason,
+      rawText: jsonString.substring(jsonString.length - 200),
+      context: { textLength: text.length, jsonStringLength: jsonString.length },
+    }));
+  }
+
+  try {
+    return Ok(JSON.parse(jsonString) as T);
+  } catch (parseError) {
+    console.error('JSON Parse Failed on:', jsonString);
+    saveErrorToFile({
+      timestamp: new Date().toISOString(),
+      operation: 'extractJsonObjectSafe',
+      inputSummary: { textLength: text.length, jsonStringLength: jsonString.length },
+      rawResponse: text.substring(0, 1500),
+      extractedJson: jsonString.substring(0, 1500),
+      parseError: String(parseError),
+    });
+
+    return Err(new ParseError('invalid_json', {
+      rawText: jsonString.substring(0, 500),
+      context: { parseError: String(parseError) },
+      cause: parseError instanceof Error ? parseError : undefined,
+    }));
+  }
+}
+
+/**
+ * Extract a JSON array from text, returning a Result instead of throwing.
+ */
+export function extractJsonArraySafe<T>(text: string): Result<T[], ParseError> {
+  const startIndex = text.indexOf('[');
+  const endIndex = text.lastIndexOf(']');
+
+  if (startIndex === -1 || endIndex === -1) {
+    saveErrorToFile({
+      timestamp: new Date().toISOString(),
+      operation: 'extractJsonArraySafe',
+      inputSummary: { textLength: text.length },
+      rawResponse: text.substring(0, 3000),
+      parseError: 'AI did not return a valid JSON array - no [ or ] found',
+    });
+
+    return Err(new ParseError('no_json', {
+      rawText: text.substring(0, 500),
+      context: { textLength: text.length },
+    }));
+  }
+
+  const jsonString = text.substring(startIndex, endIndex + 1);
+
+  const validation = validateJsonCompleteness(jsonString);
+  if (!validation.valid) {
+    console.error('JSON appears truncated:', validation.reason);
+    saveErrorToFile({
+      timestamp: new Date().toISOString(),
+      operation: 'extractJsonArraySafe',
+      inputSummary: { textLength: text.length, jsonStringLength: jsonString.length },
+      rawResponse: text.substring(0, 1500),
+      extractedJson: jsonString.substring(jsonString.length - 500),
+      parseError: `Truncated response: ${validation.reason}`,
+    });
+
+    return Err(new ParseError('truncated', {
+      message: validation.reason,
+      rawText: jsonString.substring(jsonString.length - 200),
+      context: { textLength: text.length, jsonStringLength: jsonString.length },
+    }));
+  }
+
+  try {
+    return Ok(JSON.parse(jsonString) as T[]);
+  } catch (parseError) {
+    console.error('JSON Parse Failed on:', jsonString);
+    saveErrorToFile({
+      timestamp: new Date().toISOString(),
+      operation: 'extractJsonArraySafe',
+      inputSummary: { textLength: text.length, jsonStringLength: jsonString.length },
+      rawResponse: text.substring(0, 1500),
+      extractedJson: jsonString.substring(0, 1500),
+      parseError: String(parseError),
+    });
+
+    return Err(new ParseError('invalid_json', {
+      rawText: jsonString.substring(0, 500),
+      context: { parseError: String(parseError) },
+      cause: parseError instanceof Error ? parseError : undefined,
+    }));
   }
 }

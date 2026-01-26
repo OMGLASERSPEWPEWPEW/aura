@@ -4,6 +4,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useDateIdeas } from './useDateIdeas';
 import type { Profile, UserIdentity, DateSuggestion } from '../lib/db';
 import type { WeatherForecast } from '../lib/weather';
+import { createWrapper } from '../test/testUtils';
 
 // Mock dependencies
 vi.mock('../lib/ai', () => ({
@@ -83,7 +84,8 @@ describe('useDateIdeas', () => {
 
   it('should initialize with correct default state', () => {
     const { result } = renderHook(() =>
-      useDateIdeas(undefined, undefined)
+      useDateIdeas(undefined, undefined),
+      { wrapper: createWrapper() }
     );
 
     expect(result.current.suggestions).toBeNull();
@@ -105,7 +107,8 @@ describe('useDateIdeas', () => {
     };
 
     const { result } = renderHook(() =>
-      useDateIdeas(profileWithSuggestions as Profile, mockUserIdentity as UserIdentity)
+      useDateIdeas(profileWithSuggestions as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await waitFor(() => {
@@ -115,7 +118,8 @@ describe('useDateIdeas', () => {
 
   it('should update targetDate when setTargetDate is called', () => {
     const { result } = renderHook(() =>
-      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -135,7 +139,8 @@ describe('useDateIdeas', () => {
     vi.mocked(getUserLocation).mockReturnValue('Oakland');
 
     const { result } = renderHook(() =>
-      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     const mockEvent = {
@@ -160,7 +165,8 @@ describe('useDateIdeas', () => {
     vi.mocked(searchLocalEvents).mockResolvedValue(mockEvents);
 
     const { result } = renderHook(() =>
-      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     // First set a date
@@ -193,7 +199,8 @@ describe('useDateIdeas', () => {
     vi.mocked(getMatchInterests).mockReturnValue(['hiking', 'coffee']);
 
     const { result } = renderHook(() =>
-      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -222,7 +229,8 @@ describe('useDateIdeas', () => {
     );
 
     const { result } = renderHook(() =>
-      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -245,14 +253,16 @@ describe('useDateIdeas', () => {
     vi.mocked(getDateSuggestions).mockRejectedValue(new Error('API Error'));
 
     const { result } = renderHook(() =>
-      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
       await result.current.generate();
     });
 
-    expect(result.current.error).toBe('API Error');
+    expect(result.current.error).not.toBeNull();
+    expect(result.current.error?.message).toBe('API Error');
     expect(result.current.isLoadingDates).toBe(false);
 
     consoleSpy.mockRestore();
@@ -262,7 +272,8 @@ describe('useDateIdeas', () => {
     const { getDateSuggestions } = await import('../lib/ai');
 
     const { result } = renderHook(() =>
-      useDateIdeas(undefined, mockUserIdentity as UserIdentity)
+      useDateIdeas(undefined, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -284,7 +295,8 @@ describe('useDateIdeas', () => {
     vi.mocked(getDateSuggestions).mockResolvedValue(mockSuggestions);
 
     const { result } = renderHook(() =>
-      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     // First select a date to get weather and events
@@ -322,7 +334,8 @@ describe('useDateIdeas', () => {
     vi.mocked(getUserLocation).mockReturnValue('Oakland');
 
     const { result } = renderHook(() =>
-      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -352,7 +365,8 @@ describe('useDateIdeas', () => {
     vi.mocked(getUserLocation).mockReturnValue('Oakland');
 
     const { result } = renderHook(() =>
-      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useDateIdeas(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {

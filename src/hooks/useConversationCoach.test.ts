@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useConversationCoach } from './useConversationCoach';
 import type { Profile, UserIdentity, CoachingSession, CoachingResponse, MatchCoachingAnalysis } from '../lib/db';
+import { createWrapper } from '../test/testUtils';
 
 // Mock dexie-react-hooks
 vi.mock('dexie-react-hooks', () => ({
@@ -116,7 +117,8 @@ describe('useConversationCoach', () => {
 
   it('should initialize with correct default state', () => {
     const { result } = renderHook(() =>
-      useConversationCoach(undefined, undefined)
+      useConversationCoach(undefined, undefined),
+      { wrapper: createWrapper() }
     );
 
     expect(result.current.conversationImages).toEqual([]);
@@ -132,7 +134,8 @@ describe('useConversationCoach', () => {
 
   it('should add images to conversation', () => {
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -144,7 +147,8 @@ describe('useConversationCoach', () => {
 
   it('should append images when addImages is called multiple times', () => {
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -160,7 +164,8 @@ describe('useConversationCoach', () => {
 
   it('should clear images', () => {
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -181,7 +186,8 @@ describe('useConversationCoach', () => {
     vi.mocked(analyzeConversation).mockResolvedValue(mockAnalysisResult);
 
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -200,14 +206,16 @@ describe('useConversationCoach', () => {
 
   it('should set error when analyzing without images', async () => {
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
       await result.current.analyzeConversation();
     });
 
-    expect(result.current.error).toBe('Please add conversation screenshots first.');
+    expect(result.current.error).not.toBeNull();
+    expect(result.current.error?.message).toBe('Please add conversation screenshots first.');
   });
 
   it('should set loading state during analysis', async () => {
@@ -221,7 +229,8 @@ describe('useConversationCoach', () => {
     );
 
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -248,7 +257,8 @@ describe('useConversationCoach', () => {
     vi.mocked(scoreUserResponse).mockResolvedValue(mockScoreResult);
 
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -270,7 +280,8 @@ describe('useConversationCoach', () => {
 
   it('should return null when scoring without analysis', async () => {
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     let scoreResult;
@@ -279,7 +290,8 @@ describe('useConversationCoach', () => {
     });
 
     expect(scoreResult).toBeNull();
-    expect(result.current.error).toBe('No analysis to score against.');
+    expect(result.current.error).not.toBeNull();
+    expect(result.current.error?.message).toBe('No analysis to score against.');
   });
 
   it('should generate date ask suggestions', async () => {
@@ -288,7 +300,8 @@ describe('useConversationCoach', () => {
     vi.mocked(generateDateAsk).mockResolvedValue(mockDateAskSuggestions);
 
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -305,14 +318,16 @@ describe('useConversationCoach', () => {
 
   it('should set error when generating date ask without images', async () => {
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
       await result.current.generateDateAskSuggestions();
     });
 
-    expect(result.current.error).toBe('Please add conversation screenshots first.');
+    expect(result.current.error).not.toBeNull();
+    expect(result.current.error?.message).toBe('Please add conversation screenshots first.');
   });
 
   it('should load previous session', () => {
@@ -326,7 +341,8 @@ describe('useConversationCoach', () => {
     };
 
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -350,7 +366,8 @@ describe('useConversationCoach', () => {
     };
 
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -374,7 +391,8 @@ describe('useConversationCoach', () => {
     vi.mocked(analyzeConversation).mockRejectedValue(new Error('API Error'));
 
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -385,7 +403,8 @@ describe('useConversationCoach', () => {
       await result.current.analyzeConversation();
     });
 
-    expect(result.current.error).toBe('API Error');
+    expect(result.current.error).not.toBeNull();
+    expect(result.current.error?.message).toBe('API Error');
     expect(result.current.isAnalyzing).toBe(false);
 
     consoleSpy.mockRestore();
@@ -393,7 +412,8 @@ describe('useConversationCoach', () => {
 
   it('should clear error after 5 seconds', async () => {
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -415,7 +435,8 @@ describe('useConversationCoach', () => {
     vi.mocked(analyzeConversation).mockResolvedValue(mockAnalysisResult);
 
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -432,13 +453,15 @@ describe('useConversationCoach', () => {
 
   it('should set error when refreshing without conversation', async () => {
     const { result } = renderHook(() =>
-      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useConversationCoach(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
       await result.current.refreshResponses();
     });
 
-    expect(result.current.error).toBe('No conversation to refresh.');
+    expect(result.current.error).not.toBeNull();
+    expect(result.current.error?.message).toBe('No conversation to refresh.');
   });
 });

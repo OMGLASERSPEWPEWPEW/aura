@@ -5,11 +5,13 @@ import { db } from '../lib/db';
 import type { Profile, ZodiacCompatibility, UserIdentity } from '../lib/db';
 import { getUserZodiacSign, getUserArchetype } from '../lib/utils';
 import { getMatchZodiacSign, extractAnalysisFields } from '../lib/utils/profileHelpers';
+import { AuraError, ApiError } from '../lib/errors';
+import { useErrorToast } from '../contexts/ToastContext';
 
 interface UseZodiacCompatibilityReturn {
   compatibility: ZodiacCompatibility | null;
   isLoading: boolean;
-  error: string | null;
+  error: AuraError | null;
   userZodiac: string | undefined;
   matchZodiac: string | undefined;
   canGenerate: boolean;
@@ -26,7 +28,8 @@ export function useZodiacCompatibility(
 ): UseZodiacCompatibilityReturn {
   const [compatibility, setCompatibility] = useState<ZodiacCompatibility | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AuraError | null>(null);
+  const showError = useErrorToast();
 
   const userZodiac = getUserZodiacSign(userIdentity);
   const matchZodiac = profile ? getMatchZodiacSign(profile) : undefined;
@@ -65,11 +68,15 @@ export function useZodiacCompatibility(
       });
     } catch (err) {
       console.error('Zodiac compatibility error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate zodiac compatibility');
+      const auraError = err instanceof AuraError
+        ? err
+        : new ApiError(err instanceof Error ? err.message : 'Failed to generate zodiac compatibility');
+      setError(auraError);
+      showError(auraError);
     } finally {
       setIsLoading(false);
     }
-  }, [userZodiac, matchZodiac, profile, userIdentity]);
+  }, [userZodiac, matchZodiac, profile, userIdentity, showError]);
 
   return {
     compatibility,

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useZodiacCompatibility } from './useZodiacCompatibility';
 import type { Profile, UserIdentity, ZodiacCompatibility } from '../lib/db';
+import { createWrapper } from '../test/testUtils';
 
 // Mock dependencies
 vi.mock('../lib/ai', () => ({
@@ -72,7 +73,8 @@ describe('useZodiacCompatibility', () => {
     vi.mocked(getMatchZodiacSign).mockReturnValue(undefined);
 
     const { result } = renderHook(() =>
-      useZodiacCompatibility(undefined, undefined)
+      useZodiacCompatibility(undefined, undefined),
+      { wrapper: createWrapper() }
     );
 
     expect(result.current.compatibility).toBeNull();
@@ -88,7 +90,8 @@ describe('useZodiacCompatibility', () => {
     vi.mocked(getMatchZodiacSign).mockReturnValue('Leo');
 
     const { result } = renderHook(() =>
-      useZodiacCompatibility(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useZodiacCompatibility(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     expect(result.current.userZodiac).toBe('Aries');
@@ -104,7 +107,8 @@ describe('useZodiacCompatibility', () => {
     vi.mocked(getMatchZodiacSign).mockReturnValue(undefined);
 
     const { result } = renderHook(() =>
-      useZodiacCompatibility(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useZodiacCompatibility(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     expect(result.current.canGenerate).toBe(false);
@@ -123,7 +127,8 @@ describe('useZodiacCompatibility', () => {
     };
 
     const { result } = renderHook(() =>
-      useZodiacCompatibility(profileWithCompatibility as Profile, mockUserIdentity as UserIdentity)
+      useZodiacCompatibility(profileWithCompatibility as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await waitFor(() => {
@@ -143,7 +148,8 @@ describe('useZodiacCompatibility', () => {
     vi.mocked(getZodiacCompatibility).mockResolvedValue(mockCompatibility);
 
     const { result } = renderHook(() =>
-      useZodiacCompatibility(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useZodiacCompatibility(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -172,14 +178,16 @@ describe('useZodiacCompatibility', () => {
     vi.mocked(getZodiacCompatibility).mockRejectedValue(new Error('API Error'));
 
     const { result } = renderHook(() =>
-      useZodiacCompatibility(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useZodiacCompatibility(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
       await result.current.generate();
     });
 
-    expect(result.current.error).toBe('API Error');
+    expect(result.current.error).not.toBeNull();
+    expect(result.current.error?.message).toBe('API Error');
     expect(result.current.compatibility).toBeNull();
   });
 
@@ -199,7 +207,8 @@ describe('useZodiacCompatibility', () => {
     );
 
     const { result } = renderHook(() =>
-      useZodiacCompatibility(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useZodiacCompatibility(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     act(() => {
@@ -224,7 +233,8 @@ describe('useZodiacCompatibility', () => {
     vi.mocked(getMatchZodiacSign).mockReturnValue('Leo');
 
     const { result } = renderHook(() =>
-      useZodiacCompatibility(undefined, mockUserIdentity as UserIdentity)
+      useZodiacCompatibility(undefined, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {
@@ -244,7 +254,8 @@ describe('useZodiacCompatibility', () => {
     vi.mocked(getZodiacCompatibility).mockResolvedValue(mockCompatibility);
 
     const { result } = renderHook(() =>
-      useZodiacCompatibility(mockProfile as Profile, mockUserIdentity as UserIdentity)
+      useZodiacCompatibility(mockProfile as Profile, mockUserIdentity as UserIdentity),
+      { wrapper: createWrapper() }
     );
 
     await act(async () => {

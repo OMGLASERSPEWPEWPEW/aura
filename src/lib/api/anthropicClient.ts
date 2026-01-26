@@ -2,9 +2,27 @@
 // Centralized Anthropic API client
 
 import { ANTHROPIC_CONFIG, TIMEOUTS, getApiKey, isUsingProxy } from './config';
-import { extractJsonObject, extractJsonArray, extractJsonObjectWithDebug } from './jsonExtractor';
+import {
+  extractJsonObject,
+  extractJsonArray,
+  extractJsonObjectWithDebug,
+  extractJsonObjectSafe,
+  extractJsonArraySafe,
+} from './jsonExtractor';
 import { saveErrorToFile, type ErrorDebugInfo } from '../utils/errorExport';
 import { getAccessToken } from '../supabase';
+import {
+  ApiError,
+  NetworkError,
+  TimeoutError,
+  AuthError,
+  RateLimitError,
+  ParseError,
+  type Result,
+  Ok,
+  Err,
+  type AuraError,
+} from '../errors';
 
 // Content types for API messages
 export interface TextContent {
@@ -424,4 +442,187 @@ export function imageContent(
       data,
     },
   };
+}
+
+// ============================================
+// Safe variants that return Result<T, AuraError>
+// ============================================
+
+/**
+ * Converts a caught error to an appropriate AuraError type.
+ */
+function toAuraError(error: unknown, operationName?: string): AuraError {
+  if (error instanceof ApiError || error instanceof NetworkError ||
+      error instanceof TimeoutError || error instanceof AuthError ||
+      error instanceof RateLimitError || error instanceof ParseError) {
+    return error;
+  }
+
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+
+    // Check for abort/cancellation
+    if (error.name === 'AbortError' || message.includes('aborted')) {
+      return new ApiError('Request was cancelled', {
+        context: { operation: operationName },
+        cause: error,
+      });
+    }
+
+    // Check for timeout
+    if (message.includes('timeout')) {
+      return new TimeoutError(TIMEOUTS.DEFAULT, { cause: error });
+    }
+
+    // Check for network errors
+    if (message.includes('network') || message.includes('fetch failed') ||
+        message.includes('failed to fetch')) {
+      return new NetworkError(error.message, { cause: error });
+    }
+
+    // Check for auth errors
+    if (message.includes('authentication required') || message.includes('sign in')) {
+      return new AuthError('missing', { cause: error });
+    }
+
+    // Check for rate limits
+    if (message.includes('429') || message.includes('rate limit') ||
+        message.includes('too many requests')) {
+      return new RateLimitError({ cause: error });
+    }
+
+    // Check for specific HTTP status codes
+    const statusMatch = message.match(/api error:?\s*(\d{3})/i);
+    if (statusMatch) {
+      const statusCode = parseInt(statusMatch[1], 10);
+      return new ApiError(error.message, { statusCode, cause: error });
+    }
+
+    // Generic API error
+    return new ApiError(error.message, {
+      context: { operation: operationName },
+      cause: error,
+    });
+  }
+
+  return new ApiError(String(error), {
+    context: { operation: operationName },
+  });
+}
+
+/**
+ * Make a request with retry, returning a Result instead of throwing.
+ */
+async function makeRequestWithRetrySafe(
+  options: AnthropicRequestOptions,
+  operationName?: string
+): Promise<Result<string, AuraError>> {
+  const maxRetries = options.retries ?? 2;
+  const backoffDelays = [1000, 3000];
+
+  let lastError: AuraError | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await makeRequest(options, operationName);
+      return Ok(result);
+    } catch (error) {
+      lastError = toAuraError(error, operationName);
+
+      // Don't retry user aborts
+      if (isAbortError(error)) {
+        return Err(lastError);
+      }
+
+      // Don't retry 4xx client errors (except rate limits)
+      if (lastError instanceof ApiError && lastError.statusCode &&
+          lastError.statusCode >= 400 && lastError.statusCode < 500 &&
+          lastError.statusCode !== 429) {
+        return Err(lastError);
+      }
+
+      // Check if we should retry
+      const isLastAttempt = attempt === maxRetries;
+      if (isLastAttempt || !lastError.retryable) {
+        return Err(lastError);
+      }
+
+      // Notify about retry
+      const nextAttempt = attempt + 1;
+      console.log(`Request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${backoffDelays[attempt]}ms...`);
+
+      if (options.onRetry) {
+        options.onRetry(nextAttempt, lastError);
+      }
+
+      // Wait before retry
+      await sleep(backoffDelays[attempt] || backoffDelays[backoffDelays.length - 1]);
+    }
+  }
+
+  return Err(lastError || new ApiError('Request failed after retries'));
+}
+
+/**
+ * Call Anthropic API and parse response as JSON object.
+ * Returns a Result instead of throwing.
+ *
+ * @example
+ * ```typescript
+ * const result = await callAnthropicForObjectSafe<Profile>(options);
+ * if (result.ok) {
+ *   console.log(result.value);
+ * } else {
+ *   showError(result.error);
+ * }
+ * ```
+ */
+export async function callAnthropicForObjectSafe<T>(
+  options: AnthropicRequestOptions
+): Promise<Result<T, ApiError | ParseError>> {
+  const requestResult = await makeRequestWithRetrySafe(options, 'callAnthropicForObjectSafe');
+
+  if (!requestResult.ok) {
+    return requestResult as Result<T, ApiError>;
+  }
+
+  const rawText = requestResult.value;
+  console.log('AI Raw Response:', rawText);
+
+  return extractJsonObjectSafe<T>(rawText);
+}
+
+/**
+ * Call Anthropic API and parse response as JSON array.
+ * Returns a Result instead of throwing.
+ */
+export async function callAnthropicForArrayResultSafe<T>(
+  options: AnthropicRequestOptions
+): Promise<Result<T[], ApiError | ParseError>> {
+  const requestResult = await makeRequestWithRetrySafe(options, 'callAnthropicForArrayResultSafe');
+
+  if (!requestResult.ok) {
+    return requestResult as Result<T[], ApiError>;
+  }
+
+  const rawText = requestResult.value;
+  console.log('AI Raw Response:', rawText);
+
+  return extractJsonArraySafe<T>(rawText);
+}
+
+/**
+ * Call Anthropic API and return raw text response.
+ * Returns a Result instead of throwing.
+ */
+export async function callAnthropicForTextSafe(
+  options: AnthropicRequestOptions
+): Promise<Result<string, AuraError>> {
+  const result = await makeRequestWithRetrySafe(options, 'callAnthropicForTextSafe');
+
+  if (result.ok) {
+    console.log('AI Raw Text Response:', result.value.substring(0, 500) + '...');
+  }
+
+  return result;
 }

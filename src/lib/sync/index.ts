@@ -53,6 +53,12 @@ export {
   pullProfiles,
   syncProfilesFromServer,
   pushUnsyncedProfiles,
+  // Safe variants
+  pushProfileSafe,
+  updateProfileOnServerSafe,
+  deleteProfileFromServerSafe,
+  syncProfilesFromServerSafe,
+  saveProfileWithSyncSafe,
 } from './profileSync';
 
 // User profile sync
@@ -81,3 +87,14 @@ export {
   pushUnsyncedChatMessages,
   pushChatMessagesForProfile,
 } from './chatSync';
+
+// Sync utilities with retry and Result pattern
+export {
+  withRetry,
+  withRetryAll,
+  wrapSync,
+  wrapSyncWithRetry,
+  toSyncError,
+  isOffline,
+  type RetryOptions,
+} from './syncUtils';

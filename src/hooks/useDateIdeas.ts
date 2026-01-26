@@ -6,6 +6,8 @@ import { db } from '../lib/db';
 import type { Profile, DateSuggestion, UserIdentity } from '../lib/db';
 import { getUserLocation, getUserInterests, getUserDatingGoal } from '../lib/utils';
 import { getMatchLocation, getMatchInterests, extractAnalysisFields } from '../lib/utils/profileHelpers';
+import { AuraError, ApiError } from '../lib/errors';
+import { useErrorToast } from '../contexts/ToastContext';
 
 interface UseDateIdeasReturn {
   suggestions: DateSuggestion[] | null;
@@ -15,7 +17,7 @@ interface UseDateIdeasReturn {
   localEvents: string[];
   isLoadingWeather: boolean;
   isLoadingDates: boolean;
-  error: string | null;
+  error: AuraError | null;
   handleDateSelect: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   generate: () => Promise<void>;
 }
@@ -33,7 +35,8 @@ export function useDateIdeas(
   const [localEvents, setLocalEvents] = useState<string[]>([]);
   const [isLoadingWeather, setIsLoadingWeather] = useState(false);
   const [isLoadingDates, setIsLoadingDates] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AuraError | null>(null);
+  const showError = useErrorToast();
 
   // Load existing date suggestions from profile
   useEffect(() => {
@@ -125,11 +128,15 @@ export function useDateIdeas(
       });
     } catch (err) {
       console.error('Date suggestions error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to get date ideas');
+      const auraError = err instanceof AuraError
+        ? err
+        : new ApiError(err instanceof Error ? err.message : 'Failed to get date ideas');
+      setError(auraError);
+      showError(auraError);
     } finally {
       setIsLoadingDates(false);
     }
-  }, [profile, userIdentity, targetDate, weatherForecast, localEvents]);
+  }, [profile, userIdentity, targetDate, weatherForecast, localEvents, showError]);
 
   return {
     suggestions,
