@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { UserSynthesis, VideoAnalysis } from '../../lib/db';
 import type { UserStreamingAnalysisState } from '../../hooks/useUserStreamingAnalysis';
 import UserProfileDisplay from '../UserProfileDisplay';
+import { MyVirtuesCard } from '../ui/MyVirtuesCard';
 import {
   InsightCard,
   FlagCard,
@@ -74,6 +75,9 @@ export default function InsightsTab({
   const showLegacyLoading = isAnalyzingLegacy && !isStreamingActive;
   const showResults = synthesis && !isStreamingActive && !isAnalyzingLegacy && phase !== 'error';
   const showEmptyState = !synthesis && !isStreamingActive && !isAnalyzingLegacy && !isError && phase === 'idle';
+
+  // Check if user has 11 Virtues profile
+  const hasVirtueProfile = !!(synthesis?.virtue_profile?.scores?.length);
 
   return (
     <div className="space-y-3">
@@ -379,9 +383,10 @@ export default function InsightsTab({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
+          className="space-y-6"
         >
           {/* Success header */}
-          <div className="bg-green-50 p-4 rounded-xl mb-6 flex items-center gap-3">
+          <div className="bg-green-50 p-4 rounded-xl flex items-center gap-3">
             <CheckCircle className="text-green-600 flex-shrink-0" size={24} />
             <div>
               <h3 className="font-semibold text-green-800">Analysis Complete</h3>
@@ -397,6 +402,15 @@ export default function InsightsTab({
               <RefreshCw size={18} />
             </button>
           </div>
+
+          {/* 11 Virtues Profile Card - show if available */}
+          {hasVirtueProfile && synthesis.virtue_profile && (
+            <MyVirtuesCard
+              virtueProfile={synthesis.virtue_profile}
+              onRegenerate={onRunAnalysisLegacy}
+              isRegenerating={isAnalyzingLegacy}
+            />
+          )}
 
           {/* Full profile display */}
           <UserProfileDisplay synthesis={synthesis} videoFrames={videoAnalysis?.frames} />

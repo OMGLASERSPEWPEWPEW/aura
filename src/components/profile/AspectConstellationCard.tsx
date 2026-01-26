@@ -1,10 +1,11 @@
 // src/components/profile/AspectConstellationCard.tsx
 // Displays user's 23 Aspects profile with visual bars by realm
+// NOTE: This is the legacy 23 Aspects system. New code should use VirtueMixingBoard for 11 Virtues.
 
 import { useState } from 'react';
 import { Sparkles, HelpCircle, X, ChevronDown, ChevronUp } from 'lucide-react';
 import type { UserAspectProfile } from '../../lib/db';
-import { REALMS, getAspectsByRealm } from '../../lib/virtues';
+import { LEGACY_REALMS, getAspectsByRealm } from '../../lib/virtues';
 
 interface AspectConstellationCardProps {
   aspectProfile: UserAspectProfile;
@@ -92,7 +93,7 @@ export default function AspectConstellationCard({ aspectProfile }: AspectConstel
       {/* Realm Summary */}
       {aspectProfile.realm_summary && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-          {REALMS.map(realm => (
+          {LEGACY_REALMS.map(realm => (
             <div
               key={realm.id}
               className={`${realm.bgClass} p-3 rounded-lg ${realm.borderClass} border`}
@@ -110,7 +111,7 @@ export default function AspectConstellationCard({ aspectProfile }: AspectConstel
 
       {/* Aspect Bars by Realm */}
       <div className="space-y-4">
-        {REALMS.map(realm => {
+        {LEGACY_REALMS.map(realm => {
           const realmAspects = getAspectsByRealm(realm.id);
           const isExpanded = expandedRealm === realm.id;
 

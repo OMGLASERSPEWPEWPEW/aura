@@ -1,6 +1,7 @@
 // src/lib/db.ts
 import Dexie, { type EntityTable } from 'dexie';
-import type { UserAspectProfile, MatchAspectScores } from './virtues/types';
+import type { UserAspectProfile, MatchAspectScores, UserVirtueProfile, MatchVirtueCompatibility } from './virtues/types';
+import { migrateAspectProfileToVirtues, canMigrateAspectProfile, canMigrateAspectScores } from './virtues/migration';
 
 // --- Profile Analysis Types ---
 
@@ -256,11 +257,14 @@ interface Profile {
   // Date suggestions (populated on-demand)
   date_suggestions?: DateSuggestions;
 
-  // Virtue scores (populated when user has partner_virtues)
+  // DEPRECATED: Old 5 Partner Virtues scores (keep for backwards compatibility)
   virtue_scores?: VirtueScore[];
 
-  // 23 Aspects scores (new system - takes precedence over virtue_scores when present)
+  // DEPRECATED: 23 Aspects scores (keep for backwards compatibility)
   aspect_scores?: MatchAspectScores;
+
+  // NEW: 11 Virtues compatibility (primary system)
+  virtues_11?: MatchVirtueCompatibility;
 
   // Sync fields - links to Supabase
   serverId?: string; // UUID from Supabase match_profiles table
@@ -365,12 +369,14 @@ interface UserSynthesis {
     growth_areas: string[];
     strengths: string[];
   };
-  // Virtue-based partner profile (Greek philosophy / eudaimonia)
+  // DEPRECATED: Virtue-based partner profile (Greek philosophy / eudaimonia)
   partner_virtues?: PartnerVirtue[];  // 5 core virtues you seek
   // Neurodivergence insights
   neurodivergence?: NeurodivergenceAnalysis;
-  // 23 Aspects profile (new system)
+  // DEPRECATED: 23 Aspects profile (old system)
   aspect_profile?: UserAspectProfile;
+  // NEW: 11 Virtues profile (primary system)
+  virtue_profile?: UserVirtueProfile;
 }
 
 // Insight feedback for user validation of AI analysis
@@ -556,9 +562,43 @@ db.version(10).stores({
 });
 // No upgrade needed - sync fields start as undefined and are set when synced to server
 
+// Version 11: Add 11 Virtues system fields (virtue_profile for user, virtues_11 for matches)
+db.version(11).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase, serverId',
+  userIdentity: '++id, lastUpdated, supabaseUserId, serverId',
+  coachingSessions: '++id, profileId, timestamp, serverId',
+  matchChats: '++id, profileId, timestamp, serverId'
+}).upgrade(async tx => {
+  // Migrate existing aspect_profile to virtue_profile for user
+  await tx.table('userIdentity').toCollection().modify((identity: Partial<UserIdentity>) => {
+    if (identity.synthesis?.aspect_profile && canMigrateAspectProfile(identity.synthesis.aspect_profile)) {
+      // Only migrate if we don't already have virtue_profile
+      if (!identity.synthesis.virtue_profile) {
+        identity.synthesis.virtue_profile = migrateAspectProfileToVirtues(identity.synthesis.aspect_profile);
+        console.log('Migrated user aspect_profile to virtue_profile');
+      }
+    }
+  });
+
+  // Migrate existing aspect_scores to virtues_11 for match profiles
+  await tx.table('profiles').toCollection().modify((profile: Partial<Profile>) => {
+    if (profile.aspect_scores && canMigrateAspectScores(profile.aspect_scores)) {
+      // Only migrate if we don't already have virtues_11
+      if (!profile.virtues_11) {
+        // Note: This requires the user's virtue_profile to be available
+        // For now, we'll mark that migration is needed but defer full compatibility calculation
+        // The compatibility will be re-calculated when the profile is viewed
+        console.log(`Profile ${profile.id} has aspect_scores that can be migrated to virtues_11`);
+      }
+    }
+  });
+});
+
 export { db };
-// Re-export aspect types for convenience
+// Re-export aspect types for convenience (legacy)
 export type { UserAspectProfile, MatchAspectScores, AspectScore } from './virtues/types';
+// Re-export 11 Virtues types
+export type { UserVirtueProfile, MatchVirtueCompatibility, VirtueScore as VirtueScore11, VirtueCompatibility } from './virtues/types';
 
 export type {
   Profile,

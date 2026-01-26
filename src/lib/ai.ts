@@ -30,6 +30,8 @@ import {
   NEURODIVERGENCE_ANALYSIS_PROMPT,
   USER_ASPECTS_PROMPT,
   MATCH_ASPECTS_PROMPT,
+  USER_VIRTUES_11_PROMPT,
+  MATCH_VIRTUES_11_PROMPT,
   // Streaming chunk prompts
   CHUNK_1_BASICS_PROMPT,
   CHUNK_2_IMPRESSIONS_PROMPT,
@@ -50,9 +52,10 @@ import {
   mergeChunkFlags,
   createInitialAccumulatedProfile,
 } from './streaming/types';
-import type { UserAspectProfile, MatchAspectScores } from './virtues/types';
+import type { UserAspectProfile, MatchAspectScores, UserVirtueProfile, MatchVirtueCompatibility, VirtueScore as VirtueScore11 } from './virtues/types';
 import type { DatingGoals, DataExport, ManualEntry, DateSuggestion, ZodiacCompatibility, CoachingResponse, MatchCoachingAnalysis, PartnerVirtue, VirtueScore, ProfileAnalysis, NeurodivergenceAnalysis } from './db';
 import type { WeatherForecast } from './weather';
+import { calculateMatchCompatibility } from './virtues';
 
 // Date suggestions options
 export interface DateSuggestionsOptions {
@@ -1088,6 +1091,142 @@ ${promptsText}
     messages: [textContent(prompt)],
     maxTokens: TOKEN_LIMITS.MATCH_ASPECTS,
   });
+}
+
+// =============================================================================
+// 11 VIRTUES SYSTEM (NEW)
+// =============================================================================
+
+export interface UserVirtues11Input {
+  archetype_summary?: string;
+  communication_style?: string;
+  attachment_patterns?: string;
+  dating_goal?: string;
+  what_to_look_for?: string[];
+  what_to_avoid?: string[];
+  growth_areas?: string[];
+  strengths?: string[];
+  photo_analysis?: string;
+  behavioral_data?: string;
+}
+
+/**
+ * Extract user's 11 Virtues profile based on their synthesis data.
+ * This is the NEW system that replaces 23 Aspects.
+ */
+export async function extractUserVirtues11(input: UserVirtues11Input): Promise<UserVirtueProfile> {
+  console.log('src/lib/ai.ts: Extracting user virtues (11 Virtues system)...');
+
+  // Build user profile data string
+  const profileData = `
+Archetype Summary: ${input.archetype_summary || 'Not available'}
+Communication Style: ${input.communication_style || 'Not available'}
+Attachment Patterns: ${input.attachment_patterns || 'Not available'}
+Dating Goal: ${input.dating_goal || 'Not specified'}
+What They Look For: ${input.what_to_look_for?.join(', ') || 'Not specified'}
+What They Avoid: ${input.what_to_avoid?.join(', ') || 'Not specified'}
+Growth Areas: ${input.growth_areas?.join(', ') || 'Not specified'}
+Strengths: ${input.strengths?.join(', ') || 'Not specified'}
+Photo Analysis: ${input.photo_analysis || 'Not available'}
+Behavioral Data: ${input.behavioral_data || 'Not available'}
+`.trim();
+
+  const prompt = USER_VIRTUES_11_PROMPT.replace('{user_profile_data}', profileData);
+
+  const result = await callAnthropicForObject<{
+    scores: VirtueScore11[];
+    realm_summary: {
+      biological: string;
+      emotional: string;
+      cerebral: string;
+    };
+  }>({
+    messages: [textContent(prompt)],
+    maxTokens: TOKEN_LIMITS.USER_ASPECTS, // Reuse same limit
+  });
+
+  // Return as UserVirtueProfile with timestamp
+  return {
+    scores: result.scores,
+    realm_summary: result.realm_summary,
+    lastUpdated: new Date(),
+  };
+}
+
+/**
+ * Score a match on the 11 Virtues and calculate compatibility with user.
+ * Returns the full MatchVirtueCompatibility including verdicts and critical issues.
+ */
+export async function scoreMatchVirtues11(
+  matchAnalysis: ProfileAnalysis,
+  userVirtueProfile: UserVirtueProfile
+): Promise<MatchVirtueCompatibility> {
+  if (!userVirtueProfile || !userVirtueProfile.scores || userVirtueProfile.scores.length === 0) {
+    console.log('src/lib/ai.ts: No user virtue profile provided, skipping 11 Virtues scoring');
+    throw new Error('User virtue profile required for match scoring');
+  }
+
+  console.log('src/lib/ai.ts: Scoring match virtues (11 Virtues system)...');
+
+  // Format user virtues for the prompt
+  const userVirtuesText = userVirtueProfile.scores
+    .map(s => `${s.virtue_id}: ${s.score}/100${s.evidence ? ` (${s.evidence})` : ''}`)
+    .join('\n');
+
+  const userVirtuesFormatted = `
+Scores:
+${userVirtuesText}
+
+Realm Summary:
+- Biological: ${userVirtueProfile.realm_summary?.biological || 'Not available'}
+- Emotional: ${userVirtueProfile.realm_summary?.emotional || 'Not available'}
+- Cerebral: ${userVirtueProfile.realm_summary?.cerebral || 'Not available'}
+`.trim();
+
+  // Format match analysis for the prompt
+  const psych = matchAnalysis.psychological_profile;
+  const photoVibes = matchAnalysis.photos?.map(p => `${p.vibe}: ${p.subtext}`).join('; ') || 'Not available';
+  const promptsText = matchAnalysis.prompts?.map(p => `Q: ${p.question}\nA: ${p.answer}\nAnalysis: ${p.analysis}`).join('\n\n') || 'Not available';
+  const agendasText = psych?.agendas?.map(a => `${a.type} (${a.priority}): ${a.evidence}`).join('; ') || 'Not analyzed';
+
+  const matchAnalysisText = `
+Basics: ${matchAnalysis.basics?.name || 'Unknown'}, ${matchAnalysis.basics?.age || '?'} years old
+Location: ${matchAnalysis.basics?.location || 'Unknown'}
+Job: ${matchAnalysis.basics?.job || 'Unknown'}
+
+Archetype: ${psych?.archetype_summary || 'Not available'}
+Agendas: ${agendasText}
+Presentation Tactics: ${psych?.presentation_tactics?.join(', ') || 'Not analyzed'}
+Predicted Tactics: ${psych?.predicted_tactics?.join(', ') || 'Not analyzed'}
+
+Subtext Analysis:
+- Sexual Signaling: ${psych?.subtext_analysis?.sexual_signaling || 'Not available'}
+- Power Dynamics: ${psych?.subtext_analysis?.power_dynamics || 'Not available'}
+- Vulnerability: ${psych?.subtext_analysis?.vulnerability_indicators || 'Not available'}
+- Disconnect: ${psych?.subtext_analysis?.disconnect || 'Not available'}
+
+Photo Vibes: ${photoVibes}
+
+Prompts:
+${promptsText}
+`.trim();
+
+  const prompt = MATCH_VIRTUES_11_PROMPT
+    .replace('{user_virtues}', userVirtuesFormatted)
+    .replace('{match_name}', matchAnalysis.basics?.name || 'Unknown')
+    .replace('{match_analysis}', matchAnalysisText);
+
+  // Get raw scores from AI
+  const aiResult = await callAnthropicForObject<{
+    scores: VirtueScore11[];
+  }>({
+    messages: [textContent(prompt)],
+    maxTokens: TOKEN_LIMITS.MATCH_ASPECTS, // Reuse same limit
+  });
+
+  // Use the local calculation function for consistent verdict logic
+  // This ensures verdicts match the delta tolerance rules exactly
+  return calculateMatchCompatibility(userVirtueProfile, aiResult.scores);
 }
 
 // --- STREAMING PROFILE ANALYSIS ---

@@ -1,10 +1,11 @@
 // src/components/profileDetail/AspectMatchCard.tsx
 // Displays match's 23 Aspects comparison with user
+// NOTE: This is the legacy 23 Aspects system. New code should use VirtueCompatibilityCard for 11 Virtues.
 
 import { useState } from 'react';
 import { Sparkles, HelpCircle, X, ChevronDown, ChevronUp, Heart, Zap, AlertTriangle } from 'lucide-react';
 import type { MatchAspectScores } from '../../lib/db';
-import { REALMS, getAspectsByRealm } from '../../lib/virtues';
+import { LEGACY_REALMS, getAspectsByRealm } from '../../lib/virtues';
 
 interface AspectMatchCardProps {
   aspectScores: MatchAspectScores;
@@ -178,7 +179,7 @@ export function AspectMatchCard({ aspectScores, matchName = 'Match' }: AspectMat
         {/* Full Aspect Comparison */}
         {showFullComparison && (
           <div className="space-y-4 pt-2 border-t border-slate-100">
-            {REALMS.map(realm => {
+            {LEGACY_REALMS.map(realm => {
               const realmAspects = getAspectsByRealm(realm.id);
 
               return (

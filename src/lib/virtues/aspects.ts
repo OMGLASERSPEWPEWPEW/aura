@@ -1,12 +1,15 @@
 // src/lib/virtues/aspects.ts
 // The 23 Aspects data - based on virtue_system.md
+// @deprecated - This is the legacy 23 Aspects system, kept for migration purposes.
+// New code should use the 11 Virtues system from virtues.ts
 
-import type { AspectDefinition, RealmConfig } from './types';
+import type { AspectDefinition, LegacyRealmConfig, LegacyRealmType } from './types';
 
 /**
- * Realm configurations for display
+ * @deprecated Use REALMS from virtues.ts for the 11 Virtues system
+ * Legacy realm configurations for the 23 Aspects system
  */
-export const REALMS: RealmConfig[] = [
+export const LEGACY_REALMS: LegacyRealmConfig[] = [
   {
     id: 'vitality',
     name: 'Realm of Vitality',
@@ -34,7 +37,14 @@ export const REALMS: RealmConfig[] = [
 ];
 
 /**
+ * @deprecated Use LEGACY_REALMS instead
+ * Keeping for backwards compatibility
+ */
+export const REALMS = LEGACY_REALMS;
+
+/**
  * The 23 Aspects - organized by realm
+ * @deprecated This is the legacy system. New code should use VIRTUES from virtues.ts
  */
 export const ASPECTS: AspectDefinition[] = [
   // ===== REALM I: VITALITY (7 aspects) =====
@@ -230,6 +240,7 @@ export const ASPECTS: AspectDefinition[] = [
 
 /**
  * Get aspect by ID
+ * @deprecated Use getVirtueById from virtues.ts for new code
  */
 export function getAspectById(id: string): AspectDefinition | undefined {
   return ASPECTS.find(a => a.id === id);
@@ -237,25 +248,36 @@ export function getAspectById(id: string): AspectDefinition | undefined {
 
 /**
  * Get all aspects in a realm
+ * @deprecated Use getVirtuesByRealm from virtues.ts for new code
  */
-export function getAspectsByRealm(realm: 'vitality' | 'connection' | 'structure'): AspectDefinition[] {
+export function getAspectsByRealm(realm: LegacyRealmType): AspectDefinition[] {
   return ASPECTS.filter(a => a.realm === realm);
 }
 
 /**
- * Get realm config by ID
+ * Get legacy realm config by ID
+ * @deprecated Use getRealmConfig from virtues.ts for new code
  */
-export function getRealmConfig(realmId: 'vitality' | 'connection' | 'structure'): RealmConfig | undefined {
-  return REALMS.find(r => r.id === realmId);
+export function getLegacyRealmConfig(realmId: LegacyRealmType): LegacyRealmConfig | undefined {
+  return LEGACY_REALMS.find(r => r.id === realmId);
+}
+
+/**
+ * @deprecated Use getLegacyRealmConfig instead
+ * Keeping for backwards compatibility with existing code
+ */
+export function getRealmConfig(realmId: LegacyRealmType): LegacyRealmConfig | undefined {
+  return getLegacyRealmConfig(realmId);
 }
 
 /**
  * Build the aspects prompt text (for use in AI prompts)
+ * @deprecated Use buildVirtuesPromptText from virtues.ts for new code
  */
 export function buildAspectsPromptText(): string {
   const lines: string[] = [];
 
-  for (const realm of REALMS) {
+  for (const realm of LEGACY_REALMS) {
     lines.push(`\n## ${realm.name} (${realm.subtitle})\n`);
     const realmAspects = getAspectsByRealm(realm.id);
     for (const aspect of realmAspects) {
