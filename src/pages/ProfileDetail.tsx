@@ -87,26 +87,12 @@ export default function ProfileDetail() {
             matchName={basics.name || profile.name}
             matchAnalysis={profile.analysis as import('../lib/db').ProfileAnalysis}
             compatibility={profile.compatibility}
-            // Legacy systems
-            virtueScores={compatibilityScores.virtueScores}
-            aspectScores={compatibilityScores.aspectScores}
-            isLoadingVirtues={compatibilityScores.isLoadingVirtues}
-            isLoadingAspects={compatibilityScores.isLoadingAspects}
-            virtueError={compatibilityScores.virtueError}
-            aspectError={compatibilityScores.aspectError}
-            canGenerateVirtues={compatibilityScores.canGenerateVirtues}
-            canGenerateAspects={compatibilityScores.canGenerateAspects}
-            onGenerateVirtues={compatibilityScores.generateVirtues}
-            onGenerateAspects={compatibilityScores.generateAspects}
-            // 11 Virtues system (primary)
+            // 11 Virtues system
             virtues11={compatibilityScores.virtues11}
             userVirtueProfile={compatibilityScores.userVirtueProfile}
             isLoadingVirtues11={compatibilityScores.isLoadingVirtues11}
             virtues11Error={compatibilityScores.virtues11Error}
-            canGenerateVirtues11={compatibilityScores.canGenerateVirtues11}
             onGenerateVirtues11={compatibilityScores.generateVirtues11}
-            // Combined
-            onGenerateAllScores={compatibilityScores.generateAll}
             transactionalIndicators={transactionalIndicators}
             zodiacCompatibility={zodiac.compatibility}
             zodiacIsLoading={zodiac.isLoading}

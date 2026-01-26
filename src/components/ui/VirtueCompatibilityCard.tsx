@@ -3,7 +3,7 @@
 // Wraps VirtueMixingBoard with summary header and critical issues
 
 import { useState } from 'react';
-import { Sparkles, AlertTriangle, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sparkles, AlertTriangle, CheckCircle, AlertCircle, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { VirtueMixingBoard } from './VirtueMixingBoard';
 import {
   getOverallVerdictSummary,
@@ -23,6 +23,12 @@ interface VirtueCompatibilityCardProps {
 
   // Display options
   defaultExpanded?: boolean;
+
+  // Optional re-run callback (shows refresh button if provided)
+  onRerun?: () => void;
+
+  // Error message to display
+  error?: string | null;
 }
 
 /**
@@ -39,8 +45,21 @@ export function VirtueCompatibilityCard({
   matchCompatibility,
   matchName = 'Match',
   defaultExpanded = true,
+  onRerun,
+  error,
 }: VirtueCompatibilityCardProps) {
   const [showFullBoard, setShowFullBoard] = useState(defaultExpanded);
+  const [isRerunning, setIsRerunning] = useState(false);
+
+  const handleRerun = async () => {
+    if (!onRerun || isRerunning) return;
+    setIsRerunning(true);
+    try {
+      await onRerun();
+    } finally {
+      setIsRerunning(false);
+    }
+  };
 
   const {
     compatibility,
@@ -72,10 +91,26 @@ export function VirtueCompatibilityCard({
     <section className="bg-white rounded-xl border border-indigo-200 overflow-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b border-indigo-100">
-        <div className="flex items-center gap-2">
-          <Sparkles size={20} className="text-indigo-600" />
-          <h3 className="font-bold text-slate-900">11 Virtues Compatibility</h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles size={20} className="text-indigo-600" />
+            <h3 className="font-bold text-slate-900">11 Virtues Compatibility</h3>
+          </div>
+          {onRerun && (
+            <button
+              onClick={handleRerun}
+              disabled={isRerunning}
+              className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 disabled:opacity-50"
+              title="Re-analyze with updated profile"
+            >
+              <RefreshCw size={12} className={isRerunning ? 'animate-spin' : ''} />
+              {isRerunning ? 'Updating...' : 'Update'}
+            </button>
+          )}
         </div>
+        {error && (
+          <p className="text-xs text-red-600 mt-2">{error}</p>
+        )}
       </div>
 
       <div className="p-4 space-y-4">
