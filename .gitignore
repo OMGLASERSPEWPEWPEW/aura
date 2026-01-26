@@ -42,3 +42,6 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+
+# Test video fixtures (too large for git)
+e2e/fixtures/videos/

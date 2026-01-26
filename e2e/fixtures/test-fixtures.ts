@@ -9,6 +9,9 @@ const __dirname = dirname(__filename);
 // Path to saved auth state
 const authFile = join(__dirname, '../.auth/user.json');
 
+// Path to test video file (gitignored - each developer needs their own)
+export const TEST_VIDEO_PATH = join(__dirname, 'videos/test-profile.MP4');
+
 /**
  * Extended test fixtures for Aura E2E tests
  */

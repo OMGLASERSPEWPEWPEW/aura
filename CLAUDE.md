@@ -37,8 +37,8 @@ npm run dev       # Start dev server (localhost:5173)
 npm run build     # TypeScript check + Vite production build
 npm run lint      # ESLint check
 npm run preview   # Preview production build
-npm run test:run  # Run all unit tests (624 tests)
-npm run test:e2e  # Run Playwright e2e tests (201 tests)
+npm run test:run  # Run all unit tests (748 tests)
+npm run test:e2e  # Run Playwright e2e tests (321 tests)
 ```
 
 ## Tech Stack
@@ -168,8 +168,8 @@ When planning multi-step tasks, create a todo list to track progress. Update tas
 
 ### Test Maintenance
 Tests live alongside the code they cover:
-- **Unit tests** (`*.test.ts` files) - 624 tests via Vitest
-- **E2E tests** (`e2e/*.spec.ts` files) - 201 tests via Playwright
+- **Unit tests** (`*.test.ts` files) - 748 tests via Vitest
+- **E2E tests** (`e2e/*.spec.ts` files) - 321 tests via Playwright
 
 When making code changes:
 - **Adding a feature**: Add corresponding unit tests
