@@ -154,4 +154,104 @@ describe('jsonExtractor', () => {
       expect(result[0]).toEqual([1, 2]);
     });
   });
+
+  // ==================== Smart Extraction Edge Cases ====================
+  describe('smart extraction edge cases', () => {
+    describe('markdown code blocks', () => {
+      it('should extract JSON object from markdown code block', () => {
+        const text = 'Here is the response:\n```json\n{"name": "test"}\n```\nDone.';
+        expect(extractJsonObject(text)).toEqual({ name: 'test' });
+      });
+
+      it('should extract JSON array from markdown code block', () => {
+        const text = 'Here are the items:\n```json\n[1, 2, 3]\n```';
+        expect(extractJsonArray(text)).toEqual([1, 2, 3]);
+      });
+
+      it('should prefer code block over loose JSON', () => {
+        const text = '{wrong} and ```json\n{"right": true}\n```';
+        expect(extractJsonObject(text)).toEqual({ right: true });
+      });
+
+      it('should handle code block without json language tag', () => {
+        const text = '```\n{"data": "value"}\n```';
+        expect(extractJsonObject(text)).toEqual({ data: 'value' });
+      });
+    });
+
+    describe('braces in explanatory text', () => {
+      it('should handle brace in explanatory text before JSON object', () => {
+        const text = 'The pattern {key: value} is common. Here is your data: {"actual": "json"}';
+        expect(extractJsonObject(text)).toEqual({ actual: 'json' });
+      });
+
+      it('should handle bracket in explanatory text before JSON array', () => {
+        const text = 'Arrays like [a, b] are useful. Result: ["real", "data"]';
+        expect(extractJsonArray(text)).toEqual(['real', 'data']);
+      });
+
+      it('should handle multiple braces in text before actual JSON', () => {
+        const text = 'Example: {a} and {b} are placeholders. Actual: {"name": "test"}';
+        expect(extractJsonObject(text)).toEqual({ name: 'test' });
+      });
+    });
+
+    describe('nested structures', () => {
+      it('should handle deeply nested objects', () => {
+        const text = 'Result: {"outer": {"inner": {"deep": "value"}}}';
+        const result = extractJsonObject<{ outer: { inner: { deep: string } } }>(text);
+        expect(result.outer.inner.deep).toBe('value');
+      });
+
+      it('should handle objects containing arrays', () => {
+        const text = '{"items": [1, 2, 3], "nested": {"arr": ["a", "b"]}}';
+        const result = extractJsonObject<{ items: number[]; nested: { arr: string[] } }>(text);
+        expect(result.items).toEqual([1, 2, 3]);
+        expect(result.nested.arr).toEqual(['a', 'b']);
+      });
+
+      it('should handle arrays containing objects', () => {
+        const text = '[{"id": 1}, {"id": 2, "nested": {"value": true}}]';
+        const result = extractJsonArray<{ id: number; nested?: { value: boolean } }>(text);
+        expect(result).toHaveLength(2);
+        expect(result[1].nested?.value).toBe(true);
+      });
+    });
+
+    describe('strings with special characters', () => {
+      it('should handle JSON with escaped quotes in strings', () => {
+        const text = '{"quote": "He said \\"hello\\""}';
+        expect(extractJsonObject(text)).toEqual({ quote: 'He said "hello"' });
+      });
+
+      it('should handle JSON with braces inside strings', () => {
+        const text = '{"message": "Use {name} as placeholder"}';
+        expect(extractJsonObject(text)).toEqual({ message: 'Use {name} as placeholder' });
+      });
+
+      it('should handle JSON with brackets inside strings', () => {
+        const text = '["item with [brackets]", "another"]';
+        expect(extractJsonArray(text)).toEqual(['item with [brackets]', 'another']);
+      });
+    });
+
+    describe('edge cases in surrounding text', () => {
+      it('should handle closing brace before JSON starts', () => {
+        const text = 'Note: } is a closing brace. {"valid": true}';
+        expect(extractJsonObject(text)).toEqual({ valid: true });
+      });
+
+      it('should handle multiple JSON-like structures', () => {
+        // Should extract the first balanced one
+        const text = '{"first": 1} and then {"second": 2}';
+        expect(extractJsonObject(text)).toEqual({ first: 1 });
+      });
+
+      it('should handle text with invalid JSON-like patterns before valid JSON', () => {
+        // First { is part of invalid pattern, should find the valid JSON
+        const text = 'Example with {pseudo-code} then {"valid": true}';
+        expect(extractJsonObject(text)).toEqual({ valid: true });
+      });
+    });
+  });
 });
