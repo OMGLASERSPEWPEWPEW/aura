@@ -54,8 +54,8 @@ test.describe('Settings Page', () => {
         return;
       }
 
-      // Account section should be visible
-      await expect(page.getByText('Account')).toBeVisible();
+      // Account section should be visible - use h3 heading to avoid matching multiple elements
+      await expect(page.locator('h3').filter({ hasText: 'Account' }).first()).toBeVisible();
     });
 
     test('shows user email when authenticated', async ({ page }) => {
@@ -66,8 +66,8 @@ test.describe('Settings Page', () => {
         return;
       }
 
-      // Email field should show user's email
-      await expect(page.getByText('Email')).toBeVisible();
+      // Email field label should show - use first() to handle multiple matches
+      await expect(page.getByText('Email').first()).toBeVisible();
     });
 
     test('has sign out button when authenticated', async ({ page }) => {
@@ -132,7 +132,8 @@ test.describe('Settings Page', () => {
         return;
       }
 
-      await expect(page.getByText('Data Sync')).toBeVisible();
+      // Data Sync section heading - use h3 to avoid matching description text
+      await expect(page.locator('h3').filter({ hasText: 'Data Sync' })).toBeVisible();
     });
 
     test('back link navigates to home', async ({ page }) => {
@@ -158,8 +159,8 @@ test.describe('Settings Page', () => {
       const deleteButton = page.getByRole('button', { name: /delete account/i });
       await deleteButton.click();
 
-      // Modal should appear
-      await expect(page.getByText(/are you sure|delete.*account|confirm/i)).toBeVisible();
+      // Modal should appear with heading "Delete Account"
+      await expect(page.locator('h2').filter({ hasText: 'Delete Account' })).toBeVisible();
     });
   });
 });

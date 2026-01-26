@@ -208,11 +208,18 @@ test.describe('Authentication', () => {
     test('shows invalid link message without recovery token', async ({ page }) => {
       await page.goto('/reset-password');
 
-      // Should show either invalid link message or redirect to forgot-password
-      const hasInvalidLink = await page.getByText(/invalid.*link|expired/i).isVisible().catch(() => false);
-      const onForgotPassword = await page.getByText('Reset password').isVisible().catch(() => false);
+      // Wait for navigation/redirect to settle
+      await page.waitForTimeout(500);
 
-      expect(hasInvalidLink || onForgotPassword).toBeTruthy();
+      // Should show either invalid link message or redirect to forgot-password
+      // Use heading role for "Invalid link" to be more specific
+      const hasInvalidLink = await page.getByRole('heading', { name: /invalid link/i }).isVisible().catch(() => false);
+      // For forgot-password page, check the heading "Reset password" or the URL
+      const onForgotPassword = await page.url().includes('/forgot-password');
+      // Also check for the forgot password page heading
+      const hasForgotHeading = await page.getByRole('heading', { name: /reset password/i }).isVisible().catch(() => false);
+
+      expect(hasInvalidLink || onForgotPassword || hasForgotHeading).toBeTruthy();
     });
 
     test('has link to request new reset', async ({ page }) => {

@@ -17,7 +17,8 @@ test.describe('Upload Page', () => {
 
       // Should show either upload page or login
       const onLogin = await isOnLoginPage(page);
-      const hasUploadHeader = await page.getByRole('heading', { name: /analyze profile/i }).isVisible().catch(() => false);
+      // Page heading is "Match Explore", not "Analyze Profile"
+      const hasUploadHeader = await page.getByRole('heading', { name: /match explore/i }).isVisible().catch(() => false);
 
       expect(onLogin || hasUploadHeader).toBeTruthy();
     });
@@ -31,8 +32,8 @@ test.describe('Upload Page', () => {
         return;
       }
 
-      // Should have header
-      await expect(page.getByRole('heading', { name: /analyze profile/i })).toBeVisible();
+      // Should have header - page heading is "Match Explore"
+      await expect(page.getByRole('heading', { name: /match explore/i })).toBeVisible();
 
       // Should have back link
       const backLink = page.getByRole('link', { name: /back/i });

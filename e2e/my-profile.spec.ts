@@ -17,9 +17,10 @@ test.describe('My Profile Page', () => {
 
       // Should show either my-profile page or login
       const onLogin = await isOnLoginPage(page);
-      const hasMyProfileHeader = await page.getByRole('heading', { name: /my profile/i }).isVisible().catch(() => false);
+      // Page has tagline "Build your dating intelligence" instead of "My Profile" heading
+      const hasTagline = await page.getByText('Build your dating intelligence').isVisible().catch(() => false);
 
-      expect(onLogin || hasMyProfileHeader).toBeTruthy();
+      expect(onLogin || hasTagline).toBeTruthy();
     });
 
     test('has page header when authenticated', async ({ page }) => {
@@ -31,7 +32,8 @@ test.describe('My Profile Page', () => {
         return;
       }
 
-      await expect(page.getByRole('heading', { name: /my profile/i })).toBeVisible();
+      // Page has Logo and tagline, no "My Profile" heading
+      await expect(page.getByAltText('Aura logo')).toBeVisible();
       await expect(page.getByText('Build your dating intelligence')).toBeVisible();
     });
 
@@ -44,11 +46,11 @@ test.describe('My Profile Page', () => {
         return;
       }
 
-      // Check for the 4 tabs
-      await expect(page.getByText('Video')).toBeVisible();
-      await expect(page.getByText('Text')).toBeVisible();
-      await expect(page.getByText('Info')).toBeVisible();
-      await expect(page.getByText('Insights')).toBeVisible();
+      // Check for the 4 tabs - use button role to avoid matching other elements
+      await expect(page.locator('button').filter({ hasText: 'Video' }).first()).toBeVisible();
+      await expect(page.locator('button').filter({ hasText: 'Text' }).first()).toBeVisible();
+      await expect(page.locator('button').filter({ hasText: 'Info' }).first()).toBeVisible();
+      await expect(page.locator('button').filter({ hasText: 'Insights' }).first()).toBeVisible();
     });
 
     test('can switch tabs when authenticated', async ({ page }) => {
