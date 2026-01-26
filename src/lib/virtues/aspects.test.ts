@@ -1,4 +1,10 @@
 // src/lib/virtues/aspects.test.ts
+//
+// @deprecated This tests the LEGACY 23 Aspects system.
+// New code should use the 11 Virtues system - see virtues.test.ts
+// The 23 Aspects system is maintained only for backwards compatibility
+// with profiles created before the migration to 11 Virtues.
+//
 import { describe, it, expect } from 'vitest';
 import {
   ASPECTS,
