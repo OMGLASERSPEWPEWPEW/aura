@@ -141,7 +141,7 @@ export default function Upload() {
           </button>
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-800 mb-4">Analyze Profile</h1>
+        <h1 className="text-2xl font-bold text-slate-800 mb-4">Match Explore</h1>
 
         {/* Warning if no user profile */}
         {userContextLoaded && !hasUserProfile && state.phase === 'idle' && (
@@ -180,7 +180,7 @@ export default function Upload() {
               <div className="max-w-2xl mx-auto flex justify-between items-center">
                 <span className="text-sm text-slate-500">
                   {state.phase === 'extracting' && 'Extracting frames...'}
-                  {state.phase.startsWith('chunk-') && `Analyzing (chunk ${state.currentChunk + 1}/4)...`}
+                  {state.phase.startsWith('chunk-') && `Exploring (chunk ${state.currentChunk + 1}/4)...`}
                   {state.phase === 'consolidating' && 'Finishing up...'}
                 </span>
                 <AbortButton
@@ -348,7 +348,7 @@ export default function Upload() {
                     }}
                     className="px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
                   >
-                    Analyze Another
+                    Explore Another
                   </button>
                 </div>
               </motion.div>

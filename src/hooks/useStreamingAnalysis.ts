@@ -348,7 +348,26 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
         },
         onError: (error, chunkIndex) => {
           console.error(`useStreamingAnalysis: Chunk ${chunkIndex + 1} error:`, error);
-          // Don't fail the whole analysis - continue with remaining chunks
+
+          // If chunk 1 fails, we can't continue (no basic info)
+          if (chunkIndex === 0) {
+            safeSetState({
+              phase: 'error',
+              error: error instanceof Error ? error.message : String(error),
+            });
+            return;
+          }
+
+          // For later chunks, advance the state so UI doesn't freeze
+          const chunkPhases: StreamingPhase[] = ['chunk-1', 'chunk-2', 'chunk-3', 'chunk-4'];
+          const nextPhase = chunkIndex < 3 ? chunkPhases[chunkIndex + 1] : 'consolidating';
+
+          safeSetState(prev => ({
+            ...prev,
+            phase: nextPhase,
+            currentChunk: chunkIndex + 1,
+            chunkLatencies: [...prev.chunkLatencies, 0], // Mark as instant (failed)
+          }));
         },
       });
 

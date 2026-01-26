@@ -184,7 +184,7 @@ export function FloatingProgress({
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
             <span className="text-sm font-medium">
-              Analyzing ({currentChunk}/{totalChunks})
+              Exploring ({currentChunk}/{totalChunks})
             </span>
             <div className="w-px h-4 bg-slate-700" />
             <span className="text-sm text-slate-300">
@@ -202,7 +202,7 @@ export function FloatingProgress({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
               </svg>
             </motion.div>
-            <span className="text-sm font-medium">Analysis Complete</span>
+            <span className="text-sm font-medium">Explore Complete</span>
             <div className="w-px h-4 bg-slate-700" />
             <span className="text-sm text-slate-300">
               {insightsCount} insights
