@@ -25,8 +25,6 @@ import { downloadConsoleLogs } from '../lib/utils/errorExport';
 import {
   User,
   Download,
-  Save,
-  CheckCircle,
 } from 'lucide-react';
 
 export default function Upload() {
@@ -103,12 +101,12 @@ export default function Upload() {
     }
   };
 
-  // Navigate to saved profile when complete
-  const handleViewProfile = () => {
-    if (state.savedProfileId) {
+  // Auto-navigate to profile when analysis completes
+  useEffect(() => {
+    if (state.phase === 'complete' && state.savedProfileId) {
       navigate(`/profile/${state.savedProfileId}`);
     }
-  };
+  }, [state.phase, state.savedProfileId, navigate]);
 
   // Calculate insights count for display
   const insightsCount =
@@ -319,40 +317,7 @@ export default function Upload() {
               </motion.div>
             )}
 
-            {/* Complete State - Save Button */}
-            {state.phase === 'complete' && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-green-50 border border-green-200 rounded-xl p-4"
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <h3 className="font-medium text-green-800">Quick Analysis Complete</h3>
-                </div>
-                <p className="text-sm text-green-700 mb-4">
-                  Profile saved to gallery. View full details or continue browsing.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleViewProfile}
-                    className="flex-1 bg-green-600 text-white py-3 rounded-xl font-medium hover:bg-green-700 transition-colors flex items-center justify-center"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    View Profile
-                  </button>
-                  <button
-                    onClick={() => {
-                      reset();
-                      setFile(null);
-                    }}
-                    className="px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
-                  >
-                    Explore Another
-                  </button>
-                </div>
-              </motion.div>
-            )}
+            {/* Complete State - auto-navigates to profile page via useEffect */}
           </div>
 
           {/* Floating Progress Indicator */}
