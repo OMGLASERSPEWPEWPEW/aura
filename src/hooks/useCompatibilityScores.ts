@@ -1,7 +1,8 @@
 // src/hooks/useCompatibilityScores.ts
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { scoreMatchVirtues, scoreMatchAspects, scoreMatchVirtues11 } from '../lib/ai';
 import { db } from '../lib/db';
+import { migrateAspectProfileToVirtues, canMigrateAspectProfile } from '../lib/virtues/migration';
 import type {
   Profile,
   ProfileAnalysis,
@@ -64,9 +65,6 @@ export function useCompatibilityScores(
   const [isLoadingVirtues11, setIsLoadingVirtues11] = useState(false);
   const [virtues11Error, setVirtues11Error] = useState<string | null>(null);
 
-  // User's virtue profile (for display in UI)
-  const userVirtueProfile = userIdentity?.synthesis?.virtue_profile;
-
   // Check if user has the required synthesis data
   const hasPartnerVirtues = !!(
     userIdentity?.synthesis?.partner_virtues &&
@@ -76,10 +74,61 @@ export function useCompatibilityScores(
     userIdentity?.synthesis?.aspect_profile?.scores &&
     userIdentity.synthesis.aspect_profile.scores.length > 0
   );
-  const hasVirtueProfile = !!(
-    userIdentity?.synthesis?.virtue_profile?.scores &&
-    userIdentity.synthesis.virtue_profile.scores.length > 0
-  );
+
+  // Track locally migrated virtue profile (in case userIdentity doesn't refresh)
+  const [localVirtueProfile, setLocalVirtueProfile] = useState<UserVirtueProfile | undefined>(undefined);
+
+  // Use either userIdentity's virtue_profile or locally migrated one
+  const effectiveVirtueProfile = userIdentity?.synthesis?.virtue_profile || localVirtueProfile;
+  const hasVirtueProfile = !!(effectiveVirtueProfile?.scores && effectiveVirtueProfile.scores.length > 0);
+
+  // Track if we've attempted migration to prevent duplicate calls
+  const hasMigratedRef = useRef(false);
+
+  // Auto-migrate aspect_profile to virtue_profile if needed
+  useEffect(() => {
+    const migrateUserProfile = async () => {
+      // Only migrate once per session and if conditions are met
+      if (
+        hasMigratedRef.current ||
+        hasVirtueProfile ||
+        !hasAspectProfile ||
+        !userIdentity?.synthesis?.aspect_profile
+      ) {
+        return;
+      }
+
+      // Check if migration is possible
+      if (!canMigrateAspectProfile(userIdentity.synthesis.aspect_profile)) {
+        console.log('useCompatibilityScores: Cannot migrate - insufficient aspect data');
+        return;
+      }
+
+      hasMigratedRef.current = true;
+      console.log('useCompatibilityScores: Auto-migrating aspect_profile to virtue_profile');
+
+      try {
+        const virtueProfile = migrateAspectProfileToVirtues(userIdentity.synthesis.aspect_profile);
+
+        // Set locally so we can use it immediately
+        setLocalVirtueProfile(virtueProfile);
+
+        // Also save to database for future sessions
+        await db.userIdentity.update(1, {
+          synthesis: {
+            ...userIdentity.synthesis,
+            virtue_profile: virtueProfile,
+          },
+        });
+
+        console.log('useCompatibilityScores: Migration complete, virtue_profile saved');
+      } catch (err) {
+        console.error('useCompatibilityScores: Migration failed:', err);
+      }
+    };
+
+    migrateUserProfile();
+  }, [hasVirtueProfile, hasAspectProfile, userIdentity?.synthesis]);
 
   // Can generate if user has synthesis data and profile doesn't have scores yet
   const canGenerateVirtues = hasPartnerVirtues && (!virtueScores || virtueScores.length === 0);
@@ -164,7 +213,7 @@ export function useCompatibilityScores(
 
   // Generate 11 Virtues compatibility scores (primary system)
   const generateVirtues11 = useCallback(async () => {
-    if (!profile || !userIdentity?.synthesis?.virtue_profile) {
+    if (!profile || !effectiveVirtueProfile) {
       console.log('Cannot generate 11 Virtues: missing profile or virtue_profile');
       return;
     }
@@ -176,7 +225,7 @@ export function useCompatibilityScores(
       const matchAnalysis = profile.analysis as ProfileAnalysis;
       const compatibility = await scoreMatchVirtues11(
         matchAnalysis,
-        userIdentity.synthesis.virtue_profile
+        effectiveVirtueProfile
       );
 
       setVirtues11(compatibility);
@@ -193,7 +242,7 @@ export function useCompatibilityScores(
     } finally {
       setIsLoadingVirtues11(false);
     }
-  }, [profile, userIdentity]);
+  }, [profile, effectiveVirtueProfile]);
 
   // Auto-generate 11 Virtues for new profiles that don't have them yet
   useEffect(() => {
@@ -249,7 +298,7 @@ export function useCompatibilityScores(
 
     // 11 Virtues system
     virtues11,
-    userVirtueProfile,
+    userVirtueProfile: effectiveVirtueProfile,
     isLoadingVirtues11,
     virtues11Error,
     canGenerateVirtues11,
