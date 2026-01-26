@@ -1,6 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import * as dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 // ES module compatible __dirname
 const __filename = fileURLToPath(import.meta.url);

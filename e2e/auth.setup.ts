@@ -49,7 +49,8 @@ setup('authenticate', async ({ page }) => {
   await expect(page).toHaveURL('/', { timeout: 10000 });
 
   // Verify we're logged in by checking for auth-protected content
-  await expect(page.getByText('Aura')).toBeVisible();
+  // Look for "My Profile" button which only appears when authenticated
+  await expect(page.getByRole('link', { name: /my profile/i })).toBeVisible();
 
   // Save the authentication state
   await page.context().storageState({ path: authFile });
