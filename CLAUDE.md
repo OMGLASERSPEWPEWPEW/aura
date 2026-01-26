@@ -2,6 +2,30 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Agent Orchestration (2026-01-25)
+
+**For every prompt, summon Zephyr first.**
+
+Zephyr (`.claude/agents/zephyr.md`) is the Master Product Manager who orchestrates all work. Before executing any task:
+
+1. **Invoke Zephyr** to analyze the prompt
+2. **Zephyr considers** which agents are best suited for the task
+3. **Zephyr delegates** to appropriate specialists (may include himself)
+
+Available agents:
+| Agent | Use For |
+|-------|---------|
+| `master-product-manager` (Zephyr) | Strategy, prioritization, coordination |
+| `frontend-developer` | React components, UI/UX implementation |
+| `backend-architect` | API design, Supabase, Edge Functions |
+| `code-architect` | Folder structure, architecture decisions |
+| `code-reviewer` | Quality assurance (run proactively after code changes) |
+| `debugger` | Errors, test failures, stuck UI |
+| `mobile-ux-optimizer` | Touch targets, responsive design |
+| `prd-specialist` | Feature specs, PRDs |
+| `Explore` | Codebase search, understanding patterns |
+| `Plan` | Multi-step implementation planning |
+
 ## Project Overview
 
 Aura is a local-first Progressive Web App (PWA) for dating profile analysis. It analyzes dating app profiles via screen recordings using AI to identify behavioral patterns and psychological insights. All user data stays on-device via IndexedDB.
@@ -13,7 +37,8 @@ npm run dev       # Start dev server (localhost:5173)
 npm run build     # TypeScript check + Vite production build
 npm run lint      # ESLint check
 npm run preview   # Preview production build
-npm run test:run  # Run all unit tests
+npm run test:run  # Run all unit tests (624 tests)
+npm run test:e2e  # Run Playwright e2e tests (201 tests)
 ```
 
 ## Tech Stack
@@ -140,13 +165,23 @@ VITE_ANTHROPIC_API_KEY=your_key_here
 ### Task Tracking
 When planning multi-step tasks, create a todo list to track progress. Update task status as you complete each step. This keeps work organized and provides visibility into progress.
 
-### Unit Test Maintenance
-Tests live alongside the code they cover (`*.test.ts` files). When making code changes:
+### Test Maintenance
+Tests live alongside the code they cover:
+- **Unit tests** (`*.test.ts` files) - 624 tests via Vitest
+- **E2E tests** (`e2e/*.spec.ts` files) - 201 tests via Playwright
+
+When making code changes:
 - **Adding a feature**: Add corresponding unit tests
 - **Modifying a feature**: Update affected tests to match new behavior
 - **Removing a feature**: Remove obsolete tests
 
-Always run `npm run test:run` after implementation to catch regressions before considering work complete.
+**Always run BOTH test suites before pushing to main:**
+```bash
+npm run test:run  # Unit tests
+npm run test:e2e  # E2E tests (Playwright)
+```
+
+Only consider work complete when both pass.
 
 ### Documentation Maintenance
 After completing any feature work, consider whether documentation needs updating. Check:
@@ -204,7 +239,9 @@ Design documents in `.claude/docs/` informed the implementation but are NOT runt
 
 | Document | Implemented In | Purpose |
 |----------|---------------|---------|
-| `virtue_system.md` | `src/lib/virtues/aspects.ts` | 23 Aspects system (realms, virtues, wounds, match considerations) |
+| `virtue_system.md` | `src/lib/virtues/virtues.ts` | **11 Virtues** system (3 realms, compatibility scoring) |
 | `12152025 - Scene & Dialogue Basics 2025 - With Agendas & Tactics.md` | `src/lib/prompts.ts` | Agendas & Tactics framework for psychological analysis |
+
+**Note:** The old "23 Aspects" system (`aspects.ts`) is deprecated. New code should use the **11 Virtues** system. Legacy profiles auto-migrate via `src/lib/virtues/migration.ts`.
 
 These docs define the **conceptual framework**. The actual implementation lives in code. If updating the framework, modify the source code files, not just the docs.
