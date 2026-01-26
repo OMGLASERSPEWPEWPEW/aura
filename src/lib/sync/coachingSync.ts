@@ -81,7 +81,7 @@ export async function pushCoachingSession(
     if (base64Images.length > 0) {
       const sessionId = crypto.randomUUID();
       const uploads = base64Images.map((img, idx) => ({
-        base64: img,
+        image: img,
         path: `coaching/${sessionId}/${idx}.jpg`,
       }));
       const results = await uploadImages(userId, uploads);

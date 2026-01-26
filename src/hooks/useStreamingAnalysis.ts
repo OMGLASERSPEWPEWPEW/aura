@@ -27,6 +27,7 @@ import {
   ChunkAnalysisError,
   AuraError,
 } from '../lib/errors';
+import { base64ToBlob } from '../lib/utils/thumbnailUtils';
 
 export interface StreamingAnalysisState {
   phase: StreamingPhase;
@@ -158,9 +159,12 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
     // Convert accumulated profile to ProfileAnalysis format
     const analysis = accumulatedToProfileAnalysis(profile);
 
-    // Determine thumbnail
+    // Determine thumbnail (frames are base64)
     const thumbnailIndex = profile.photos.thumbnailIndex;
-    const thumbnail = allFrames[thumbnailIndex] || allFrames[0] || '';
+    const thumbnailBase64 = allFrames[thumbnailIndex] || allFrames[0] || '';
+
+    // Convert thumbnail to Blob for storage efficiency (~33% size reduction)
+    const thumbnailBlob = thumbnailBase64 ? base64ToBlob(thumbnailBase64) : thumbnailBase64;
 
     // Save to local database first (fast)
     const profileId = await db.profiles.add({
@@ -169,7 +173,7 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
       appName: profile.identity.app || 'Unknown App',
       timestamp: new Date(),
       analysis: analysis,
-      thumbnail: thumbnail,
+      thumbnail: thumbnailBlob,
       analysisPhase: phase,
     });
 
@@ -191,14 +195,17 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
   ): Promise<number> => {
     const analysis = accumulatedToProfileAnalysis(profile);
     const thumbnailIndex = profile.photos.thumbnailIndex;
-    const thumbnail = allFrames[thumbnailIndex] || allFrames[0] || '';
+    const thumbnailBase64 = allFrames[thumbnailIndex] || allFrames[0] || '';
+
+    // Convert thumbnail to Blob for storage efficiency (~33% size reduction)
+    const thumbnailBlob = thumbnailBase64 ? base64ToBlob(thumbnailBase64) : thumbnailBase64;
 
     await db.profiles.update(profileId, {
       name: profile.identity.name || 'Unknown Match',
       age: profile.identity.age || undefined,
       appName: profile.identity.app || 'Unknown App',
       analysis: analysis,
-      thumbnail: thumbnail,
+      thumbnail: thumbnailBlob,
       analysisPhase: 'quick',
     });
 

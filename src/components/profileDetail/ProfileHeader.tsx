@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, AlertTriangle, MapPin, Briefcase, GraduationCap } from 'lucide-react';
 import type { Profile, ProfileBasics } from '../../lib/db';
+import { useThumbnailUrl, type ThumbnailValue } from '../../lib/utils/thumbnailUtils';
 
 interface ProfileHeaderProps {
   profile: Profile;
@@ -12,12 +13,14 @@ interface ProfileHeaderProps {
  * Header section with profile image and basic info.
  */
 export function ProfileHeader({ profile, basics }: ProfileHeaderProps) {
+  const thumbnailUrl = useThumbnailUrl(profile.thumbnail as ThumbnailValue);
+
   return (
     <>
       {/* Header Image */}
       <div className="relative h-64 bg-slate-900">
-        {profile.thumbnail ? (
-          <img src={profile.thumbnail} className="w-full h-full object-cover opacity-80" alt="Cover" />
+        {thumbnailUrl ? (
+          <img src={thumbnailUrl} className="w-full h-full object-cover opacity-80" alt="Cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-slate-500">
             <div className="text-center">

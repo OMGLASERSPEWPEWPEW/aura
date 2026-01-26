@@ -8,6 +8,7 @@ const mockCallAnthropicForArray = vi.fn();
 const mockCallAnthropicForArraySafe = vi.fn();
 const mockCallAnthropicForText = vi.fn();
 const mockCallAnthropicWithDebug = vi.fn();
+const mockCallAnthropicForObjectValidated = vi.fn();
 
 vi.mock('./api', () => ({
   callAnthropicForObject: mockCallAnthropicForObject,
@@ -15,6 +16,7 @@ vi.mock('./api', () => ({
   callAnthropicForArraySafe: mockCallAnthropicForArraySafe,
   callAnthropicForText: mockCallAnthropicForText,
   callAnthropicWithDebug: mockCallAnthropicWithDebug,
+  callAnthropicForObjectValidated: mockCallAnthropicForObjectValidated,
   textContent: vi.fn((text: string) => ({ type: 'text', text })),
   imageContent: vi.fn((data: string) => ({ type: 'image', source: { data } })),
   TOKEN_LIMITS: {
@@ -292,8 +294,11 @@ describe('ai module', () => {
         { virtue_name: 'Honesty', score: 7, evidence: 'Direct communication', anti_virtue_detected: false },
       ];
 
-      // Function calls callAnthropicForObject and extracts virtue_scores from result
-      mockCallAnthropicForObject.mockResolvedValue({ virtue_scores: mockScores });
+      // Function now uses callAnthropicForObjectValidated which returns Result<T, Error>
+      mockCallAnthropicForObjectValidated.mockResolvedValue({
+        ok: true,
+        value: { virtue_scores: mockScores },
+      });
 
       const userVirtues = [
         { name: 'Curiosity', description: 'Love of learning', anti_virtue: 'Closed-mindedness' },
@@ -307,7 +312,7 @@ describe('ai module', () => {
 
       const result = await scoreMatchVirtues(mockAnalysis as any, userVirtues as any);
 
-      expect(mockCallAnthropicForObject).toHaveBeenCalled();
+      expect(mockCallAnthropicForObjectValidated).toHaveBeenCalled();
       expect(result).toEqual(mockScores);
     });
   });

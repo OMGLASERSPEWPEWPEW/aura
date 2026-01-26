@@ -100,22 +100,22 @@ async function resizeImageIfNeeded(
 }
 
 /**
- * Uploads a base64 image to Supabase Storage
+ * Uploads an image to Supabase Storage
  * @param userId - The user's Supabase ID
- * @param base64 - The base64 encoded image
+ * @param image - The image as Blob or base64 string
  * @param path - The path within the user's folder (e.g., 'thumbnails/abc123.jpg')
  * @param options - Optional resize/quality settings
  */
 export async function uploadImage(
   userId: string,
-  base64: string,
+  image: Blob | string,
   path: string,
   options: ImageSyncOptions = {}
 ): Promise<ImageUploadResult> {
   const { maxSizeBytes = DEFAULT_MAX_SIZE, quality = DEFAULT_QUALITY } = options;
 
-  // Convert base64 to blob
-  let blob = base64ToBlob(base64);
+  // Convert to Blob if base64 string, otherwise use directly
+  let blob = typeof image === 'string' ? base64ToBlob(image) : image;
 
   // Resize if needed
   blob = await resizeImageIfNeeded(blob, maxSizeBytes, quality);
@@ -147,10 +147,10 @@ export async function uploadImage(
 }
 
 /**
- * Downloads an image from Supabase Storage and returns as base64
+ * Downloads an image from Supabase Storage and returns as Blob
  * @param path - The full storage path (including userId)
  */
-export async function downloadImage(path: string): Promise<string> {
+export async function downloadImageAsBlob(path: string): Promise<Blob> {
   const { data, error } = await supabase.storage
     .from(BUCKET_NAME)
     .download(path);
@@ -158,6 +158,17 @@ export async function downloadImage(path: string): Promise<string> {
   if (error) {
     throw new Error(`Failed to download image: ${error.message}`);
   }
+
+  return data;
+}
+
+/**
+ * Downloads an image from Supabase Storage and returns as base64
+ * @deprecated Use downloadImageAsBlob for storage efficiency
+ * @param path - The full storage path (including userId)
+ */
+export async function downloadImage(path: string): Promise<string> {
+  const blob = await downloadImageAsBlob(path);
 
   // Convert blob to base64
   return new Promise((resolve, reject) => {
@@ -167,7 +178,7 @@ export async function downloadImage(path: string): Promise<string> {
       resolve(result);
     };
     reader.onerror = reject;
-    reader.readAsDataURL(data);
+    reader.readAsDataURL(blob);
   });
 }
 
@@ -208,34 +219,64 @@ export async function deleteImage(path: string): Promise<void> {
 /**
  * Uploads multiple images in parallel
  * @param userId - The user's Supabase ID
- * @param images - Array of { base64, path } objects
+ * @param images - Array of { image, path } objects (image can be Blob or base64)
  * @param options - Optional resize/quality settings
  */
 export async function uploadImages(
   userId: string,
-  images: Array<{ base64: string; path: string }>,
+  images: Array<{ image: Blob | string; path: string }>,
   options: ImageSyncOptions = {}
 ): Promise<ImageUploadResult[]> {
   const results = await Promise.all(
-    images.map(({ base64, path }) => uploadImage(userId, base64, path, options))
+    images.map(({ image, path }) => uploadImage(userId, image, path, options))
   );
   return results;
 }
 
 /**
- * Checks if an image path is a Storage path (vs base64)
+ * Checks if a value is a Blob
  */
-export function isStoragePath(value: string): boolean {
+export function isBlob(value: unknown): value is Blob {
+  return value instanceof Blob;
+}
+
+/**
+ * Checks if an image path is a Storage path (vs base64 or Blob)
+ */
+export function isStoragePath(value: string | Blob): boolean {
+  if (isBlob(value)) {
+    return false;
+  }
   // Storage paths look like: userId/thumbnails/xxx.jpg
   // Base64 starts with 'data:' or is just raw base64
   return !value.startsWith('data:') && value.includes('/');
 }
 
 /**
- * Gets image as base64, handling both Storage paths and existing base64
- * @param value - Either a Storage path or base64 string
+ * Checks if a value needs to be uploaded (is base64 or Blob, not already a storage path)
  */
-export async function getImageAsBase64(value: string): Promise<string> {
+export function needsUpload(value: string | Blob | undefined): boolean {
+  if (!value) return false;
+  if (isBlob(value)) return true;
+  // It's a string - check if it's base64 (not a storage path)
+  return value.startsWith('data:');
+}
+
+/**
+ * Gets image as base64, handling Storage paths, base64, and Blobs
+ * @deprecated Prefer working with Blobs directly
+ * @param value - Either a Storage path, base64 string, or Blob
+ */
+export async function getImageAsBase64(value: string | Blob): Promise<string> {
+  if (isBlob(value)) {
+    // Convert Blob to base64
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(value);
+    });
+  }
   if (!isStoragePath(value)) {
     // Already base64
     return value;

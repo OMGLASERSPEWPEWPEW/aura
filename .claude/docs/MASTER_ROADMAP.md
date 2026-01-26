@@ -1,8 +1,8 @@
 # Aura Master Roadmap
 
-**Version**: 2.0
+**Version**: 2.1
 **Date**: January 2026
-**Status**: Phase 1A Complete | Phase 1B-2 Planning
+**Status**: Phase 1A Complete | Phase 1B In Progress | Phase 2 Planning
 
 ---
 
@@ -18,35 +18,36 @@ This master roadmap synthesizes findings from the documentation sprint to chart 
 
 | Dimension | Current State | Risk Level |
 |-----------|---------------|------------|
-| **Security** | ✅ API key secured via Supabase Edge Function proxy | 🟢 Resolved |
-| **Scalability** | IndexedDB limited to ~300 profiles | 🟡 Medium |
-| **Data Integrity** | 6 migrations, union types, no validation | 🟡 Medium |
-| **Maintainability** | 3 error handling patterns, hardcoded values | 🟡 Medium |
-| **Performance** | ✅ 4-chunk streaming analysis with progressive UI | 🟢 Improved |
+| **Security** | API key secured via Supabase Edge Function proxy | Resolved |
+| **Scalability** | IndexedDB limited to ~300 profiles | Medium |
+| **Data Integrity** | 6 migrations, union types, Zod validation available | Low |
+| **Maintainability** | Typed AuraError infrastructure, standardized patterns | Low |
+| **Performance** | 4-chunk streaming analysis with progressive UI | Resolved |
 
 ### UX Assessment
 
 | Dimension | Current State | Priority |
 |-----------|---------------|----------|
-| **Upload Flow** | ✅ 4-chunk streaming with progressive UI, insight cards | 🟢 Resolved |
-| **Information Density** | 10 sections on Overview, 23 Aspects | Medium |
+| **Upload Flow** | 4-chunk streaming with progressive UI, insight cards | Resolved |
+| **Information Density** | 10 sections on Overview, 11 Virtues | Medium |
 | **Conditional Features** | Scoring requires profile setup (hidden) | High |
 | **Accessibility** | No keyboard nav, small touch targets | Medium |
 | **Onboarding** | None | Medium |
 
 ### Feature Readiness
 
-- ✅ Core analysis pipeline working (4-chunk streaming)
-- ✅ Full feature set implemented (23+ features)
-- ✅ Supabase Edge Function proxy deployed (Pro tier, 150s timeout)
-- ✅ Progressive streaming UI with auto-save
-- ✅ Conversation coaching with response scoring
-- ✅ User profile synthesis with 23 Aspects
-- 🟡 Settings page minimal
-- 🟡 Data export limited to Tinder JSON
-- ❌ No user accounts
-- ❌ No monetization
-- ❌ No native mobile apps
+- Core analysis pipeline working (4-chunk streaming)
+- Full feature set implemented (23+ features)
+- Supabase Edge Function proxy deployed (Pro tier, 150s timeout)
+- Progressive streaming UI with auto-save
+- Conversation coaching with response scoring
+- User profile synthesis with 11 Virtues system
+- Typed error infrastructure (AuraError hierarchy)
+- Comprehensive test coverage (800+ unit tests, 321 E2E tests)
+- Settings page minimal
+- Data export limited to Tinder JSON
+- No credit/billing system
+- Native mobile apps not started
 
 ---
 
@@ -56,9 +57,9 @@ This master roadmap synthesizes findings from the documentation sprint to chart 
 
 | Layer | Current | Recommended | Rationale |
 |-------|---------|-------------|-----------|
-| Auth | None | Supabase Auth | Integrated, OAuth support |
-| Database | IndexedDB only | Supabase PostgreSQL | Scalable, synced |
-| API Gateway | Direct browser calls | Supabase Edge Functions | Secure API key |
+| Auth | Supabase Auth (email + Google) | Add Apple OAuth | Required for iOS App Store |
+| Database | IndexedDB + Supabase sync | Current is good | Scalable, synced |
+| API Gateway | Supabase Edge Functions | Current is good | Secure API key |
 | Payments (Web) | None | Stripe | Industry standard |
 | Payments (Mobile) | None | RevenueCat | Unified IAP handling |
 | Mobile Wrapper | PWA | Capacitor | Fastest path to stores |
@@ -72,52 +73,73 @@ This master roadmap synthesizes findings from the documentation sprint to chart 
 - Subscription: $14.99/month unlimited
 
 **Revenue Projections** (conservative):
-- 10,000 MAU × 5% paid conversion × $8 ARPU = $4,000/month
+- 10,000 MAU x 5% paid conversion x $8 ARPU = $4,000/month
 - Break-even: ~$500/month (API costs + infrastructure)
 
 ---
 
 ## Phased Implementation Plan
 
-### Phase 1A: Architecture Pivot ✅ COMPLETE
+### Phase 1A: Architecture Pivot - COMPLETE
 
 **Duration**: Completed January 2026
 **Goal**: Secure the API key and establish backend infrastructure
 
-#### Week 1-2: Supabase Setup + API Proxy ✅
-
+#### Week 1-2: Supabase Setup + API Proxy
 - [x] Create Supabase project (qaueoxubnifmtdirnxgz)
 - [x] Implement Edge Function for Anthropic proxy (`anthropic-proxy`)
 - [x] Update frontend to use proxy endpoint
-- [x] **Remove API key from frontend bundle** ✅ RESOLVED
+- [x] **Remove API key from frontend bundle** - RESOLVED
 - [x] Verify API calls work through proxy
 - [x] Deploy and test in production
 - [x] Upgrade to Pro tier (150-second timeout)
 - [x] Implement streaming analysis (4-chunk progressive UI)
 
 #### Week 3-4: Authentication
-
-- [ ] Implement email/password signup
-- [ ] Implement Google OAuth
-- [ ] Implement Apple OAuth (required for iOS)
-- [ ] Add auth state management to frontend
-- [ ] Create protected route wrapper
-- [ ] Implement session management UI
+- [x] Implement email/password signup
+- [x] Implement Google OAuth
+- [ ] Implement Apple OAuth (required for iOS) - **BLOCKED: App Store review**
+- [x] Add auth state management to frontend
+- [x] Create protected route wrapper
+- [x] Implement session management UI
 
 #### Week 5-6: Data Synchronization
-
-- [ ] Create PostgreSQL schema (profiles, user_profiles)
-- [ ] Implement sync service (Dexie ↔ Supabase)
-- [ ] Handle conflict resolution (last-write-wins)
-- [ ] Test offline scenarios
-- [ ] Migrate existing local data for logged-in users
+- [x] Create PostgreSQL schema (profiles, user_profiles)
+- [x] Implement sync service (Dexie <-> Supabase)
+- [x] Handle conflict resolution (last-write-wins)
+- [x] Test offline scenarios
+- [x] Migrate existing local data for logged-in users
 - [ ] Implement data export endpoint
 
 **Phase 1A Exit Criteria**:
-- [x] API key not in frontend bundle ✅
-- [ ] Users can create accounts (Phase 1B)
-- [ ] Profile data syncs across devices (Phase 1B)
-- [ ] Existing PWA users can migrate data (Phase 1B)
+- [x] API key not in frontend bundle
+- [x] Users can create accounts
+- [x] Profile data syncs across devices
+- [x] Existing PWA users can migrate data
+
+---
+
+### Phase 1B: Quality & Polish - IN PROGRESS
+
+**Duration**: 2-3 weeks
+**Goal**: Improve code quality, test coverage, and UI consolidation
+
+#### Tech Debt (January 26, 2026)
+- [x] Typed error infrastructure (AuraError hierarchy)
+- [x] Standardize error handling across all hooks
+- [x] Smart JSON extraction with multi-strategy fallback
+- [x] E2E test fixes (50 tests updated)
+- [x] Unit test coverage for streaming analysis
+- [x] 11 Virtues system comprehensive tests (68 tests)
+- [x] Remove legacy 23 Aspects UI completely
+- [x] Consolidate user profile display
+- [x] Agent organization (role-based folders)
+
+#### Remaining
+- [ ] Apple OAuth integration (awaiting App Store)
+- [ ] Data export endpoint
+- [ ] Onboarding flow
+- [ ] Accessibility improvements
 
 ---
 
@@ -134,6 +156,7 @@ This master roadmap synthesizes findings from the documentation sprint to chart 
 - [ ] Update frontend to check credits before analysis
 - [ ] Add credit balance display in header
 - [ ] Implement low-credit warning modal
+- [ ] **NEW**: AI inference history tracking (see below)
 
 #### Week 3-4: Stripe Integration
 
@@ -302,20 +325,17 @@ This master roadmap synthesizes findings from the documentation sprint to chart 
 ## Dependencies & Prerequisites
 
 ### Before Phase 1
-
-- [ ] Supabase account created
-- [ ] Domain configured for Supabase
-- [ ] Development environment set up
+- [x] Supabase account created
+- [x] Domain configured for Supabase
+- [x] Development environment set up
 
 ### Before Phase 2
-
 - [ ] Stripe account approved
 - [ ] Business entity for payments
 - [ ] Bank account connected to Stripe
 - [ ] Pricing finalized
 
 ### Before Phase 3
-
 - [ ] Apple Developer account ($99/year)
 - [ ] Google Play Developer account ($25)
 - [ ] App icons and marketing assets
@@ -347,9 +367,9 @@ This master roadmap synthesizes findings from the documentation sprint to chart 
 
 ## Next Steps
 
-1. **Immediate**: Review this roadmap with stakeholders
-2. **This week**: Set up Supabase project
-3. **Next sprint**: Begin Phase 1 implementation
+1. **Immediate**: Await Apple OAuth approval
+2. **This week**: Begin Phase 2 planning (credit system design)
+3. **Next sprint**: AI inference history feature (see below)
 4. **Ongoing**: Weekly progress reviews against milestones
 
 ---
@@ -358,5 +378,6 @@ This master roadmap synthesizes findings from the documentation sprint to chart 
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.1 | 2026-01-26 | Phase 1B tech debt progress, test coverage improvements, error infrastructure |
 | 2.0 | January 2026 | Phase 1A complete: API proxy deployed, streaming analysis shipped |
 | 1.0 | January 2026 | Initial roadmap created |

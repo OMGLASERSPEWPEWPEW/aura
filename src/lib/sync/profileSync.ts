@@ -3,7 +3,7 @@
 
 import { supabase } from '../supabase';
 import { db, type Profile } from '../db';
-import { uploadImage, deleteImage, isStoragePath, downloadImage } from './imageSync';
+import { uploadImage, deleteImage, needsUpload, downloadImageAsBlob } from './imageSync';
 import type { ServerMatchProfile } from './types';
 import { ImageSyncError, SyncError } from '../errors';
 
@@ -67,8 +67,8 @@ export async function pushProfile(
 ): Promise<string> {
   let thumbnailPath: string | undefined;
 
-  // Upload thumbnail if it's base64 (not already a storage path)
-  if (profile.thumbnail && !isStoragePath(profile.thumbnail)) {
+  // Upload thumbnail if it's base64 or Blob (not already a storage path)
+  if (profile.thumbnail && needsUpload(profile.thumbnail)) {
     const result = await uploadImage(
       userId,
       profile.thumbnail,
@@ -113,8 +113,8 @@ export async function updateProfileOnServer(
 
   let thumbnailPath = profile.thumbnailPath;
 
-  // Upload new thumbnail if it's base64
-  if (profile.thumbnail && !isStoragePath(profile.thumbnail) && !profile.thumbnailPath) {
+  // Upload new thumbnail if it's base64 or Blob (not already synced to storage)
+  if (profile.thumbnail && needsUpload(profile.thumbnail) && !profile.thumbnailPath) {
     const result = await uploadImage(
       userId,
       profile.thumbnail,
@@ -255,12 +255,13 @@ export async function syncProfilesFromServer(userId: string): Promise<void> {
 
   // Download thumbnails for profiles that need them
   // Do this in parallel for better performance
+  // Store as Blob for storage efficiency (~33% savings vs base64)
   if (profilesToDownloadThumbnails.length > 0) {
     await Promise.all(
       profilesToDownloadThumbnails.map(async ({ id, thumbnailPath }) => {
         try {
-          const base64 = await downloadImage(thumbnailPath);
-          await db.profiles.update(id, { thumbnail: base64 });
+          const blob = await downloadImageAsBlob(thumbnailPath);
+          await db.profiles.update(id, { thumbnail: blob });
         } catch (error) {
           // Non-critical: log typed error but continue with other profiles
           const imageError = new ImageSyncError('download', {

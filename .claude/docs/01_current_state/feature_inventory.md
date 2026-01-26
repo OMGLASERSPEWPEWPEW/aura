@@ -2,6 +2,7 @@
 
 **Agent Persona**: Frontend Developer
 **Date**: January 2026
+**Last Updated**: 2026-01-26
 **Scope**: Complete feature audit of Aura PWA
 
 ---
@@ -10,24 +11,27 @@
 
 | Feature | Status | Location | Dependencies | Notes |
 |---------|--------|----------|--------------|-------|
-| Video frame extraction | ✅ Working | `lib/frameExtraction.ts` | Canvas API | iOS Safari compatible (muted + playsinline) |
-| AI profile analysis | ✅ Working | `lib/ai.ts` | Anthropic API | 2-stage (basics + deep) |
-| Match storage/gallery | ✅ Working | `lib/db.ts`, `pages/Home.tsx` | Dexie/IndexedDB | Thumbnail + full data |
-| Compatibility scoring | ✅ Working | `hooks/useCompatibilityScore.ts` | User synthesis | Requires user profile setup |
-| 23 Aspects system | ✅ Working | `components/profileDetail/` | Analysis data | New redundant system alongside virtues |
-| Zodiac compatibility | ✅ Working | `hooks/useZodiacCompatibility.ts` | Both user + match signs | Falls back gracefully |
-| Date ideas + weather | ✅ Working | `hooks/useDateIdeas.ts` | Weather API | Location-based suggestions |
-| Opener suggestions | ✅ Working | `hooks/useOpenerRefresh.ts` | Analysis data | Copy-to-clipboard included |
-| Ask About Match chat | ✅ Working | `components/profileDetail/AskAboutMatch.tsx` | Profile context | Persistent chat history |
-| Conversation coaching | ✅ Working | Coach tab | Screenshot upload | Analyzes conversations |
-| User profile synthesis | ✅ Working | `pages/MyProfile.tsx` | 6 input methods | Generates user analysis |
-| Partner virtues | ✅ Working | `components/profileDetail/` | User synthesis | 5 eudaimonia-based virtues |
-| Neurodivergence analysis | ✅ Working | Analysis output | AI analysis | Generated but minimal display |
-| Settings | 🟡 MVP-only | `pages/Settings.tsx` | None | Single toggle currently |
-| Data export | 🟡 MVP-only | MyProfile | Tinder API | Only Tinder JSON supported |
-| PWA install | ✅ Working | `public/manifest.json` | Service worker | Full icon set, OG meta tags |
-| Offline mode | ⚠️ Partial | Service worker | Cache strategy | Only cached assets, not full offline |
-| Logo/branding | ✅ Working | `components/ui/Logo.tsx` | Static assets | Consistent branding across app |
+| Video frame extraction | Working | `lib/frameExtraction.ts` | Canvas API | iOS Safari compatible (muted + playsinline) |
+| AI profile analysis | Working | `lib/ai.ts` | Anthropic API | 4-chunk streaming with progressive UI |
+| Match storage/gallery | Working | `lib/db.ts`, `pages/Home.tsx` | Dexie/IndexedDB | Thumbnail + full data |
+| Compatibility scoring | Working | `hooks/useCompatibilityScore.ts` | User synthesis | Requires user profile setup |
+| 23 Aspects system | Removed | - | - | Replaced by 11 Virtues system (Jan 2026) |
+| Zodiac compatibility | Working | `hooks/useZodiacCompatibility.ts` | Both user + match signs | Falls back gracefully |
+| Date ideas + weather | Working | `hooks/useDateIdeas.ts` | Weather API | Location-based suggestions |
+| Opener suggestions | Working | `hooks/useOpenerRefresh.ts` | Analysis data | Copy-to-clipboard included |
+| Ask About Match chat | Working | `components/profileDetail/AskAboutMatch.tsx` | Profile context | Persistent chat history |
+| Conversation coaching | Working | Coach tab | Screenshot upload | Analyzes conversations |
+| User profile synthesis | Working | `pages/MyProfile.tsx` | 6 input methods | Generates user analysis |
+| 11 Virtues system | Working | `lib/virtues/virtues.ts` | User synthesis | 3 Realms, 11 spectrums, Mixing Board UI |
+| Neurodivergence analysis | Working | Analysis output | AI analysis | Generated but minimal display |
+| Settings | MVP-only | `pages/Settings.tsx` | None | Single toggle currently |
+| Data export | MVP-only | MyProfile | Tinder API | Only Tinder JSON supported |
+| PWA install | Working | `public/manifest.json` | Service worker | Full icon set, OG meta tags |
+| Offline mode | Partial | Service worker | Cache strategy | Only cached assets, not full offline |
+| Logo/branding | Working | `components/ui/Logo.tsx` | Static assets | Consistent branding across app |
+| Authentication | Working | `contexts/AuthContext.tsx` | Supabase Auth | Email + Google (Apple pending) |
+| Cross-device sync | Working | `lib/sync/` | Supabase | Profiles, coaching, chats sync |
+| Typed errors | Working | `lib/errors.ts` | None | AuraError hierarchy with Result types |
 
 ---
 
@@ -40,30 +44,24 @@
 
 ```
 Input: Video file (MP4, MOV, WebM)
-Process: Canvas drawImage at intervals
-Output: Array of base64 JPEG frames
+Process: Canvas drawImage at intervals (4 chunks of 4 frames)
+Output: Array of base64 JPEG frames with quality scores
 ```
 
 **Constraints**:
 - iOS Safari requires `muted` and `playsinline` attributes
 - Frame interval configurable (default: every 2 seconds)
-- Maximum frames capped to prevent memory issues
+- Maximum 16 frames extracted (4 chunks x 4 frames)
+- Progressive quality scoring for thumbnail selection
 
 #### AI Profile Analysis
 **File**: `src/lib/ai.ts`
 
-**Stage 1 - Basic Extraction**:
-- Name, age, location
-- Occupation, education
-- Basic bio parsing
-- Image descriptions
-
-**Stage 2 - Deep Analysis**:
-- Personality assessment
-- Communication style
-- Values identification
-- Red/green flags
-- Neurodivergence indicators
+**Streaming Analysis (4 chunks)**:
+- **Chunk 1**: Basic info (name, age), initial observations
+- **Chunk 2**: Interests, hobbies, lifestyle signals
+- **Chunk 3**: Communication style, personality indicators
+- **Chunk 4**: Final details, synthesis preparation
 
 **Token Budget**: 16,384 max (profile analysis)
 
@@ -74,16 +72,20 @@ Output: Array of base64 JPEG frames
 
 **Tables**:
 ```typescript
-profiles: '++id, name'  // Auto-increment ID, indexed name
-userIdentity: 'id'      // Single record at id=1
+profiles: '++id, name, appName, timestamp, analysisPhase, serverId'
+userIdentity: '++id, lastUpdated, supabaseUserId, serverId'
+coachingSessions: '++id, profileId, timestamp, serverId'
+matchChats: '++id, profileId, timestamp, serverId'
 ```
 
 **Profile Record Structure**:
 - `id`: number (auto-generated)
 - `name`: string
-- `thumbnail`: string (base64)
-- `frames`: string[] (base64 array)
+- `thumbnail`: Blob (converted from base64 for ~33% storage savings)
 - `analysis`: AnalysisData (union type)
+- `analysisPhase`: 'quick' | 'deep' | 'complete'
+- `virtues_11`: MatchVirtueCompatibility (primary compatibility system)
+- `serverId`: string (Supabase sync ID)
 - `createdAt`: Date
 - `chatHistory`: ChatMessage[]
 
@@ -100,35 +102,29 @@ userIdentity: 'id'      // Single record at id=1
 
 **Requirement**: User must complete profile synthesis first.
 
-#### 23 Aspects System
-**Location**: Analysis tab on ProfileDetail
+#### 11 Virtues System
+**Location**: `src/lib/virtues/virtues.ts`
 
-**Categories**:
-1. Emotional Intelligence
-2. Communication Style
-3. Attachment Pattern
-4. Conflict Resolution
-5. Values Hierarchy
-6. Social Orientation
-7. Growth Mindset
-8. Authenticity Level
-9. Boundary Setting
-10. Emotional Availability
-11. Life Goals Alignment
-12. Humor Compatibility
-13. Intellectual Curiosity
-14. Adventure Seeking
-15. Stability Preference
-16. Family Orientation
-17. Career Drive
-18. Health Consciousness
-19. Financial Attitudes
-20. Spiritual/Philosophical
-21. Political Alignment
-22. Social Media Usage
-23. Relationship History
+The 11 Virtues system replaced the legacy 23 Aspects in January 2026. It organizes compatibility into 3 Realms with delta-based scoring:
 
-**Note**: Somewhat redundant with virtues system; consolidation recommended.
+**Realm I: Biological (Chemistry)** - Binary needs, low tolerance for mismatch
+1. **Vitality** (Restorative <-> High Voltage)
+2. **Lust** (Reserved <-> Voracious)
+3. **Play** (Serious <-> Absurd)
+
+**Realm II: Emotional (Connection)** - How you fight and bond
+4. **Warmth** (Cool <-> Radiant)
+5. **Voice** (Diplomatic <-> Blunt)
+6. **Space** (Merged <-> Autonomous) - **CRITICAL**
+7. **Anchor** (Fluid <-> Structured)
+
+**Realm III: Cerebral (Mind)** - Long-term conversation potential
+8. **Wit** (Earnest <-> Intellectual)
+9. **Drive** (Content <-> Relentless)
+10. **Curiosity** (Traditional <-> Explorer)
+11. **Soul** (Pragmatic <-> Idealist)
+
+**UI**: "Mixing Board" metaphor with dual faders showing user vs match scores and delta verdicts (Sympatico/Friction/Danger).
 
 #### Zodiac Compatibility
 **Hook**: `src/hooks/useZodiacCompatibility.ts`
@@ -193,16 +189,62 @@ userIdentity: 'id'      // Single record at id=1
 
 **Output**: AI-synthesized user profile analysis matching match profile structure.
 
-#### Partner Virtues
-**Based on Eudaimonia Framework**:
+#### Virtue Compatibility Scoring
+**Based on 11 Virtues System** (see above):
 
-1. **Sophia** (Wisdom): Intellectual compatibility
-2. **Andreia** (Courage): Emotional bravery
-3. **Sophrosyne** (Temperance): Self-regulation
-4. **Dikaiosyne** (Justice): Fairness and ethics
-5. **Philia** (Friendship): Companionship quality
+Each virtue uses delta-based compatibility with categories:
+- **Low** (<20 delta required): Vitality, Lust, Voice, Wit, Curiosity
+- **Medium Dangerous** (20-40 risky): Warmth, Space (CRITICAL)
+- **Medium Magic** (complementary OK): Play, Anchor
+- **Flexible** (<40 OK): Drive, Soul
 
-Each virtue scored 1-10 with narrative explanation.
+**Verdicts**: Sympatico, Friction, Danger
+
+Reference: `src/lib/virtues/virtues.ts`
+
+### Authentication & Sync
+
+#### Authentication
+**File**: `src/contexts/AuthContext.tsx`
+
+**Providers**:
+- Email/password signup
+- Google OAuth
+- Apple OAuth (pending App Store approval)
+
+**Features**:
+- Session persistence
+- Protected routes
+- Automatic token refresh
+
+#### Cross-Device Sync
+**Location**: `src/lib/sync/`
+
+**Synced Data**:
+- Match profiles (`profileSync.ts`)
+- User profile (`userProfileSync.ts`)
+- Coaching sessions (`coachingSync.ts`)
+- Match chats (`chatSync.ts`)
+- Images (`imageSync.ts`)
+
+**Conflict Resolution**: Last-write-wins with timestamps
+
+### Error Handling
+
+#### Typed Error Infrastructure
+**File**: `src/lib/errors.ts`
+
+**Error Hierarchy**:
+- `AuraError` (base class)
+  - `ApiError` - HTTP/API errors with status codes
+  - `NetworkError` - Connection failures
+  - `TimeoutError` - Request timeouts
+  - `AuthError` - Authentication failures
+  - `RateLimitError` - 429 responses
+  - `ParseError` - JSON parsing failures
+  - `SchemaError` - Zod validation failures
+
+**Result Type**: `Result<T, E>` for type-safe error handling
 
 ### PWA & Branding
 
@@ -255,11 +297,12 @@ Each virtue scored 1-10 with narrative explanation.
 
 | Feature | Priority | Effort | Notes |
 |---------|----------|--------|-------|
-| User authentication | P0 | High | Required for monetization |
+| User authentication | Done | - | Email + Google complete, Apple pending |
 | Credit system | P0 | Medium | Required for monetization |
-| API key security | P0 | Medium | Currently exposed in bundle |
+| API key security | Done | - | Secured via Supabase Edge Function proxy |
 | Full offline mode | P1 | High | Only partial cache now |
 | Data export (all) | P1 | Low | Only Tinder JSON currently |
+| AI inference history | P1 | Medium | Track costs per analysis (see roadmap) |
 
 ### Missing Enhancement Features
 
@@ -289,11 +332,13 @@ Each virtue scored 1-10 with narrative explanation.
 ### API Layer
 **Files**: `src/lib/api/`
 
-- `anthropicClient.ts`: Main API client
-- `config.ts`: API configuration
-- `jsonExtractor.ts`: Response parsing
+- `anthropicClient.ts`: Main API client with retry logic
+- `config.ts`: API configuration (proxy vs direct)
+- `jsonExtractor.ts`: Multi-strategy JSON extraction
 
 **Pattern**: All calls use `callAnthropicForObject<T>()` or `callAnthropicForArray<T>()`
+
+**Safe Variants**: `callAnthropicForObjectSafe<T>()` returns `Result<T, AuraError>`
 
 ### Hooks Architecture
 **Directory**: `src/hooks/`
@@ -303,7 +348,7 @@ Each feature hook follows pattern:
 export function useFeature(profile: Profile) {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AuraError | null>(null);
 
   const fetch = useCallback(async () => { ... }, [profile]);
   const refresh = useCallback(async () => { ... }, [fetch]);
@@ -321,11 +366,37 @@ export function useFeature(profile: Profile) {
 - `CompatibilityScore.tsx`
 - `DateIdeas.tsx`
 - `OpenerSuggestions.tsx`
-- `VirtuesDisplay.tsx`
+- `VirtueCompatibilityCard.tsx` (11 Virtues Mixing Board)
 - `ZodiacCompatibility.tsx`
 
 **Reusable UI Components** (`src/components/ui/`):
 - `Logo.tsx` - Brand logo with variants
+
+---
+
+## Test Coverage
+
+### Unit Tests (Vitest)
+**Count**: 800+ tests (as of 2026-01-26)
+
+**Key Test Files**:
+- `src/lib/api/jsonExtractor.test.ts` - JSON extraction strategies
+- `src/lib/virtues/virtues.test.ts` - 11 Virtues system (68 tests)
+- `src/hooks/useStreamingAnalysis.test.tsx` - Streaming state machine
+- `src/hooks/useCompatibilityScores.test.ts` - Compatibility logic
+- `src/hooks/useDateIdeas.test.ts` - Date suggestions
+- `src/hooks/useOpenerRefresh.test.ts` - Opener generation
+
+### E2E Tests (Playwright)
+**Count**: 321 tests
+
+**Test Files**:
+- `e2e/home.spec.ts` - Gallery functionality
+- `e2e/upload.spec.ts` - Upload flow
+- `e2e/upload-analysis.spec.ts` - Full analysis flow
+- `e2e/my-profile.spec.ts` - User profile
+- `e2e/settings.spec.ts` - Settings page
+- `e2e/auth.spec.ts` - Authentication flows
 
 ---
 
@@ -340,6 +411,7 @@ export function useFeature(profile: Profile) {
 | `error_occurred` | error_type, context | Debugging |
 | `session_duration` | time, actions_count | Engagement |
 | `credit_used` | credit_type, feature | Monetization |
+| `inference_cost` | tokens, model, feature | Cost tracking |
 
 **Note**: Currently no analytics implemented. Privacy-first approach requires careful consent management.
 
@@ -355,7 +427,9 @@ export function useFeature(profile: Profile) {
 | 0.4 | Compatibility scoring | +2 months |
 | 0.5 | Coach tab features | +3 months |
 | 0.6 | 23 Aspects + Virtues | +4 months |
-| 0.7 | Logo/branding + PWA polish | Current |
+| 0.7 | Logo/branding + PWA polish | +5 months |
+| 0.8 | Authentication + Sync | +6 months |
+| 0.9 | 11 Virtues, streaming analysis | Current |
 
 ---
 
@@ -368,15 +442,14 @@ App.tsx
 │   └── ProfileCard.tsx
 ├── Upload.tsx
 │   ├── VideoUploader.tsx
-│   ├── FrameExtractor.tsx
-│   └── AnalysisProgress.tsx
+│   ├── ProgressiveHeader.tsx
+│   └── InsightCard.tsx
 ├── ProfileDetail.tsx
 │   ├── OverviewTab.tsx
 │   │   ├── CompatibilityScore.tsx
-│   │   ├── VirtuesDisplay.tsx
+│   │   ├── VirtueCompatibilityCard.tsx (11 Virtues)
 │   │   └── ZodiacCompatibility.tsx
 │   ├── AnalysisTab.tsx
-│   │   └── AspectCards.tsx (x23)
 │   └── CoachTab.tsx
 │       ├── AskAboutMatch.tsx
 │       ├── DateIdeas.tsx
@@ -384,14 +457,22 @@ App.tsx
 │       └── ConversationCoach.tsx
 ├── MyProfile.tsx
 │   ├── Logo.tsx
+│   ├── UserProfileDisplay.tsx
 │   ├── BasicInfoTab.tsx
 │   ├── DatingProfileTab.tsx
 │   ├── ValuesTab.tsx
 │   ├── PreferencesTab.tsx
 │   ├── HistoryTab.tsx
 │   └── ImportTab.tsx
-└── Settings.tsx
+├── Settings.tsx
+└── Auth/
+    ├── SignIn.tsx
+    └── SignUp.tsx
 
 Shared UI Components (src/components/ui/):
 └── Logo.tsx
+
+Contexts:
+├── AuthContext.tsx
+└── SyncContext.tsx
 ```

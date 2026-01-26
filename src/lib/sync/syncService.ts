@@ -216,6 +216,7 @@ export async function clearAllLocalData(): Promise<void> {
  */
 export async function countUnsyncedRecords(): Promise<number> {
   const [profiles, sessions, chats] = await Promise.all([
+    // Filter for records without serverId (undefined doesn't work with .equals() on indexes)
     db.profiles.filter(p => !p.serverId).count(),
     db.coachingSessions.filter(s => !s.serverId).count(),
     db.matchChats.filter(c => !c.serverId).count(),

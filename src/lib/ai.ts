@@ -5,12 +5,18 @@ import {
   callAnthropicForArraySafe,
   callAnthropicForText,
   callAnthropicWithDebug,
+  callAnthropicForObjectValidated,
   textContent,
   imageContent,
   TOKEN_LIMITS,
   TIMEOUTS,
   type MessageContent,
 } from './api';
+import {
+  PartnerVirtuesResultSchema,
+  VirtueScoreResultSchema,
+  MatchVirtues11ResponseSchema,
+} from './schemas';
 import { ChunkAnalysisError } from './errors/media';
 import {
   PROFILE_ANALYSIS_PROMPT,
@@ -814,17 +820,23 @@ export async function extractPartnerVirtues(input: PartnerVirtuesInput): Promise
     .replace('{growth_areas}', input.growth_areas?.join(', ') || 'Not specified')
     .replace('{strengths}', input.strengths?.join(', ') || 'Not specified');
 
-  const result = await callAnthropicForObject<PartnerVirtuesResult>({
-    messages: [textContent(prompt)],
-    maxTokens: TOKEN_LIMITS.VIRTUE_EXTRACTION,
-  });
+  const result = await callAnthropicForObjectValidated(
+    {
+      messages: [textContent(prompt)],
+      maxTokens: TOKEN_LIMITS.VIRTUE_EXTRACTION,
+    },
+    PartnerVirtuesResultSchema
+  );
 
-  return result.partner_virtues || [];
+  if (!result.ok) {
+    console.error('src/lib/ai.ts: Partner virtues extraction failed:', result.error.message);
+    throw result.error;
+  }
+
+  return result.value.partner_virtues;
 }
 
-export interface VirtueScoreResult {
-  virtue_scores: VirtueScore[];
-}
+// Note: VirtueScoreResult type is now derived from VirtueScoreResultSchema
 
 /**
  * Score a match against user's partner virtues
@@ -864,12 +876,20 @@ export async function scoreMatchVirtues(
     .replace('{match_photo_vibes}', photoVibes)
     .replace('{match_prompts}', promptsText);
 
-  const result = await callAnthropicForObject<VirtueScoreResult>({
-    messages: [textContent(prompt)],
-    maxTokens: TOKEN_LIMITS.VIRTUE_SCORING,
-  });
+  const result = await callAnthropicForObjectValidated(
+    {
+      messages: [textContent(prompt)],
+      maxTokens: TOKEN_LIMITS.VIRTUE_SCORING,
+    },
+    VirtueScoreResultSchema
+  );
 
-  return result.virtue_scores || [];
+  if (!result.ok) {
+    console.error('src/lib/ai.ts: Virtue scoring failed:', result.error.message);
+    throw result.error;
+  }
+
+  return result.value.virtue_scores;
 }
 
 // --- ASK ABOUT MATCH ---
@@ -1217,17 +1237,23 @@ ${promptsText}
     .replace('{match_name}', matchAnalysis.basics?.name || 'Unknown')
     .replace('{match_analysis}', matchAnalysisText);
 
-  // Get raw scores from AI
-  const aiResult = await callAnthropicForObject<{
-    scores: VirtueScore11[];
-  }>({
-    messages: [textContent(prompt)],
-    maxTokens: TOKEN_LIMITS.MATCH_ASPECTS, // Reuse same limit
-  });
+  // Get raw scores from AI with schema validation
+  const aiResult = await callAnthropicForObjectValidated(
+    {
+      messages: [textContent(prompt)],
+      maxTokens: TOKEN_LIMITS.MATCH_ASPECTS, // Reuse same limit
+    },
+    MatchVirtues11ResponseSchema
+  );
+
+  if (!aiResult.ok) {
+    console.error('src/lib/ai.ts: Match virtues 11 scoring failed:', aiResult.error.message);
+    throw aiResult.error;
+  }
 
   // Use the local calculation function for consistent verdict logic
   // This ensures verdicts match the delta tolerance rules exactly
-  return calculateMatchCompatibility(userVirtueProfile, aiResult.scores);
+  return calculateMatchCompatibility(userVirtueProfile, aiResult.value.scores);
 }
 
 // --- STREAMING PROFILE ANALYSIS ---

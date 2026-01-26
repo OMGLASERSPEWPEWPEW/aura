@@ -22,6 +22,9 @@ export {
   callAnthropicForObjectSafe,
   callAnthropicForArrayResultSafe,
   callAnthropicForTextSafe,
+  // Zod-validated variants
+  callAnthropicForObjectValidated,
+  callAnthropicForArrayValidated,
   type MessageContent,
   type TextContent,
   type ImageContent,

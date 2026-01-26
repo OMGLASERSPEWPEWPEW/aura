@@ -4,6 +4,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, MapPin, Briefcase, Loader2 } from 'lucide-react';
 import type { AccumulatedProfile } from '../../lib/streaming/types';
+import { useThumbnailUrl, type ThumbnailValue } from '../../lib/utils/thumbnailUtils';
 
 interface ProgressiveHeaderProps {
   profile: AccumulatedProfile;
@@ -17,6 +18,8 @@ export function ProgressiveHeader({
   isLoading = false,
 }: ProgressiveHeaderProps) {
   const { name, age, location, job, app } = profile.identity;
+  // During streaming analysis, thumbnailFrame is always base64, but hook handles both
+  const thumbnailUrl = useThumbnailUrl(thumbnailFrame as ThumbnailValue | null);
 
   // App badge colors
   const getAppBadgeStyle = (appName: string | null) => {
@@ -40,10 +43,10 @@ export function ProgressiveHeader({
         {/* Thumbnail */}
         <div className="w-16 h-20 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 relative">
           <AnimatePresence mode="wait">
-            {thumbnailFrame ? (
+            {thumbnailUrl ? (
               <motion.img
                 key="thumbnail"
-                src={thumbnailFrame}
+                src={thumbnailUrl}
                 alt={name || 'Profile'}
                 initial={{ opacity: 0, scale: 1.1 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -68,7 +71,7 @@ export function ProgressiveHeader({
           </AnimatePresence>
 
           {/* Loading overlay */}
-          {isLoading && thumbnailFrame && (
+          {isLoading && thumbnailUrl && (
             <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
               <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
             </div>
