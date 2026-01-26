@@ -152,6 +152,7 @@ This ensures fast initial display while ultimately selecting the optimal thumbna
 Two tables in `AuraDB`:
 - `profiles` - Analyzed match profiles
 - `userIdentity` - Single record (id=1) for user's own profile data
+  - `manualEntry.livingSituation` - User's living situation: 'solo' | 'roommates' | 'caregiving'
 
 ### Environment Variables
 
@@ -245,3 +246,22 @@ Design documents in `.claude/docs/` informed the implementation but are NOT runt
 **Note:** The old "23 Aspects" system (`aspects.ts`) is deprecated. New code should use the **11 Virtues** system. Legacy profiles auto-migrate via `src/lib/virtues/migration.ts`.
 
 These docs define the **conceptual framework**. The actual implementation lives in code. If updating the framework, modify the source code files, not just the docs.
+
+## Architecture Decision Records
+
+Major architectural decisions are documented in `docs/adr/`. Each ADR captures the context, decision, and consequences of significant technical choices.
+
+| ADR | Title | Status |
+|-----|-------|--------|
+| [0001](docs/adr/0001-local-first-architecture.md) | Local-First Architecture | Accepted |
+| [0002](docs/adr/0002-direct-browser-api-calls.md) | Direct Browser API Calls | Superseded by 0004 |
+| [0003](docs/adr/0003-dexie-over-raw-indexeddb.md) | Dexie over Raw IndexedDB | Accepted |
+| [0004](docs/adr/0004-supabase-edge-function-proxy.md) | Supabase Edge Function Proxy | Accepted |
+| [0005](docs/adr/0005-streaming-chunked-analysis.md) | Streaming Chunked Analysis | Accepted |
+| [0006](docs/adr/0006-progressive-frame-quality.md) | Progressive Frame Quality Scoring | Accepted |
+| [0007](docs/adr/0007-eleven-virtues-system.md) | Eleven Virtues System | Accepted |
+| [0008](docs/adr/0008-authentication-and-sync.md) | Authentication & Cross-Device Sync | Accepted |
+| [0009](docs/adr/0009-typed-error-infrastructure.md) | Typed Error Infrastructure | Accepted |
+| [0010](docs/adr/0010-testing-strategy.md) | Testing Strategy | Accepted |
+
+See `docs/adr/README.md` for the full index and ADR template.

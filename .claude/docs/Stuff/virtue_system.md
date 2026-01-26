@@ -1,4 +1,4 @@
-This is a brilliant system architecture question. You are essentially asking to build a "Character Sheet" for Real Life.
+
 
 In Ultima Online, the system was based on 8 Virtues derived from 3 Principles (Truth, Love, Courage). In our Dojo Dating System, we can derive virtues from the core components of Storytelling and Scene Dynamics: Motivation (Desire), Conflict (Wounds), and Tactics (Action).
 
