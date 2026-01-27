@@ -63,7 +63,7 @@ This helps the user track session progress when returning after breaks.
 | `frontend-developer` | React components, UI/UX implementation |
 | `backend-architect` | API design, Supabase, Edge Functions |
 | `code-architect` | Folder structure, architecture decisions |
-| `code-reviewer` | Quality assurance (run proactively after code changes) |
+| `Argus` (code-reviewer) | Quality assurance, code review |
 | `debugger` | Errors, test failures, stuck UI |
 | `mobile-ux-optimizer` | Touch targets, responsive design |
 | `prd-specialist` | Feature specs, PRDs |
@@ -72,6 +72,15 @@ This helps the user track session progress when returning after breaks.
 | `branding` | Voice, visual identity, messaging consistency |
 | `Explore` | Codebase search, understanding patterns |
 | `Plan` | Multi-step implementation planning |
+
+## Available Skills
+
+| Skill | Invocation | Description |
+|-------|------------|-------------|
+| `/evolution` | **User-invoked only** | Collective agent self-improvement. Run at end of sessions or after milestones. |
+| `/new-feature` | **User-invoked only** | Guided feature development workflow |
+
+**Note:** Skills are NEVER auto-triggered. They must be explicitly invoked by the user with `/<skill-name>`.
 
 ## Project Overview
 
