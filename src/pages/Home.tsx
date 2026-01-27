@@ -10,22 +10,6 @@ import UserMenu from '../components/auth/UserMenu';
 import { SyncIndicator } from '../components/SyncIndicator';
 import { deleteProfileFromServer } from '../lib/sync';
 import { SyncError } from '../lib/errors';
-import { useThumbnailUrl, type ThumbnailValue } from '../lib/utils/thumbnailUtils';
-
-// Component to render thumbnail with proper Blob handling
-function ProfileThumbnail({ thumbnail, name }: { thumbnail: ThumbnailValue | undefined; name: string }) {
-  const thumbnailUrl = useThumbnailUrl(thumbnail);
-
-  if (thumbnailUrl) {
-    return <img src={thumbnailUrl} alt={name} className="w-full h-full object-cover" />;
-  }
-
-  return (
-    <div className="w-full h-full flex items-center justify-center text-slate-300">
-      <User />
-    </div>
-  );
-}
 
 export default function Home() {
   const profiles = useLiveQuery(() => db.profiles.orderBy('timestamp').reverse().toArray());
@@ -149,7 +133,13 @@ export default function Home() {
             >
               {/* Thumbnail */}
               <div className="w-20 h-24 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 relative">
-                <ProfileThumbnail thumbnail={profile.thumbnail as ThumbnailValue} name={profile.name} />
+                {profile.thumbnail ? (
+                  <img src={profile.thumbnail as string} alt={profile.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-300">
+                    <User />
+                  </div>
+                )}
               </div>
 
               {/* Info */}
