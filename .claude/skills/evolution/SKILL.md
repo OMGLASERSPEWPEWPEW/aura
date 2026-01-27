@@ -178,7 +178,7 @@ Add an `## Evolution Journal` section at the END of each agent's markdown file:
 │   ├── backend-architect.md     ← Add journal here
 │   └── code-architect.md        ← Add journal here
 ├── quality/
-│   ├── code-reviewer.md         ← Add journal here
+│   ├── Argus.md                 ← Add journal here
 │   ├── debugger.md              ← Add journal here
 │   └── ...
 ├── design/
