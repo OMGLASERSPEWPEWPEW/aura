@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **For every prompt, summon Zephyr first.**
 
-Zephyr (`.claude/agents/strategy/zephyr.md`) is the Master Product Manager who orchestrates all work. Before executing any task:
+Zephyr (`.claude/agents/zephyr.md`) is the Master Product Manager who orchestrates all work. Before executing any task:
 
 1. **Invoke Zephyr** to analyze the prompt
 2. **Zephyr considers** which agents are best suited for the task
@@ -84,8 +84,8 @@ npm run dev       # Start dev server (localhost:5173)
 npm run build     # TypeScript check + Vite production build
 npm run lint      # ESLint check
 npm run preview   # Preview production build
-npm run test:run  # Run all unit tests (748 tests)
-npm run test:e2e  # Run Playwright e2e tests (321 tests)
+npm run test:run  # Run all unit tests (997 tests)
+npm run test:e2e  # Run Playwright e2e tests (362 tests)
 ```
 
 ## Tech Stack
@@ -94,6 +94,7 @@ npm run test:e2e  # Run Playwright e2e tests (321 tests)
 - Tailwind CSS 3.4
 - Dexie.js (IndexedDB wrapper) for local storage
 - Anthropic API (Claude) called directly from browser
+- OpenAI API (DALL-E 3) for essence image generation
 - React Router for navigation
 
 ## Architecture
@@ -102,6 +103,10 @@ npm run test:e2e  # Run Playwright e2e tests (321 tests)
 
 ```
 Video Upload -> Frame Extraction (Canvas) -> AI Analysis -> IndexedDB -> UI
+                                                    |
+                                            [Essence Generation]
+                                                    |
+                                    Virtue Sentence + DALL-E Image
 ```
 
 ### Streaming Analysis Architecture
@@ -119,7 +124,7 @@ Video -> Extract Chunk (4 frames) -> Analyze Chunk -> Merge Results -> Update UI
 2. `extracting` - Extracting video frames
 3. `chunk-1` through `chunk-4` - Processing each frame chunk
 4. `consolidating` - Final synthesis of all chunks
-5. `complete` - Analysis finished
+5. `complete` - Analysis finished, essence generation starts in background
 
 **Chunk Strategy (4 frames per chunk):**
 - **Chunk 1**: Basic info (name, age), initial observations
@@ -136,8 +141,30 @@ Video -> Extract Chunk (4 frames) -> Analyze Chunk -> Merge Results -> Update UI
 
 This ensures fast initial display while ultimately selecting the optimal thumbnail from all frames.
 
+### Essence Identity System
+
+After analysis completes, the app generates an "Essence Identity" for each match:
+
+```
+Analysis Complete -> Compute virtues_11 -> Generate Virtue Sentence -> Call DALL-E 3 -> Save Image
+```
+
+**Components:**
+1. **Virtue Sentence**: One-line personality summary derived from 11 Virtues scores (e.g., "A curious explorer with radiant warmth")
+2. **Essence Image**: AI-generated abstract art representing the person's personality via DALL-E 3
+3. **Swipeable Carousel**: ProfileHeader displays essence image alongside profile photo with touch gestures
+
 **Key Files:**
-- `src/hooks/useStreamingAnalysis.ts` - State machine hook, progressive thumbnail logic
+- `src/lib/essence/virtueSentence.ts` - Generates virtue sentences from scores
+- `src/lib/essence/promptBuilder.ts` - Builds DALL-E prompts from virtue scores
+- `src/lib/essence/dalleClient.ts` - DALL-E 3 API client via Supabase proxy
+- `src/lib/essence/essenceGenerator.ts` - Orchestrates full essence generation
+- `src/components/profileDetail/ProfileHeader.tsx` - Swipeable carousel UI
+
+**Cost:** ~$0.04 per essence image (DALL-E 3 standard quality)
+
+**Key Files:**
+- `src/hooks/useStreamingAnalysis.ts` - State machine hook, progressive thumbnail logic, essence generation trigger
 - `src/lib/frameQuality.ts` - Frame quality scoring (brightness, variance, edge detection)
 - `src/lib/streaming/types.ts` - Streaming types and chunk definitions
 - `src/lib/ai.ts` - `analyzeProfileStreaming()` and merge functions
@@ -155,8 +182,10 @@ This ensures fast initial display while ultimately selecting the optimal thumbna
 
 - `src/lib/` - Core business logic
   - `api/` - Anthropic API client (`anthropicClient.ts`, `config.ts`, `jsonExtractor.ts`)
+  - `essence/` - Essence Identity generation (virtue sentences, DALL-E prompts, image generation)
   - `utils/` - Shared utilities (`userContext.ts`, `profileHelpers.ts`, `thumbnailUtils.ts`)
   - `streaming/` - Streaming analysis types and chunk definitions
+  - `virtues/` - 11 Virtues system (scoring, compatibility, migration)
   - `ai.ts` - AI function orchestration (includes `analyzeProfileStreaming()`)
   - `db.ts` - Dexie schema and TypeScript types
   - `prompts.ts` - AI prompt templates (includes chunk-specific prompts)
@@ -175,7 +204,7 @@ This ensures fast initial display while ultimately selecting the optimal thumbna
   - `MyProfile.tsx` - User's own profile management
 
 - `src/components/`
-  - `profileDetail/` - Section components for ProfileDetail page
+  - `profileDetail/` - Section components for ProfileDetail page (includes ProfileHeader with carousel)
   - `profile/` - Tab components for MyProfile page
   - `upload/` - Progressive analysis UI (ProgressiveHeader, InsightCard)
   - `ui/` - Reusable UI components (Logo, buttons, cards, etc.)
@@ -200,6 +229,10 @@ This ensures fast initial display while ultimately selecting the optimal thumbna
 
 Two tables in `AuraDB`:
 - `profiles` - Analyzed match profiles
+  - `virtues_11` - 11 Virtues compatibility scores
+  - `virtueSentence` - Generated one-line personality summary
+  - `essenceImage` - DALL-E generated Blob image
+  - `essencePrompt` - The prompt used to generate the essence image
 - `userIdentity` - Single record (id=1) for user's own profile data
   - `manualEntry.livingSituation` - User's living situation: 'solo' | 'roommates' | 'caregiving'
 
@@ -217,8 +250,8 @@ When planning multi-step tasks, create a todo list to track progress. Update tas
 
 ### Test Maintenance
 Tests live alongside the code they cover:
-- **Unit tests** (`*.test.ts` files) - 748 tests via Vitest
-- **E2E tests** (`e2e/*.spec.ts` files) - 321 tests via Playwright
+- **Unit tests** (`*.test.ts` files) - 997 tests via Vitest
+- **E2E tests** (`e2e/*.spec.ts` files) - 362 tests via Playwright
 
 When making code changes:
 - **Adding a feature**: Add corresponding unit tests
@@ -263,8 +296,10 @@ Triggers for documentation review:
 
 ### API Proxy (Supabase Edge Function)
 - **Project:** qaueoxubnifmtdirnxgz
-- **Edge Function:** `anthropic-proxy` at `/functions/v1/anthropic-proxy`
-- **Purpose:** Keeps Anthropic API key server-side (not in browser bundle)
+- **Edge Functions:**
+  - `anthropic-proxy` at `/functions/v1/anthropic-proxy` - Claude API proxy
+  - `dalle-proxy` at `/functions/v1/dalle-proxy` - DALL-E 3 image generation
+- **Purpose:** Keeps API keys server-side (not in browser bundle)
 - **Tier:** Pro (150-second timeout). Free tier has 60-second timeout.
 
 ### Environment Variables

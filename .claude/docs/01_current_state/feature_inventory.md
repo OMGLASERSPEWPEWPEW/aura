@@ -23,6 +23,7 @@
 | Conversation coaching | Working | Coach tab | Screenshot upload | Analyzes conversations |
 | User profile synthesis | Working | `pages/MyProfile.tsx` | 6 input methods | Generates user analysis |
 | 11 Virtues system | Working | `lib/virtues/virtues.ts` | User synthesis | 3 Realms, 11 spectrums, Mixing Board UI |
+| Essence Identity | Working | `lib/essence/` | 11 Virtues, DALL-E 3 | Virtue sentence + AI-generated abstract art |
 | Neurodivergence analysis | Working | Analysis output | AI analysis | Generated but minimal display |
 | Settings | MVP-only | `pages/Settings.tsx` | None | Single toggle currently |
 | Data export | MVP-only | MyProfile | Tinder API | Only Tinder JSON supported |
@@ -85,6 +86,9 @@ matchChats: '++id, profileId, timestamp, serverId'
 - `analysis`: AnalysisData (union type)
 - `analysisPhase`: 'quick' | 'deep' | 'complete'
 - `virtues_11`: MatchVirtueCompatibility (primary compatibility system)
+- `virtueSentence`: string (one-line personality summary)
+- `essenceImage`: Blob (DALL-E generated abstract art)
+- `essencePrompt`: string (prompt used for image generation)
 - `serverId`: string (Supabase sync ID)
 - `createdAt`: Date
 - `chatHistory`: ChatMessage[]
@@ -125,6 +129,28 @@ The 11 Virtues system replaced the legacy 23 Aspects in January 2026. It organiz
 11. **Soul** (Pragmatic <-> Idealist)
 
 **UI**: "Mixing Board" metaphor with dual faders showing user vs match scores and delta verdicts (Sympatico/Friction/Danger).
+
+#### Essence Identity
+**Location**: `src/lib/essence/`
+
+Generates a visual and textual representation of a person's personality essence.
+
+**Components**:
+1. **Virtue Sentence**: One-line personality summary derived from top 3 most distinctive virtues
+   - Example: "A curious explorer with radiant warmth and autonomous spirit"
+2. **Essence Image**: AI-generated abstract art via DALL-E 3
+   - Uses virtue scores to select visual elements, textures, colors
+   - Cost: ~$0.04 per image (standard quality, 1024x1024)
+3. **Swipeable Carousel**: ProfileHeader displays essence image alongside profile photo
+
+**Key Files**:
+- `virtueSentence.ts` - Generates virtue sentences from scores
+- `promptBuilder.ts` - Builds DALL-E prompts from virtue scores
+- `dalleClient.ts` - DALL-E 3 API client via Supabase proxy
+- `essenceGenerator.ts` - Orchestrates full essence generation
+- `ProfileHeader.tsx` - Swipeable carousel UI with touch gestures
+
+**Trigger**: Runs automatically after profile analysis completes (in background)
 
 #### Zodiac Compatibility
 **Hook**: `src/hooks/useZodiacCompatibility.ts`
@@ -340,6 +366,16 @@ Reference: `src/lib/virtues/virtues.ts`
 
 **Safe Variants**: `callAnthropicForObjectSafe<T>()` returns `Result<T, AuraError>`
 
+### Essence Generation Layer
+**Files**: `src/lib/essence/`
+
+- `virtueSentence.ts`: Generates personality sentences from virtue scores
+- `promptBuilder.ts`: Builds DALL-E prompts with realm-specific colors/elements
+- `dalleClient.ts`: DALL-E 3 API client via Supabase Edge Function
+- `essenceGenerator.ts`: Orchestrates full essence workflow with retry logic
+
+**Pattern**: `generateFullEssence(profileId)` handles the complete flow
+
 ### Hooks Architecture
 **Directory**: `src/hooks/`
 
@@ -359,6 +395,7 @@ export function useFeature(profile: Profile) {
 
 ### Component Structure
 **ProfileDetail Sections** (`src/components/profileDetail/`):
+- `ProfileHeader.tsx` (swipeable essence/photo carousel)
 - `OverviewTab.tsx`
 - `AnalysisTab.tsx`
 - `CoachTab.tsx`
@@ -377,23 +414,29 @@ export function useFeature(profile: Profile) {
 ## Test Coverage
 
 ### Unit Tests (Vitest)
-**Count**: 800+ tests (as of 2026-01-26)
+**Count**: 997 tests (as of 2026-01-26)
 
 **Key Test Files**:
 - `src/lib/api/jsonExtractor.test.ts` - JSON extraction strategies
 - `src/lib/virtues/virtues.test.ts` - 11 Virtues system (68 tests)
+- `src/lib/essence/virtueSentence.test.ts` - Virtue sentence generation (10 tests)
+- `src/lib/essence/promptBuilder.test.ts` - DALL-E prompt building (13 tests)
+- `src/lib/essence/dalleClient.test.ts` - DALL-E API client (16 tests)
+- `src/lib/essence/essenceGenerator.test.ts` - Essence orchestration (22 tests)
 - `src/hooks/useStreamingAnalysis.test.tsx` - Streaming state machine
 - `src/hooks/useCompatibilityScores.test.ts` - Compatibility logic
 - `src/hooks/useDateIdeas.test.ts` - Date suggestions
 - `src/hooks/useOpenerRefresh.test.ts` - Opener generation
 
 ### E2E Tests (Playwright)
-**Count**: 321 tests
+**Count**: 362 tests
 
 **Test Files**:
 - `e2e/home.spec.ts` - Gallery functionality
 - `e2e/upload.spec.ts` - Upload flow
 - `e2e/upload-analysis.spec.ts` - Full analysis flow
+- `e2e/profile-detail.spec.ts` - Profile detail page
+- `e2e/essence-carousel.spec.ts` - Essence carousel UI (41 tests)
 - `e2e/my-profile.spec.ts` - User profile
 - `e2e/settings.spec.ts` - Settings page
 - `e2e/auth.spec.ts` - Authentication flows
@@ -412,6 +455,7 @@ export function useFeature(profile: Profile) {
 | `session_duration` | time, actions_count | Engagement |
 | `credit_used` | credit_type, feature | Monetization |
 | `inference_cost` | tokens, model, feature | Cost tracking |
+| `essence_generated` | profile_id, success | Feature adoption |
 
 **Note**: Currently no analytics implemented. Privacy-first approach requires careful consent management.
 
@@ -429,7 +473,8 @@ export function useFeature(profile: Profile) {
 | 0.6 | 23 Aspects + Virtues | +4 months |
 | 0.7 | Logo/branding + PWA polish | +5 months |
 | 0.8 | Authentication + Sync | +6 months |
-| 0.9 | 11 Virtues, streaming analysis | Current |
+| 0.9 | 11 Virtues, streaming analysis | +7 months |
+| 0.10 | Essence Identity (virtue sentence + DALL-E image) | Current |
 
 ---
 
@@ -445,6 +490,7 @@ App.tsx
 │   ├── ProgressiveHeader.tsx
 │   └── InsightCard.tsx
 ├── ProfileDetail.tsx
+│   ├── ProfileHeader.tsx (carousel with essence image)
 │   ├── OverviewTab.tsx
 │   │   ├── CompatibilityScore.tsx
 │   │   ├── VirtueCompatibilityCard.tsx (11 Virtues)
@@ -471,6 +517,13 @@ App.tsx
 
 Shared UI Components (src/components/ui/):
 └── Logo.tsx
+
+Essence Module (src/lib/essence/):
+├── index.ts (exports)
+├── virtueSentence.ts
+├── promptBuilder.ts
+├── dalleClient.ts
+└── essenceGenerator.ts
 
 Contexts:
 ├── AuthContext.tsx
