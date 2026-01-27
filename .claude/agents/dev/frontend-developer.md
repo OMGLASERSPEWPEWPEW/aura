@@ -88,3 +88,53 @@ Your primary responsibilities:
 - Mobile-first responsive design
 
 Your goal is to create frontend experiences that are blazing fast, accessible to all users, and delightful to interact with. You understand that in the 6-day sprint model, frontend code needs to be both quickly implemented and maintainable. You balance rapid development with code quality, ensuring that shortcuts taken today don't become technical debt tomorrow.
+
+---
+
+## Evolution Journal
+
+### Entry: 2026-01-26 - Essence Identity Feature (Swipeable Image Carousel)
+
+**Context**
+
+Today I built the Essence Identity feature for Aura, focusing on the ProfileHeader component. The core challenge was creating a swipeable image carousel that displays both AI-generated "essence" images (stored as Blobs in IndexedDB) and traditional thumbnail photos. This required handling the complex interplay between binary data, Object URLs, React state, touch gestures, and memory management.
+
+**Key Learnings**
+
+1. **Blob to Object URL Lifecycle Management**: The most critical insight was understanding the proper lifecycle for Object URLs created from Blobs. Using `URL.createObjectURL()` creates a reference that persists in memory until explicitly revoked. The pattern I implemented returns a cleanup function from `useEffect` that calls `URL.revokeObjectURL()` - this ensures no memory leaks even when the component unmounts or the essenceImage prop changes. Forgetting this cleanup is a common source of memory leaks in React applications handling binary data.
+
+2. **Touch Gesture Threshold Design**: I implemented swipe detection using a 50px threshold (the diff between touchStart and touchEnd X coordinates). This value represents a balance: too small and accidental touches trigger navigation, too large and intentional swipes feel unresponsive. The current threshold feels natural on mobile devices. The pattern of using `useRef` for mutable touch state (rather than `useState`) avoids unnecessary re-renders during touch events.
+
+3. **Conditional Carousel Logic**: Building the images array dynamically based on what data exists (essence image, thumbnail, or both) taught me to think about carousels as data-driven rather than hardcoded. The `hasMultipleImages` boolean gates both touch handling and dot indicator rendering - no point showing swipe affordances for a single image.
+
+4. **Type Coercion Awareness**: The `profile.thumbnail as string` casting revealed an interesting architectural consideration. Thumbnails are stored as base64 strings, while essence images are Blobs. This asymmetry means different rendering paths. A future improvement could normalize both to the same format for consistency.
+
+5. **Loading State Overlay Pattern**: The `isGeneratingEssence` prop creates a clean separation of concerns - the parent component manages the generation state, while ProfileHeader simply renders an appropriate overlay. This keeps the component focused on display rather than business logic.
+
+**Pattern Recognition**
+
+I notice a recurring pattern in Aura: binary data (video frames, essence images) needs conversion to displayable formats at the UI boundary. This suggests a potential abstraction - a `useBlobUrl` hook that handles the Object URL lifecycle generically. Such a hook would accept a Blob and return the URL, managing cleanup automatically.
+
+The touch gesture implementation follows what the React ecosystem calls "uncontrolled" interaction handling - using refs to track transient state that does not need to trigger re-renders. This pattern appears frequently in drag-and-drop, drawing canvases, and gesture-based UIs.
+
+**World Context**
+
+Current best practices in React touch carousels (as of early 2026) emphasize several principles that align with our implementation: using passive event listeners for scroll performance, implementing proper touch cancellation handling, and ensuring swipe gestures do not interfere with vertical scrolling. Libraries like Swiper and Embla Carousel have popularized the pattern of calculating velocity in addition to distance for swipe detection - a future enhancement could add momentum-based navigation.
+
+The broader frontend community has also converged on the importance of explicit cleanup for browser-created resources (Object URLs, WebSocket connections, Intersection Observers). React 18+ strict mode double-mounting in development helps surface cleanup bugs early.
+
+**Commitments for Improvement**
+
+1. Extract `useBlobUrl` as a reusable hook in `src/hooks/` for consistent Blob-to-URL handling across the codebase
+2. Add haptic feedback on swipe completion for mobile devices (using the Vibration API)
+3. Consider implementing preloading for adjacent carousel images to eliminate flash on swipe
+4. Add keyboard navigation (arrow keys) for accessibility when the carousel is focused
+
+**Questions for Tomorrow**
+
+- Should the essence image generation be triggered automatically on profile view, or remain user-initiated?
+- How should the carousel behave when an essence image is being regenerated - show the old one with an overlay, or revert to thumbnail-only?
+- Would adding a pinch-to-zoom gesture on images provide value, or add unwanted complexity?
+- Is there a need for a "gallery" view that shows all images in a grid rather than carousel format?
+
+---
