@@ -27,7 +27,6 @@ import {
   ChunkAnalysisError,
   AuraError,
 } from '../lib/errors';
-import { generateFullEssence } from '../lib/essence';
 
 export interface StreamingAnalysisState {
   phase: StreamingPhase;
@@ -467,17 +466,8 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
         savedProfileId: profileId,
       });
 
-      // Generate essence identity in background (non-blocking)
-      // Virtue sentence is free, essence image costs ~$0.04
-      generateFullEssence(profileId).then(result => {
-        if (result.success) {
-          console.log('useStreamingAnalysis: Essence generated:', result.virtueSentence?.substring(0, 50));
-        } else {
-          console.log('useStreamingAnalysis: Essence generation skipped:', result.error);
-        }
-      }).catch(err => {
-        console.log('useStreamingAnalysis: Essence generation failed:', err);
-      });
+      // Note: Essence generation is triggered from ProfileDetail page
+      // after virtues_11 are computed by useCompatibilityScores
 
     } catch (error) {
       if (error instanceof Error && error.message === 'The user aborted a request.') {

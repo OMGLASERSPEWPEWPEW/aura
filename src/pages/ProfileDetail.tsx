@@ -7,6 +7,7 @@ import { db } from '../lib/db';
 import type { UserIdentity, ProfileAnalysis } from '../lib/db';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
 import { hasUserProfile as checkHasUserProfile } from '../lib/utils/userContext';
+import { generateFullEssence } from '../lib/essence';
 
 import {
   useCopyToClipboard,
@@ -52,6 +53,44 @@ export default function ProfileDetail() {
     };
     loadUserIdentity();
   }, []);
+
+  // Generate essence when virtues_11 becomes available
+  // This runs after useCompatibilityScores computes virtues_11
+  const [isGeneratingEssence, setIsGeneratingEssence] = useState(false);
+  const [essenceGenerated, setEssenceGenerated] = useState(false);
+
+  useEffect(() => {
+    // Only generate once per profile view, when conditions are met
+    if (
+      profile?.id &&
+      compatibilityScores.virtues11 &&
+      !profile.virtueSentence &&
+      !isGeneratingEssence &&
+      !essenceGenerated
+    ) {
+      console.log('[ProfileDetail] Generating essence for profile:', profile.id);
+      setIsGeneratingEssence(true);
+
+      // Update profile with virtues_11 first (so essence generator can use it)
+      db.profiles.update(profile.id, {
+        virtues_11: compatibilityScores.virtues11,
+      }).then(() => {
+        // Now generate essence
+        return generateFullEssence(profile.id);
+      }).then(result => {
+        if (result.success) {
+          console.log('[ProfileDetail] Essence generated:', result.virtueSentence?.substring(0, 50));
+        } else {
+          console.log('[ProfileDetail] Essence generation failed:', result.error);
+        }
+        setEssenceGenerated(true);
+        setIsGeneratingEssence(false);
+      }).catch(err => {
+        console.error('[ProfileDetail] Essence generation error:', err);
+        setIsGeneratingEssence(false);
+      });
+    }
+  }, [profile?.id, profile?.virtueSentence, compatibilityScores.virtues11, isGeneratingEssence, essenceGenerated]);
 
   // Loading state
   if (!profile) {
