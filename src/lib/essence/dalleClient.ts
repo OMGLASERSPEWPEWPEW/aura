@@ -1,8 +1,6 @@
 // src/lib/essence/dalleClient.ts
 // Client for calling DALL-E 3 via Supabase Edge Function
 
-import { supabase } from '../supabase';
-
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 export interface DalleGenerationResult {
@@ -28,22 +26,10 @@ export async function generateImage(
 ): Promise<DalleGenerationResult> {
   const { size = '1024x1024', quality = 'standard' } = options;
 
-  // Get current session for auth token
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-  if (sessionError || !session) {
-    console.error('[DALL-E Client] No auth session:', sessionError?.message);
-    return {
-      success: false,
-      error: 'Authentication required for image generation',
-    };
-  }
-
   try {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/dalle-proxy`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
