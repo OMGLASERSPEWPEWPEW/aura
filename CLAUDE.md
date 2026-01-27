@@ -2,15 +2,24 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Agent Orchestration (2026-01-25)
+## Agent Orchestration (2026-01-26)
 
 **For every prompt, summon Zephyr first.**
 
-Zephyr (`.claude/agents/zephyr.md`) is the Master Product Manager who orchestrates all work. Before executing any task:
+Zephyr (`.claude/agents/strategy/zephyr.md`) is the Master Product Manager who orchestrates all work. Before executing any task:
 
 1. **Invoke Zephyr** to analyze the prompt
 2. **Zephyr considers** which agents are best suited for the task
 3. **Zephyr delegates** to appropriate specialists (may include himself)
+
+## Response Timestamps
+
+**End every response with a timestamp** in this format:
+```
+---
+🕐 2026-01-26 17:45 PST
+```
+This helps the user track session progress when returning after breaks.
 
 Available agents:
 | Agent | Use For |
