@@ -39,7 +39,10 @@ export async function generateImage(
       }),
     });
 
+    console.log('[DALL-E Client] Response status:', response.status);
     const data = await response.json();
+    console.log('[DALL-E Client] Response data keys:', Object.keys(data));
+    console.log('[DALL-E Client] Has image:', !!data.image, 'Image length:', data.image?.length || 0);
 
     if (!response.ok || data.error) {
       console.error('[DALL-E Client] Generation failed:', data.error);
@@ -49,6 +52,15 @@ export async function generateImage(
       };
     }
 
+    if (!data.image) {
+      console.error('[DALL-E Client] No image data in successful response');
+      return {
+        success: false,
+        error: 'No image data in response',
+      };
+    }
+
+    console.log('[DALL-E Client] Success! Image size:', data.image.length, 'chars');
     return {
       success: true,
       image: data.image,

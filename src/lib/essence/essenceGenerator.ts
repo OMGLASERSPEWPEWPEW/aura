@@ -155,6 +155,8 @@ export async function generateAndSaveEssenceImage(
     const result = await generateProfileEssenceImage(profile);
 
     if (result.success && result.essenceImage) {
+      console.log('[Essence] Got image blob, size:', result.essenceImage.size, 'bytes');
+
       // Save to profile
       await db.profiles.update(profileId, {
         virtueSentence: result.virtueSentence,
@@ -162,7 +164,11 @@ export async function generateAndSaveEssenceImage(
         essencePrompt: result.essencePrompt,
       });
 
+      // Verify save
+      const savedProfile = await db.profiles.get(profileId);
       console.log('[Essence] Saved essence image for profile', profileId);
+      console.log('[Essence] Verified essenceImage in DB:', !!savedProfile?.essenceImage, savedProfile?.essenceImage instanceof Blob);
+
       return result;
     }
 
