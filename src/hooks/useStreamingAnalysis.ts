@@ -27,7 +27,6 @@ import {
   ChunkAnalysisError,
   AuraError,
 } from '../lib/errors';
-import { base64ToBlob } from '../lib/utils/thumbnailUtils';
 import { generateFullEssence } from '../lib/essence';
 
 export interface StreamingAnalysisState {
@@ -162,10 +161,7 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
 
     // Determine thumbnail (frames are base64)
     const thumbnailIndex = profile.photos.thumbnailIndex;
-    const thumbnailBase64 = allFrames[thumbnailIndex] || allFrames[0] || '';
-
-    // Convert thumbnail to Blob for storage efficiency (~33% size reduction)
-    const thumbnailBlob = thumbnailBase64 ? base64ToBlob(thumbnailBase64) : thumbnailBase64;
+    const thumbnail = allFrames[thumbnailIndex] || allFrames[0] || '';
 
     // Save to local database first (fast)
     const profileId = await db.profiles.add({
@@ -174,7 +170,7 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
       appName: profile.identity.app || 'Unknown App',
       timestamp: new Date(),
       analysis: analysis,
-      thumbnail: thumbnailBlob,
+      thumbnail: thumbnail,
       analysisPhase: phase,
     });
 
@@ -196,17 +192,14 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
   ): Promise<number> => {
     const analysis = accumulatedToProfileAnalysis(profile);
     const thumbnailIndex = profile.photos.thumbnailIndex;
-    const thumbnailBase64 = allFrames[thumbnailIndex] || allFrames[0] || '';
-
-    // Convert thumbnail to Blob for storage efficiency (~33% size reduction)
-    const thumbnailBlob = thumbnailBase64 ? base64ToBlob(thumbnailBase64) : thumbnailBase64;
+    const thumbnail = allFrames[thumbnailIndex] || allFrames[0] || '';
 
     await db.profiles.update(profileId, {
       name: profile.identity.name || 'Unknown Match',
       age: profile.identity.age || undefined,
       appName: profile.identity.app || 'Unknown App',
       analysis: analysis,
-      thumbnail: thumbnailBlob,
+      thumbnail: thumbnail,
       analysisPhase: 'quick',
     });
 
