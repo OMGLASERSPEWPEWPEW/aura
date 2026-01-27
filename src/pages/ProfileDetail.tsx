@@ -111,7 +111,7 @@ export default function ProfileDetail() {
 
   return (
     <div className="pb-24 bg-white min-h-screen">
-      <ProfileHeader profile={profile} basics={basics} />
+      <ProfileHeader profile={profile} basics={basics} isGeneratingEssence={isGeneratingEssence} />
 
       {/* Tab Navigation */}
       <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
