@@ -168,17 +168,26 @@ export async function generateAndSaveEssenceImage(
     if (result.success && result.essenceImage) {
       console.log('[Essence] Got image blob, size:', result.essenceImage.size, 'bytes');
 
-      // Save to profile
+      // Re-fetch profile to get latest state (moodboard may have been saved concurrently)
+      const currentProfile = await db.profiles.get(profileId);
+
+      // Save to profile, defensively preserving moodboard fields if they exist
+      // This prevents race condition where essence save could overwrite moodboard
       await db.profiles.update(profileId, {
         virtueSentence: result.virtueSentence,
         essenceImage: result.essenceImage,
         essencePrompt: result.essencePrompt,
+        // Preserve moodboard fields if they exist in current profile but not in this update
+        ...(currentProfile?.moodboardImage
+          ? { moodboardImage: currentProfile.moodboardImage, moodboardPrompt: currentProfile.moodboardPrompt }
+          : {}),
       });
 
       // Verify save
       const savedProfile = await db.profiles.get(profileId);
       console.log('[Essence] Saved essence image for profile', profileId);
       console.log('[Essence] Verified essenceImage in DB:', !!savedProfile?.essenceImage, savedProfile?.essenceImage instanceof Blob);
+      console.log('[Essence] Verified moodboardImage preserved:', !!savedProfile?.moodboardImage);
 
       return result;
     }

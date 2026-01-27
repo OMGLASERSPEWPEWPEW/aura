@@ -333,8 +333,11 @@ describe('essenceGenerator', () => {
 
       await generateAndSaveEssenceImage(1);
 
-      // Should call get twice: once at start, once to verify
-      expect(db.profiles.get).toHaveBeenCalledTimes(2);
+      // Should call get three times:
+      // 1. Once at start to check if essence already exists
+      // 2. Once before save to preserve moodboard fields (defensive merge)
+      // 3. Once after save to verify
+      expect(db.profiles.get).toHaveBeenCalledTimes(3);
     });
   });
 

@@ -85,6 +85,9 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
   const allFrameScoresRef = useRef<FrameQualityScore[]>([]);
   const navigate = useNavigate();
 
+  // Track moodboard generation promise to ensure it completes before essence generation
+  const moodboardGenerationRef = useRef<Promise<void> | null>(null);
+
   // Track mounted state
   useEffect(() => {
     isMountedRef.current = true;
@@ -115,6 +118,7 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
     autoSavePromiseRef.current = null;
     savedProfileIdRef.current = null;
     allFrameScoresRef.current = [];
+    moodboardGenerationRef.current = null;
     setState(INITIAL_STATE);
   }, []);
 
@@ -217,25 +221,41 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
 
   // Start mood board generation in background (after chunk 3)
   // This generates a lifestyle-focused image based on profile content
-  const startMoodboardGeneration = useCallback(async (profileId: number, accumulatedProfile: AccumulatedProfile) => {
+  // Returns a promise that resolves when moodboard generation completes
+  const startMoodboardGeneration = useCallback((profileId: number, accumulatedProfile: AccumulatedProfile): Promise<void> => {
     console.log('useStreamingAnalysis: Starting mood board generation for profile', profileId);
 
-    try {
-      const result = await generateAndSaveMoodboard(profileId, accumulatedProfile);
+    const generationPromise = (async () => {
+      try {
+        const result = await generateAndSaveMoodboard(profileId, accumulatedProfile);
 
-      if (result.success) {
-        console.log('useStreamingAnalysis: Mood board generated successfully!');
-      } else {
-        console.log('useStreamingAnalysis: Mood board generation failed:', result.error);
+        if (result.success) {
+          console.log('useStreamingAnalysis: Mood board generated successfully!');
+        } else {
+          console.log('useStreamingAnalysis: Mood board generation failed:', result.error);
+        }
+      } catch (error) {
+        console.log('useStreamingAnalysis: Mood board generation error:', error);
       }
-    } catch (error) {
-      console.log('useStreamingAnalysis: Mood board generation error:', error);
-    }
+    })();
+
+    // Store promise in ref so essence generation can await it
+    moodboardGenerationRef.current = generationPromise;
+
+    return generationPromise;
   }, []);
 
   // Start essence generation in background (virtues + DALL-E image)
   const startEssenceGeneration = useCallback(async (profileId: number) => {
     console.log('useStreamingAnalysis: Starting essence generation for profile', profileId);
+
+    // Wait for moodboard generation to complete first (if running)
+    // This prevents race condition where essence save could overwrite moodboard fields
+    if (moodboardGenerationRef.current) {
+      console.log('useStreamingAnalysis: Waiting for moodboard generation to complete before essence...');
+      await moodboardGenerationRef.current;
+      console.log('useStreamingAnalysis: Moodboard generation complete, proceeding with essence');
+    }
 
     // Get user's virtue profile
     const userIdentity = await db.userIdentity.get(1);
