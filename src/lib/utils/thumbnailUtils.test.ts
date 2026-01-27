@@ -1,6 +1,6 @@
 // src/lib/utils/thumbnailUtils.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import {
   base64ToBlob,
   blobToBase64,
@@ -100,6 +100,35 @@ describe('thumbnailUtils', () => {
       expect(isBlob(123)).toBe(false);
       expect(isBlob({})).toBe(false);
       expect(isBlob([])).toBe(false);
+    });
+
+    it('should detect Blob-like objects via duck typing (IndexedDB edge case)', () => {
+      // Simulates a Blob that lost its prototype chain (as can happen with IndexedDB)
+      const blobLike = {
+        size: 1024,
+        type: 'image/jpeg',
+        slice: () => new Blob(),
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+      };
+      expect(isBlob(blobLike)).toBe(true);
+    });
+
+    it('should reject objects missing Blob properties', () => {
+      // Missing arrayBuffer
+      const partialBlobLike = {
+        size: 1024,
+        type: 'image/jpeg',
+        slice: () => new Blob(),
+      };
+      expect(isBlob(partialBlobLike)).toBe(false);
+
+      // Missing slice
+      const anotherPartial = {
+        size: 1024,
+        type: 'image/jpeg',
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+      };
+      expect(isBlob(anotherPartial)).toBe(false);
     });
   });
 
@@ -281,6 +310,24 @@ describe('thumbnailUtils', () => {
       // No blob URLs should have been created or revoked
       expect(URL.createObjectURL).not.toHaveBeenCalled();
       expect(revokedUrls).toHaveLength(0);
+    });
+
+    it('should handle Blob-like objects from IndexedDB', async () => {
+      // Create a mock Blob-like object that simulates IndexedDB deserialization
+      // where instanceof fails but duck-typing succeeds
+      const blobLike = {
+        size: 9,
+        type: 'image/jpeg',
+        slice: () => new Blob(),
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(9)),
+      };
+
+      // The hook should still work with Blob-like objects
+      const { result } = renderHook(() => useThumbnailUrl(blobLike as unknown as Blob));
+
+      await waitFor(() => {
+        expect(result.current).toMatch(/^blob:mock-url-/);
+      });
     });
   });
 });

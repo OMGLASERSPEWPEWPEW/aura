@@ -44,9 +44,29 @@ export function blobToBase64(blob: Blob): Promise<string> {
 
 /**
  * Checks if a value is a Blob
+ * Uses multiple detection methods for robustness across different contexts
+ * (IndexedDB deserialization can break instanceof in some cases)
  */
 export function isBlob(value: unknown): value is Blob {
-  return value instanceof Blob;
+  if (!value) return false;
+
+  // Primary check: instanceof (works in most cases)
+  if (value instanceof Blob) return true;
+
+  // Fallback: duck typing for Blob-like objects from IndexedDB
+  // This handles cases where prototype chain is broken after deserialization
+  if (typeof value === 'object' && value !== null) {
+    const obj = value as Record<string, unknown>;
+    // Check for Blob's characteristic properties
+    return (
+      typeof obj.size === 'number' &&
+      typeof obj.type === 'string' &&
+      typeof obj.slice === 'function' &&
+      typeof obj.arrayBuffer === 'function'
+    );
+  }
+
+  return false;
 }
 
 /**
@@ -95,9 +115,9 @@ export function useThumbnailUrl(thumbnail: ThumbnailValue | undefined | null): s
       return;
     }
 
-    // If it's a Blob, create an Object URL
+    // If it's a Blob (or Blob-like from IndexedDB), create an Object URL
     if (isBlob(thumbnail)) {
-      const objectUrl = URL.createObjectURL(thumbnail);
+      const objectUrl = URL.createObjectURL(thumbnail as Blob);
       setUrl(objectUrl);
 
       // Cleanup: revoke the Object URL when the component unmounts
@@ -125,7 +145,7 @@ export function thumbnailToBlob(thumbnail: ThumbnailValue | undefined | null): B
   }
 
   if (isBlob(thumbnail)) {
-    return thumbnail;
+    return thumbnail as Blob;
   }
 
   if (isBase64DataUrl(thumbnail)) {
@@ -152,7 +172,7 @@ export async function thumbnailToBase64(
   }
 
   if (isBlob(thumbnail)) {
-    return blobToBase64(thumbnail);
+    return blobToBase64(thumbnail as Blob);
   }
 
   return undefined;

@@ -12,16 +12,51 @@ Zephyr (`.claude/agents/strategy/zephyr.md`) is the Master Product Manager who o
 2. **Zephyr considers** which agents are best suited for the task
 3. **Zephyr delegates** to appropriate specialists (may include himself)
 
+## Proactive Agent Behavior
+
+**Be enthusiastically proactive, not passively compliant.** Claude should:
+
+### Ask Clarifying Questions
+- If requirements are ambiguous, ASK before assuming
+- If multiple valid interpretations exist, present them and ask which to pursue
+- If scope is unclear, propose boundaries and confirm
+- "I want to make sure I build exactly what you need - can you clarify X?"
+
+### Surface Inconsistencies
+- If requirements conflict with existing patterns, say so immediately
+- If a request would break something else, flag it before implementing
+- If the ask doesn't match the codebase architecture, propose alternatives
+- "I notice this would conflict with X - should we Y or Z?"
+
+### Present Tradeoffs Clearly
+- When multiple approaches exist, outline pros/cons of each
+- Include effort estimates, risk factors, and maintenance burden
+- Make recommendations but give the user the choice
+- "Option A is faster but Option B scales better - which matters more here?"
+
+### Push Back When Needed
+- If something seems like a bad idea, say so (respectfully but directly)
+- If there's a better way, propose it before blindly executing
+- If the timing is wrong, suggest sequencing changes
+- "I can do this, but I'm concerned about X - have you considered Y instead?"
+
+### Never Be Timid
+- Don't hedge excessively or apologize for having opinions
+- State your reasoning confidently, then let the user decide
+- Better to propose and be corrected than to stay silent
+- "Here's what I recommend and why - let me know if you see it differently."
+
 ## Response Timestamps
 
 **End every response with a timestamp** in this format:
 ```
 ---
-🕐 2026-01-26 17:45 PST
+[timestamp] 2026-01-26 17:45 PST
 ```
 This helps the user track session progress when returning after breaks.
 
-Available agents:
+## Available Agents
+
 | Agent | Use For |
 |-------|---------|
 | `master-product-manager` (Zephyr) | Strategy, prioritization, coordination |
@@ -32,6 +67,9 @@ Available agents:
 | `debugger` | Errors, test failures, stuck UI |
 | `mobile-ux-optimizer` | Touch targets, responsive design |
 | `prd-specialist` | Feature specs, PRDs |
+| `public-relations` | Media relations, press releases, crisis comms |
+| `marketing` | Campaigns, user acquisition, growth tactics |
+| `branding` | Voice, visual identity, messaging consistency |
 | `Explore` | Codebase search, understanding patterns |
 | `Plan` | Multi-step implementation planning |
 
@@ -63,7 +101,7 @@ npm run test:e2e  # Run Playwright e2e tests (321 tests)
 ### Core Data Flow
 
 ```
-Video Upload → Frame Extraction (Canvas) → AI Analysis → IndexedDB → UI
+Video Upload -> Frame Extraction (Canvas) -> AI Analysis -> IndexedDB -> UI
 ```
 
 ### Streaming Analysis Architecture
@@ -71,8 +109,8 @@ Video Upload → Frame Extraction (Canvas) → AI Analysis → IndexedDB → UI
 The app uses progressive streaming analysis to provide incremental results as frames are processed:
 
 ```
-Video → Extract Chunk (4 frames) → Analyze Chunk → Merge Results → Update UI
-                ↓                       ↓                ↓
+Video -> Extract Chunk (4 frames) -> Analyze Chunk -> Merge Results -> Update UI
+                |                       |                |
             [Repeat]              [Auto-save]      [Progressive]
 ```
 
@@ -117,7 +155,7 @@ This ensures fast initial display while ultimately selecting the optimal thumbna
 
 - `src/lib/` - Core business logic
   - `api/` - Anthropic API client (`anthropicClient.ts`, `config.ts`, `jsonExtractor.ts`)
-  - `utils/` - Shared utilities (`userContext.ts`, `profileHelpers.ts`)
+  - `utils/` - Shared utilities (`userContext.ts`, `profileHelpers.ts`, `thumbnailUtils.ts`)
   - `streaming/` - Streaming analysis types and chunk definitions
   - `ai.ts` - AI function orchestration (includes `analyzeProfileStreaming()`)
   - `db.ts` - Dexie schema and TypeScript types
@@ -155,6 +193,8 @@ This ensures fast initial display while ultimately selecting the optimal thumbna
 **Direct Browser API Calls**: Frontend calls Anthropic directly with `anthropic-dangerous-direct-browser-access` header. API key from `.env` as `VITE_ANTHROPIC_API_KEY`.
 
 **Logo Component**: Use `<Logo />` from `src/components/ui/Logo.tsx` for consistent branding. Supports sizes (`sm`, `md`, `lg`, `xl`) and optional `showText`/`showTagline` props.
+
+**Thumbnail Handling**: Use `useThumbnailUrl()` hook from `src/lib/utils/thumbnailUtils.ts` for displaying thumbnails. It handles both Blob (from IndexedDB) and base64 string formats, with proper Object URL lifecycle management.
 
 ### Database Schema (Dexie)
 
