@@ -267,6 +267,11 @@ interface Profile {
   // NEW: 11 Virtues compatibility (primary system)
   virtues_11?: MatchVirtueCompatibility;
 
+  // Essence Identity: AI-generated personality representation
+  virtueSentence?: string;      // One-line personality summary from 11 Virtues
+  essenceImage?: Blob;          // AI-generated abstract visualization
+  essencePrompt?: string;       // Prompt used for generation (debugging/regeneration)
+
   // Sync fields - links to Supabase
   serverId?: string; // UUID from Supabase match_profiles table
   thumbnailPath?: string; // Storage path (replaces base64 thumbnail after sync)
@@ -632,6 +637,19 @@ db.version(13).stores({
   inferenceHistory: '++id, timestamp, feature, userId, success'
 });
 // No upgrade needed - new table starts empty
+
+// Version 14: Add Essence Identity fields for AI-generated personality representation
+// virtueSentence: One-line summary from 11 Virtues (e.g., "A curious explorer with radiant warmth")
+// essenceImage: AI-generated abstract visualization via DALL-E 3
+// essencePrompt: The prompt used for generation (for debugging/regeneration)
+db.version(14).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase, serverId',
+  userIdentity: '++id, lastUpdated, supabaseUserId, serverId',
+  coachingSessions: '++id, profileId, timestamp, serverId',
+  matchChats: '++id, profileId, timestamp, serverId',
+  inferenceHistory: '++id, timestamp, feature, userId, success'
+});
+// No upgrade needed - new fields start as undefined
 
 export { db };
 // Re-export aspect types for convenience (legacy)

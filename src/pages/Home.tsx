@@ -178,6 +178,12 @@ export default function Home() {
                   const { basics, overall } = extractAnalysisFields(profile.analysis);
                   return (
                     <>
+                      {/* Virtue Sentence (if available) */}
+                      {profile.virtueSentence && (
+                        <p className="text-sm text-slate-600 italic mb-1 line-clamp-1">
+                          {profile.virtueSentence}
+                        </p>
+                      )}
                       <p className="text-sm text-slate-500 mb-2 truncate">
                         {profile.age ? `${profile.age} • ` : ''}
                         {basics.location || 'Unknown Location'}

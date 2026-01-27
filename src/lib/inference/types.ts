@@ -18,6 +18,7 @@ export type InferenceFeature =
   | 'ask_about_match'
   | 'conversation_coaching'
   | 'zodiac_compatibility'
+  | 'essence_image_generation'  // DALL-E 3 image generation for essence identity
   | 'unknown';
 
 /**
@@ -37,6 +38,7 @@ export const FEATURE_LABELS: Record<InferenceFeature, string> = {
   ask_about_match: 'Match Q&A',
   conversation_coaching: 'Conversation Coaching',
   zodiac_compatibility: 'Zodiac Compatibility',
+  essence_image_generation: 'Essence Portrait',
   unknown: 'AI Analysis',
 };
 
@@ -56,6 +58,7 @@ export const FEATURE_VALUE_DESCRIPTIONS: Record<InferenceFeature, string> = {
   ask_about_match: 'Match question answered',
   conversation_coaching: 'Response suggestions provided',
   zodiac_compatibility: 'Zodiac insights generated',
+  essence_image_generation: 'Personality portrait created',
   unknown: 'AI insights generated',
 };
 
@@ -103,6 +106,11 @@ export interface LogInferenceParams {
   success: boolean;
   errorType?: string;
   profileId?: number;
+  /**
+   * Override cost calculation (for services like DALL-E that don't use tokens).
+   * If provided, this value is used instead of calculating from tokens.
+   */
+  estimatedCostUsd?: number;
 }
 
 /**

@@ -26,7 +26,8 @@ export function logInference(params: LogInferenceParams): void {
  * Internal async implementation of inference logging.
  */
 async function logInferenceAsync(params: LogInferenceParams): Promise<void> {
-  const cost = calculateCost(params.inputTokens, params.outputTokens, params.model);
+  // Use provided cost or calculate from tokens (for DALL-E and other non-token services)
+  const cost = params.estimatedCostUsd ?? calculateCost(params.inputTokens, params.outputTokens, params.model);
 
   // Get current user ID if logged in (non-blocking)
   const userId = await getUserIdIfLoggedIn();
