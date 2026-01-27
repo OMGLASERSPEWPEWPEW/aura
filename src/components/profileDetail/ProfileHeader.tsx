@@ -27,27 +27,53 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
   const touchStartX = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Handle essence image URL
+  // Cache URLs in refs to prevent loss on re-render
+  const essenceUrlRef = useRef<string | null>(null);
+  const moodboardUrlRef = useRef<string | null>(null);
+
+  // Handle essence image URL with defensive caching
   useEffect(() => {
-    if (profile.essenceImage instanceof Blob) {
+    // Only create new URL if we have a valid Blob
+    if (profile.essenceImage && profile.essenceImage instanceof Blob) {
+      // Revoke old URL if exists
+      if (essenceUrlRef.current) {
+        URL.revokeObjectURL(essenceUrlRef.current);
+      }
       const url = URL.createObjectURL(profile.essenceImage);
+      essenceUrlRef.current = url;
       setEssenceImageUrl(url);
-      return () => URL.revokeObjectURL(url);
-    } else {
-      setEssenceImageUrl(null);
     }
+    // Note: We intentionally do NOT clear the URL if blob is missing
+    // This prevents flicker when profile object reference changes
   }, [profile.essenceImage]);
 
-  // Handle moodboard image URL
+  // Handle moodboard image URL with defensive caching
   useEffect(() => {
-    if (profile.moodboardImage instanceof Blob) {
+    // Only create new URL if we have a valid Blob
+    if (profile.moodboardImage && profile.moodboardImage instanceof Blob) {
+      // Revoke old URL if exists
+      if (moodboardUrlRef.current) {
+        URL.revokeObjectURL(moodboardUrlRef.current);
+      }
       const url = URL.createObjectURL(profile.moodboardImage);
+      moodboardUrlRef.current = url;
       setMoodboardImageUrl(url);
-      return () => URL.revokeObjectURL(url);
-    } else {
-      setMoodboardImageUrl(null);
     }
+    // Note: We intentionally do NOT clear the URL if blob is missing
+    // This prevents flicker when profile object reference changes
   }, [profile.moodboardImage]);
+
+  // Cleanup URLs on unmount only (not on re-render)
+  useEffect(() => {
+    return () => {
+      if (essenceUrlRef.current) {
+        URL.revokeObjectURL(essenceUrlRef.current);
+      }
+      if (moodboardUrlRef.current) {
+        URL.revokeObjectURL(moodboardUrlRef.current);
+      }
+    };
+  }, []);
 
   // Handle thumbnail (can be string or Blob)
   const thumbnailUrl = useThumbnailUrl(profile.thumbnail);
