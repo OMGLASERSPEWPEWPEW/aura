@@ -28,6 +28,7 @@ import {
   AuraError,
 } from '../lib/errors';
 import { base64ToBlob } from '../lib/utils/thumbnailUtils';
+import { generateFullEssence } from '../lib/essence';
 
 export interface StreamingAnalysisState {
   phase: StreamingPhase;
@@ -471,6 +472,18 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
         phase: 'complete',
         profile: finalProfile,
         savedProfileId: profileId,
+      });
+
+      // Generate essence identity in background (non-blocking)
+      // Virtue sentence is free, essence image costs ~$0.04
+      generateFullEssence(profileId).then(result => {
+        if (result.success) {
+          console.log('useStreamingAnalysis: Essence generated:', result.virtueSentence?.substring(0, 50));
+        } else {
+          console.log('useStreamingAnalysis: Essence generation skipped:', result.error);
+        }
+      }).catch(err => {
+        console.log('useStreamingAnalysis: Essence generation failed:', err);
       });
 
     } catch (error) {
