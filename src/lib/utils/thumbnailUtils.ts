@@ -101,7 +101,15 @@ export type ThumbnailValue = string | Blob;
  * ```
  */
 export function useThumbnailUrl(thumbnail: ThumbnailValue | undefined | null): string | null {
-  const [url, setUrl] = useState<string | null>(null);
+  // Initialize synchronously for strings to avoid flash of placeholder
+  // Only use null initial value for Blobs which need async Object URL creation
+  const getInitialUrl = (): string | null => {
+    if (!thumbnail) return null;
+    if (typeof thumbnail === 'string') return thumbnail;
+    return null; // Blobs will be handled in useEffect
+  };
+
+  const [url, setUrl] = useState<string | null>(getInitialUrl);
 
   useEffect(() => {
     if (!thumbnail) {
@@ -110,6 +118,7 @@ export function useThumbnailUrl(thumbnail: ThumbnailValue | undefined | null): s
     }
 
     // If it's a base64 string, use it directly
+    // (Also set here for when thumbnail prop changes)
     if (typeof thumbnail === 'string') {
       setUrl(thumbnail);
       return;
