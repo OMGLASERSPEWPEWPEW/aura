@@ -38,7 +38,7 @@ export default function Logo({
             Aura
           </span>
           {showTagline && (
-            <span className={`${sizes.tagline} text-slate-500`}>
+            <span className={`${sizes.tagline} text-slate-500 dark:text-slate-400`}>
               Decode Emotions. Navigate Life.
             </span>
           )}

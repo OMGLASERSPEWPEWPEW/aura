@@ -94,7 +94,11 @@ export default function ProfileDetail() {
 
   // Loading state
   if (!profile) {
-    return <div className="p-8 text-center">Loading Profile...</div>;
+    return (
+      <div className="p-8 text-center text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 min-h-screen">
+        Loading Profile...
+      </div>
+    );
   }
 
   // Extract analysis fields with safe fallbacks
@@ -110,7 +114,7 @@ export default function ProfileDetail() {
   const hasUserProfileFlag = checkHasUserProfile(userIdentity);
 
   return (
-    <div className="pb-24 bg-white min-h-screen">
+    <div className="pb-24 bg-white dark:bg-slate-900 min-h-screen">
       <ProfileHeader profile={profile} basics={basics} isGeneratingEssence={isGeneratingEssence} />
 
       {/* Tab Navigation */}

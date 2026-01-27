@@ -101,7 +101,7 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false }: 
             alt={currentImage.label}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-slate-500">
+          <div className="w-full h-full flex items-center justify-center text-slate-500 dark:text-slate-400">
             <div className="text-center">
               <AlertTriangle className="mx-auto mb-2" />
               <p>No Image Saved</p>
@@ -148,7 +148,7 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false }: 
         {/* Back Button */}
         <Link
           to="/"
-          className="absolute top-6 left-6 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center text-slate-900 shadow-md z-10"
+          className="absolute top-6 left-6 w-10 h-10 bg-white/90 dark:bg-slate-800/90 rounded-full flex items-center justify-center text-slate-900 dark:text-slate-50 shadow-md z-10"
         >
           <ArrowLeft size={20} />
         </Link>
@@ -163,19 +163,19 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false }: 
       </div>
 
       {/* Quick Stats */}
-      <div className="flex flex-wrap gap-3 text-sm text-slate-600 px-4 py-3">
+      <div className="flex flex-wrap gap-3 text-sm text-slate-600 dark:text-slate-300 px-4 py-3">
         {basics.job && (
-          <div className="flex items-center gap-1 bg-slate-100 px-3 py-1 rounded-full">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full">
             <Briefcase size={14} /> {basics.job}
           </div>
         )}
         {basics.school && (
-          <div className="flex items-center gap-1 bg-slate-100 px-3 py-1 rounded-full">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full">
             <GraduationCap size={14} /> {basics.school}
           </div>
         )}
         {basics.hometown && (
-          <div className="flex items-center gap-1 bg-slate-100 px-3 py-1 rounded-full">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full">
             <MapPin size={14} /> {basics.hometown}
           </div>
         )}

@@ -14,8 +14,8 @@ export function PsychologicalRead({ archetypeSummary }: PsychologicalReadProps) 
 
   return (
     <section>
-      <SectionHeader icon={Eye} title="Psychological Read" iconColor="text-purple-600" />
-      <div className="bg-purple-50 p-4 rounded-xl text-purple-900 border border-purple-100 text-sm leading-relaxed">
+      <SectionHeader icon={Eye} title="Psychological Read" iconColor="text-purple-600 dark:text-purple-400" />
+      <div className="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-xl text-purple-900 dark:text-purple-100 border border-purple-100 dark:border-purple-700 text-sm leading-relaxed">
         {archetypeSummary}
       </div>
     </section>

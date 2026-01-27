@@ -61,13 +61,13 @@ export default function TextInputTab({ textInputs, onTextInputsChange }: TextInp
   return (
     <div className="space-y-6">
       {/* Text Input Section */}
-      <div className="bg-white p-4 rounded-xl shadow-sm">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <FileText className="text-indigo-600" size={20} />
-          <h2 className="font-semibold text-gray-800">Your Story</h2>
+          <h2 className="font-semibold text-slate-900 dark:text-slate-50">Your Story</h2>
         </div>
 
-        <p className="text-sm text-slate-500 mb-4">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
           Add journal entries, dating app bios, therapy notes, or any text that describes who you are
           and what you're looking for.
         </p>
@@ -78,7 +78,7 @@ export default function TextInputTab({ textInputs, onTextInputsChange }: TextInp
           value={currentLabel}
           onChange={(e) => setCurrentLabel(e.target.value)}
           placeholder="Label (e.g., 'My Hinge Bio', 'Journal Entry')"
-          className="w-full p-2 border border-slate-200 rounded-lg text-sm mb-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm mb-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 dark:placeholder:text-slate-500"
         />
 
         {/* Text Area */}
@@ -86,12 +86,12 @@ export default function TextInputTab({ textInputs, onTextInputsChange }: TextInp
           value={currentText}
           onChange={(e) => setCurrentText(e.target.value)}
           placeholder="I'm looking for someone who... My ideal weekend is... I value..."
-          className="w-full h-36 p-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+          className="w-full h-36 p-3 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 dark:placeholder:text-slate-500"
         />
 
         <div className="flex items-center justify-between mt-3">
           {/* File Upload */}
-          <label className="flex items-center gap-2 text-sm text-indigo-600 font-medium cursor-pointer hover:text-indigo-800">
+          <label className="flex items-center gap-2 text-sm text-indigo-600 font-medium cursor-pointer hover:text-indigo-800 dark:hover:text-indigo-400">
             <Upload size={16} />
             Upload .txt or .md files
             <input
@@ -119,10 +119,10 @@ export default function TextInputTab({ textInputs, onTextInputsChange }: TextInp
       {textInputs.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-800">
+            <h3 className="font-semibold text-slate-900 dark:text-slate-50">
               Added Entries ({textInputs.length})
             </h3>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-slate-500 dark:text-slate-400">
               {getTotalCharacters().toLocaleString()} characters total
             </span>
           </div>
@@ -130,28 +130,28 @@ export default function TextInputTab({ textInputs, onTextInputsChange }: TextInp
           {textInputs.map((input, index) => (
             <div
               key={index}
-              className="bg-white p-4 rounded-xl shadow-sm border border-slate-100"
+              className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-slate-800 truncate">
+                    <span className="font-medium text-slate-900 dark:text-slate-50 truncate">
                       {input.label}
                     </span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
                       {input.content.length.toLocaleString()} chars
                     </span>
                   </div>
-                  <p className="text-sm text-slate-600 line-clamp-2">
+                  <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2">
                     {input.content}
                   </p>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                     Added {new Date(input.addedAt).toLocaleDateString()}
                   </p>
                 </div>
                 <button
                   onClick={() => removeInput(index)}
-                  className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                  className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"
                 >
                   <Trash2 size={18} />
                 </button>
@@ -163,8 +163,8 @@ export default function TextInputTab({ textInputs, onTextInputsChange }: TextInp
 
       {/* Tips */}
       {textInputs.length === 0 && (
-        <div className="bg-slate-50 p-4 rounded-xl text-sm text-slate-600">
-          <h4 className="font-semibold text-slate-800 mb-2">Ideas for what to add:</h4>
+        <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-xl text-sm text-slate-600 dark:text-slate-300">
+          <h4 className="font-semibold text-slate-900 dark:text-slate-50 mb-2">Ideas for what to add:</h4>
           <ul className="list-disc pl-4 space-y-1">
             <li>Your current dating app bio</li>
             <li>Journal entries about past relationships</li>

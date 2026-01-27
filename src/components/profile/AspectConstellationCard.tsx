@@ -49,12 +49,12 @@ export default function AspectConstellationCard({ aspectProfile }: AspectConstel
   return (
     <section className="mt-6">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
           <Sparkles size={18} className="text-violet-600" /> Your 23 Aspects
         </h3>
         <button
           onClick={() => setShowHelp(!showHelp)}
-          className="p-1.5 rounded-full hover:bg-violet-100 transition-colors"
+          className="p-1.5 rounded-full hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors"
           aria-label="What are the 23 Aspects?"
         >
           <HelpCircle size={18} className="text-violet-600" />
@@ -63,29 +63,29 @@ export default function AspectConstellationCard({ aspectProfile }: AspectConstel
 
       {/* Help Modal */}
       {showHelp && (
-        <div className="mb-4 bg-violet-50 p-4 rounded-lg border border-violet-300 relative">
+        <div className="mb-4 bg-violet-50 dark:bg-violet-900/30 p-4 rounded-lg border border-violet-300 dark:border-violet-700 relative">
           <button
             onClick={() => setShowHelp(false)}
-            className="absolute top-2 right-2 p-1 hover:bg-violet-200 rounded-full"
+            className="absolute top-2 right-2 p-1 hover:bg-violet-200 dark:hover:bg-violet-800 rounded-full"
           >
-            <X size={14} className="text-violet-600" />
+            <X size={14} className="text-violet-600 dark:text-violet-400" />
           </button>
-          <h4 className="font-bold text-violet-900 text-sm mb-2">What are the 23 Aspects?</h4>
-          <p className="text-sm text-violet-800 mb-2">
+          <h4 className="font-bold text-violet-900 dark:text-violet-100 text-sm mb-2">What are the 23 Aspects?</h4>
+          <p className="text-sm text-violet-800 dark:text-violet-200 mb-2">
             The 23 Aspects system is a comprehensive framework for understanding romantic compatibility.
             Each aspect represents a core virtue or value dimension.
           </p>
-          <p className="text-sm text-violet-800 mb-2">
+          <p className="text-sm text-violet-800 dark:text-violet-200 mb-2">
             <strong>3 Realms:</strong>
           </p>
-          <ul className="text-sm text-violet-800 mb-2 ml-4 list-disc">
+          <ul className="text-sm text-violet-800 dark:text-violet-200 mb-2 ml-4 list-disc">
             <li><strong>Vitality</strong> - How you move through the world (body & action)</li>
             <li><strong>Connection</strong> - How you bond with others (heart & spirit)</li>
             <li><strong>Structure</strong> - How you organize reality (mind & environment)</li>
           </ul>
-          <p className="text-xs text-violet-600 italic">
-            Your <span className="text-emerald-600 font-bold">dominant aspects</span> are your strengths.
-            Your <span className="text-amber-600 font-bold">shadow aspects</span> are growth areas.
+          <p className="text-xs text-violet-600 dark:text-violet-400 italic">
+            Your <span className="text-emerald-600 dark:text-emerald-400 font-bold">dominant aspects</span> are your strengths.
+            Your <span className="text-amber-600 dark:text-amber-400 font-bold">shadow aspects</span> are growth areas.
           </p>
         </div>
       )}
@@ -96,12 +96,12 @@ export default function AspectConstellationCard({ aspectProfile }: AspectConstel
           {LEGACY_REALMS.map(realm => (
             <div
               key={realm.id}
-              className={`${realm.bgClass} p-3 rounded-lg ${realm.borderClass} border`}
+              className={`${realm.bgClass} dark:bg-opacity-30 p-3 rounded-lg ${realm.borderClass} dark:border-opacity-50 border`}
             >
               <h4 className={`font-bold text-xs uppercase ${realm.colorClass}`}>
                 {realm.id === 'vitality' ? 'Vitality' : realm.id === 'connection' ? 'Connection' : 'Structure'}
               </h4>
-              <p className="text-xs text-slate-700 mt-1">
+              <p className="text-xs text-slate-700 dark:text-slate-300 mt-1">
                 {aspectProfile.realm_summary[realm.id as keyof typeof aspectProfile.realm_summary]}
               </p>
             </div>
@@ -118,15 +118,15 @@ export default function AspectConstellationCard({ aspectProfile }: AspectConstel
           return (
             <div
               key={realm.id}
-              className={`${realm.bgClass} rounded-xl border ${realm.borderClass} overflow-hidden`}
+              className={`${realm.bgClass} dark:bg-opacity-20 rounded-xl border ${realm.borderClass} dark:border-opacity-50 overflow-hidden`}
             >
               <button
                 onClick={() => setExpandedRealm(isExpanded ? null : realm.id)}
-                className="w-full p-3 flex items-center justify-between hover:bg-white/30 transition-colors"
+                className="w-full p-3 flex items-center justify-between hover:bg-white/30 dark:hover:bg-white/10 transition-colors"
               >
                 <div>
                   <h4 className={`font-bold text-sm ${realm.colorClass}`}>{realm.name}</h4>
-                  <p className="text-xs text-slate-600">{realm.subtitle}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">{realm.subtitle}</p>
                 </div>
                 {isExpanded ? (
                   <ChevronUp size={18} className={realm.colorClass} />
@@ -144,31 +144,31 @@ export default function AspectConstellationCard({ aspectProfile }: AspectConstel
                     const shadow = isShadow(aspect.id);
 
                     return (
-                      <div key={aspect.id} className="bg-white/60 rounded-lg p-2">
+                      <div key={aspect.id} className="bg-white/60 dark:bg-slate-800/60 rounded-lg p-2">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-slate-800 flex items-center gap-1">
+                          <span className="text-sm font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1">
                             {aspect.name}
                             {dominant && (
-                              <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">
+                              <span className="text-xs bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded font-bold">
                                 Dominant
                               </span>
                             )}
                             {shadow && (
-                              <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
+                              <span className="text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded font-bold">
                                 Growth
                               </span>
                             )}
                           </span>
-                          <span className="text-xs font-bold text-slate-600">{score}</span>
+                          <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{score}</span>
                         </div>
-                        <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                           <div
                             className={`h-full ${getBarColor(aspect.id, score)} rounded-full transition-all duration-300`}
                             style={{ width: `${score}%` }}
                           />
                         </div>
                         {evidence && (
-                          <p className="text-xs text-slate-500 mt-1 italic">{evidence}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 italic">{evidence}</p>
                         )}
                       </div>
                     );
@@ -181,7 +181,7 @@ export default function AspectConstellationCard({ aspectProfile }: AspectConstel
       </div>
 
       {/* Legend */}
-      <div className="mt-4 flex items-center justify-center gap-4 text-xs">
+      <div className="mt-4 flex items-center justify-center gap-4 text-xs text-slate-600 dark:text-slate-400">
         <span className="flex items-center gap-1">
           <span className="w-3 h-3 bg-emerald-500 rounded-full" />
           Dominant

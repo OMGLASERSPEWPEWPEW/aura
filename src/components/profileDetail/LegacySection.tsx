@@ -22,17 +22,17 @@ export function LegacySection({ overall, hasArchetype }: LegacySectionProps) {
   return (
     <section>
       <SectionHeader title="Vibe Check (Legacy)" />
-      <div className="bg-blue-50 p-4 rounded-xl text-blue-900 border border-blue-100">{overall.summary}</div>
+      <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl text-blue-900 dark:text-blue-100 border border-blue-100 dark:border-blue-700">{overall.summary}</div>
       <div className="mt-4 grid grid-cols-2 gap-4">
-        <div className="bg-green-50 p-3 rounded-lg">
-          <h4 className="font-bold text-green-800 text-sm mb-1">Green Flags</h4>
-          <ul className="text-xs text-green-700 list-disc list-inside">
+        <div className="bg-green-50 dark:bg-green-900/30 p-3 rounded-lg">
+          <h4 className="font-bold text-green-800 dark:text-green-200 text-sm mb-1">Green Flags</h4>
+          <ul className="text-xs text-green-700 dark:text-green-300 list-disc list-inside">
             {overall.green_flags?.map((f, i) => <li key={i}>{f}</li>) || <li>None listed</li>}
           </ul>
         </div>
-        <div className="bg-red-50 p-3 rounded-lg">
-          <h4 className="font-bold text-red-800 text-sm mb-1">Red Flags</h4>
-          <ul className="text-xs text-red-700 list-disc list-inside">
+        <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded-lg">
+          <h4 className="font-bold text-red-800 dark:text-red-200 text-sm mb-1">Red Flags</h4>
+          <ul className="text-xs text-red-700 dark:text-red-300 list-disc list-inside">
             {overall.red_flags?.map((f, i) => <li key={i}>{f}</li>) || <li>None listed</li>}
           </ul>
         </div>

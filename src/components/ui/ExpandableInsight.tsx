@@ -70,7 +70,7 @@ function HelpTooltip({
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
-      className="absolute right-0 top-full mt-2 z-10 w-64 p-3 bg-slate-800 text-white text-xs rounded-lg shadow-lg"
+      className="absolute right-0 top-full mt-2 z-10 w-64 p-3 bg-slate-800 dark:bg-slate-900 text-white text-xs rounded-lg shadow-lg"
       onClick={(e) => e.stopPropagation()}
     >
       <p>{text}</p>
@@ -84,7 +84,7 @@ function HelpTooltip({
         Got it
       </button>
       {/* Arrow pointing up */}
-      <div className="absolute -top-1.5 right-4 w-3 h-3 bg-slate-800 rotate-45" />
+      <div className="absolute -top-1.5 right-4 w-3 h-3 bg-slate-800 dark:bg-slate-900 rotate-45" />
     </motion.div>
   );
 }
@@ -116,10 +116,10 @@ function FeedbackButton({
       className={`
         flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium
         transition-all duration-200 min-w-[88px] min-h-[44px]
-        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
+        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-slate-800
         ${isSelected
           ? `${colorClass} text-white shadow-sm`
-          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
         }
       `}
     >
@@ -159,7 +159,7 @@ export default function ExpandableInsight({
 
   return (
     <div
-      className={`bg-white rounded-xl shadow-sm overflow-hidden ${className}`}
+      className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden ${className}`}
     >
       {/* Header - always visible */}
       <button
@@ -178,7 +178,7 @@ export default function ExpandableInsight({
           <div className="flex-1 min-w-0">
             {/* Title row with help and expand icons */}
             <div className="flex items-center justify-between gap-2">
-              <h3 className="font-semibold text-slate-800 text-sm">
+              <h3 className="font-semibold text-slate-800 dark:text-slate-100 text-sm">
                 {title}
               </h3>
 
@@ -191,7 +191,7 @@ export default function ExpandableInsight({
                         e.stopPropagation();
                         setShowHelp(!showHelp);
                       }}
-                      className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       aria-label="Help"
                     >
                       <HelpCircle size={16} />
@@ -213,7 +213,7 @@ export default function ExpandableInsight({
                   <motion.div
                     animate={{ rotate: isExpanded ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
-                    className="text-slate-400"
+                    className="text-slate-400 dark:text-slate-500"
                   >
                     <ChevronDown size={18} />
                   </motion.div>
@@ -222,7 +222,7 @@ export default function ExpandableInsight({
             </div>
 
             {/* Summary - always visible */}
-            <p className="text-sm text-slate-600 mt-1 line-clamp-2">
+            <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">
               {summary}
             </p>
           </div>
@@ -241,15 +241,15 @@ export default function ExpandableInsight({
           >
             <div className="px-4 pb-4">
               {/* Divider */}
-              <div className="border-t border-dashed border-slate-200 mb-4" />
+              <div className="border-t border-dashed border-slate-200 dark:border-slate-700 mb-4" />
 
               {/* Detail content */}
               {detail && (
                 <div className="mb-4">
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                  <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
                     Why This Matters
                   </h4>
-                  <div className="text-sm text-slate-600">
+                  <div className="text-sm text-slate-600 dark:text-slate-300">
                     {detail}
                   </div>
                 </div>
@@ -265,7 +265,7 @@ export default function ExpandableInsight({
               {/* Feedback buttons */}
               {showFeedback && onFeedback && (
                 <div className="mt-4">
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                  <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
                     Does this resonate?
                   </h4>
                   <div className="flex gap-2">

@@ -232,6 +232,7 @@ interface MatchChatMessage {
 
 interface AppSettings {
   autoCompatibility: boolean;  // Auto-run compatibility scoring when saving matches
+  theme?: 'system' | 'light' | 'dark';  // User's theme preference
 }
 
 // Analysis phase for streaming analysis
@@ -650,6 +651,24 @@ db.version(14).stores({
   inferenceHistory: '++id, timestamp, feature, userId, success'
 });
 // No upgrade needed - new fields start as undefined
+
+// Version 15: Add theme setting for dark mode support
+db.version(15).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase, serverId',
+  userIdentity: '++id, lastUpdated, supabaseUserId, serverId',
+  coachingSessions: '++id, profileId, timestamp, serverId',
+  matchChats: '++id, profileId, timestamp, serverId',
+  inferenceHistory: '++id, timestamp, feature, userId, success'
+}).upgrade(async tx => {
+  // Initialize theme setting to 'system' for existing users
+  await tx.table('userIdentity').toCollection().modify((identity: Partial<UserIdentity>) => {
+    if (!identity.settings) {
+      identity.settings = { autoCompatibility: true, theme: 'system' };
+    } else if (!identity.settings.theme) {
+      identity.settings.theme = 'system';
+    }
+  });
+});
 
 export { db };
 // Re-export aspect types for convenience (legacy)

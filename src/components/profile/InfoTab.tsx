@@ -89,12 +89,12 @@ export default function InfoTab({ manualEntry, onManualEntryChange, goals, onGoa
   return (
     <div className="space-y-6">
       {/* Dating Goals Section */}
-      <div className="bg-white p-4 rounded-xl shadow-sm">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
         <div className="flex items-center gap-2 mb-2">
           <Target className="text-indigo-600" size={20} />
-          <h2 className="font-semibold text-gray-800">Relationship Timeline</h2>
+          <h2 className="font-semibold text-slate-900 dark:text-slate-50">Relationship Timeline</h2>
         </div>
-        <p className="text-sm text-slate-500 mb-4">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
           How fast are you looking to move? (This is about commitment pace, not structure)
         </p>
 
@@ -105,15 +105,15 @@ export default function InfoTab({ manualEntry, onManualEntryChange, goals, onGoa
               onClick={() => handleGoalSelect(option.value)}
               className={`p-4 rounded-xl border-2 text-left transition-all ${
                 goals?.type === option.value
-                  ? 'border-indigo-500 bg-indigo-50'
-                  : 'border-slate-200 hover:border-slate-300 bg-white'
+                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
               }`}
             >
               <div className="text-2xl mb-1">{option.emoji}</div>
-              <div className={`font-medium ${goals?.type === option.value ? 'text-indigo-700' : 'text-slate-800'}`}>
+              <div className={`font-medium ${goals?.type === option.value ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-900 dark:text-slate-50'}`}>
                 {option.label}
               </div>
-              <div className="text-xs text-slate-500 mt-0.5">{option.description}</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{option.description}</div>
             </button>
           ))}
         </div>
@@ -121,40 +121,40 @@ export default function InfoTab({ manualEntry, onManualEntryChange, goals, onGoa
         {/* Optional description */}
         {goals?.type && (
           <div className="mt-4 animate-in fade-in slide-in-from-bottom-2">
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
               Want to add more detail? (Optional)
             </label>
             <textarea
               value={goals.description || ''}
               onChange={(e) => handleDescriptionChange(e.target.value)}
               placeholder="e.g., Looking for someone who shares my love of hiking..."
-              className="w-full h-20 p-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              className="w-full h-20 p-3 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
         )}
       </div>
 
       {/* Basic Info */}
-      <div className="bg-white p-4 rounded-xl shadow-sm">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <User className="text-blue-600" size={20} />
-          <h2 className="font-semibold text-gray-800">Basic Info</h2>
+          <h2 className="font-semibold text-slate-900 dark:text-slate-50">Basic Info</h2>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Name</label>
             <input
               type="text"
               value={manualEntry.name || ''}
               onChange={(e) => updateField('name', e.target.value)}
               placeholder="Your name"
-              className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Age</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Age</label>
             <input
               type="number"
               value={manualEntry.age || ''}
@@ -162,41 +162,41 @@ export default function InfoTab({ manualEntry, onManualEntryChange, goals, onGoa
               placeholder="Your age"
               min={18}
               max={100}
-              className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Occupation</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Occupation</label>
             <input
               type="text"
               value={manualEntry.occupation || ''}
               onChange={(e) => updateField('occupation', e.target.value)}
               placeholder="What you do"
-              className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Location</label>
             <input
               type="text"
               value={manualEntry.location || ''}
               onChange={(e) => updateField('location', e.target.value)}
               placeholder="City, State"
-              className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
         </div>
       </div>
 
       {/* Zodiac Sign */}
-      <div className="bg-white p-4 rounded-xl shadow-sm">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <Sparkles className="text-purple-600" size={20} />
-          <h2 className="font-semibold text-gray-800">Zodiac Sign</h2>
+          <h2 className="font-semibold text-slate-900 dark:text-slate-50">Zodiac Sign</h2>
         </div>
-        <p className="text-sm text-slate-500 mb-4">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
           Used for compatibility insights with matches
         </p>
 
@@ -207,22 +207,22 @@ export default function InfoTab({ manualEntry, onManualEntryChange, goals, onGoa
               onClick={() => updateField('zodiac_sign', sign.value)}
               className={`p-2 rounded-lg border-2 text-center transition-all ${
                 manualEntry.zodiac_sign === sign.value
-                  ? 'border-purple-500 bg-purple-50'
-                  : 'border-slate-200 hover:border-slate-300'
+                  ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
               }`}
             >
               <div className="text-2xl mb-1">{sign.symbol}</div>
-              <div className={`text-xs font-medium ${manualEntry.zodiac_sign === sign.value ? 'text-purple-700' : 'text-slate-800'}`}>
+              <div className={`text-xs font-medium ${manualEntry.zodiac_sign === sign.value ? 'text-purple-700 dark:text-purple-300' : 'text-slate-900 dark:text-slate-50'}`}>
                 {sign.label}
               </div>
-              <div className="text-xs text-slate-400">{sign.dates}</div>
+              <div className="text-xs text-slate-400 dark:text-slate-500">{sign.dates}</div>
             </button>
           ))}
         </div>
         {manualEntry.zodiac_sign && (
           <button
             onClick={() => updateField('zodiac_sign', undefined)}
-            className="mt-3 py-2 min-h-[44px] text-sm text-slate-500 hover:text-slate-700"
+            className="mt-3 py-2 min-h-[44px] text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           >
             Clear selection
           </button>
@@ -230,8 +230,8 @@ export default function InfoTab({ manualEntry, onManualEntryChange, goals, onGoa
       </div>
 
       {/* Interests */}
-      <div className="bg-white p-4 rounded-xl shadow-sm">
-        <h3 className="font-semibold text-gray-800 mb-3">Interests & Hobbies</h3>
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
+        <h3 className="font-semibold text-slate-900 dark:text-slate-50 mb-3">Interests & Hobbies</h3>
 
         <div className="flex gap-2 mb-3">
           <input
@@ -240,7 +240,7 @@ export default function InfoTab({ manualEntry, onManualEntryChange, goals, onGoa
             onChange={(e) => setNewInterest(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addInterest()}
             placeholder="Add an interest..."
-            className="flex-1 p-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
           <button
             onClick={addInterest}
@@ -257,12 +257,12 @@ export default function InfoTab({ manualEntry, onManualEntryChange, goals, onGoa
             {manualEntry.interests.map((interest) => (
               <span
                 key={interest}
-                className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm"
+                className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 rounded-full text-sm"
               >
                 {interest}
                 <button
                   onClick={() => removeInterest(interest)}
-                  className="p-1.5 -mr-1.5 hover:text-blue-600 hover:bg-blue-200 rounded-full min-w-[28px] min-h-[28px] flex items-center justify-center"
+                  className="p-1.5 -mr-1.5 hover:text-blue-600 dark:hover:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full min-w-[28px] min-h-[28px] flex items-center justify-center"
                   aria-label={`Remove ${interest}`}
                 >
                   <X size={14} />
@@ -274,12 +274,12 @@ export default function InfoTab({ manualEntry, onManualEntryChange, goals, onGoa
       </div>
 
       {/* Relationship Structure */}
-      <div className="bg-white p-4 rounded-xl shadow-sm">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
         <div className="flex items-center gap-2 mb-2">
           <Heart className="text-rose-500" size={20} />
-          <h3 className="font-semibold text-gray-800">Relationship Structure</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-slate-50">Relationship Structure</h3>
         </div>
-        <p className="text-sm text-slate-500 mb-4">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
           What type of relationship format works for you? (This is about exclusivity, not timeline)
         </p>
 
@@ -292,16 +292,16 @@ export default function InfoTab({ manualEntry, onManualEntryChange, goals, onGoa
                 onClick={() => toggleRelationshipStyle(style.value)}
                 className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
                   isSelected
-                    ? 'border-rose-500 bg-rose-50'
-                    : 'border-slate-200 hover:border-slate-300'
+                    ? 'border-rose-500 bg-rose-50 dark:bg-rose-900/30'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className={`font-medium ${isSelected ? 'text-rose-700' : 'text-slate-800'}`}>
+                    <div className={`font-medium ${isSelected ? 'text-rose-700 dark:text-rose-300' : 'text-slate-900 dark:text-slate-50'}`}>
                       {style.label}
                     </div>
-                    <div className="text-xs text-slate-500">{style.description}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">{style.description}</div>
                   </div>
                   {isSelected && (
                     <div className="w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
@@ -321,7 +321,7 @@ export default function InfoTab({ manualEntry, onManualEntryChange, goals, onGoa
               return (
                 <span
                   key={style}
-                  className="px-3 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-medium"
+                  className="px-3 py-1 bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 rounded-full text-xs font-medium"
                 >
                   {styleInfo?.label || style}
                 </span>
@@ -332,22 +332,22 @@ export default function InfoTab({ manualEntry, onManualEntryChange, goals, onGoa
       </div>
 
       {/* Relationship History */}
-      <div className="bg-white p-4 rounded-xl shadow-sm">
-        <h3 className="font-semibold text-gray-800 mb-3">Relationship History (Optional)</h3>
-        <p className="text-sm text-slate-500 mb-3">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
+        <h3 className="font-semibold text-slate-900 dark:text-slate-50 mb-3">Relationship History (Optional)</h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
           Brief notes about past relationships, patterns you've noticed, or what hasn't worked.
         </p>
         <textarea
           value={manualEntry.relationshipHistory || ''}
           onChange={(e) => updateField('relationshipHistory', e.target.value)}
           placeholder="e.g., 'Tend to date people who are emotionally unavailable', 'Last relationship ended because of communication issues'..."
-          className="w-full h-28 p-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          className="w-full h-28 p-3 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 dark:placeholder:text-slate-500"
         />
       </div>
 
       {/* Note about attachment style */}
-      <div className="bg-slate-50 p-4 rounded-xl">
-        <p className="text-sm text-slate-600">
+      <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-xl">
+        <p className="text-sm text-slate-600 dark:text-slate-300">
           <span className="font-medium">Note:</span> Your attachment style will be determined by AI analysis
           based on your video, text, and other inputs. This provides a more objective assessment than self-reporting.
         </p>

@@ -27,18 +27,18 @@ export function DebugSection({ profile, basics }: DebugSectionProps) {
   };
 
   return (
-    <div className="mt-12 bg-slate-900 rounded-lg overflow-hidden">
-      <div className="flex justify-between items-center p-3 border-b border-slate-800">
-        <span className="text-slate-400 font-mono text-sm">🔧 Database Entry</span>
+    <div className="mt-12 bg-slate-900 dark:bg-slate-950 rounded-lg overflow-hidden">
+      <div className="flex justify-between items-center p-3 border-b border-slate-800 dark:border-slate-700">
+        <span className="text-slate-400 dark:text-slate-500 font-mono text-sm">Database Entry</span>
         <button
           onClick={handleDownload}
-          className="text-xs bg-blue-600 text-white px-3 py-1 rounded flex items-center hover:bg-blue-500 font-bold"
+          className="text-xs bg-blue-600 dark:bg-blue-700 text-white px-3 py-1 rounded flex items-center hover:bg-blue-500 dark:hover:bg-blue-600 font-bold"
         >
           <Download size={14} className="mr-1" />
           Download JSON
         </button>
       </div>
-      <pre className="p-4 text-xs text-green-400 overflow-x-auto whitespace-pre-wrap font-mono h-48">
+      <pre className="p-4 text-xs text-green-400 dark:text-green-300 overflow-x-auto whitespace-pre-wrap font-mono h-48">
         {JSON.stringify(profile, null, 2)}
       </pre>
     </div>

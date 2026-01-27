@@ -99,7 +99,7 @@ export function ImageCarousel({ images, onImageChange }: ImageCarouselProps) {
           <button
             onClick={goPrev}
             disabled={currentIndex === 0}
-            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-white transition-colors hidden sm:flex"
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/60 dark:bg-white/20 dark:hover:bg-white/40 disabled:opacity-30 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-white transition-colors hidden sm:flex"
             aria-label="Previous image"
           >
             <ChevronLeft size={20} />
@@ -107,7 +107,7 @@ export function ImageCarousel({ images, onImageChange }: ImageCarouselProps) {
           <button
             onClick={goNext}
             disabled={currentIndex === images.length - 1}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-white transition-colors hidden sm:flex"
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 hover:bg-black/60 dark:bg-white/20 dark:hover:bg-white/40 disabled:opacity-30 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-white transition-colors hidden sm:flex"
             aria-label="Next image"
           >
             <ChevronRight size={20} />
@@ -135,7 +135,7 @@ export function ImageCarousel({ images, onImageChange }: ImageCarouselProps) {
 
       {/* Image Type Label */}
       {showNavigation && (
-        <div className="absolute top-4 right-4 bg-black/40 text-white text-xs px-2 py-1 rounded-full">
+        <div className="absolute top-4 right-4 bg-black/40 dark:bg-white/20 text-white text-xs px-2 py-1 rounded-full">
           {currentImage.label}
         </div>
       )}

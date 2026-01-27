@@ -15,26 +15,30 @@ export function AgendasSection({ agendas }: AgendasSectionProps) {
 
   return (
     <section>
-      <SectionHeader icon={Target} title="What They Want (Agendas)" iconColor="text-blue-600" />
+      <SectionHeader icon={Target} title="What They Want (Agendas)" iconColor="text-blue-600 dark:text-blue-400" />
       <div className="space-y-3">
         {agendas.map((agenda, i) => (
           <div
             key={i}
             className={`p-3 rounded-lg border-l-4 ${
-              agenda.priority === 'primary' ? 'bg-blue-50 border-blue-500' : 'bg-slate-50 border-slate-300'
+              agenda.priority === 'primary'
+                ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-500 dark:border-blue-400'
+                : 'bg-slate-50 dark:bg-slate-700 border-slate-300 dark:border-slate-500'
             }`}
           >
             <div className="flex items-center gap-2 mb-1">
               <span
                 className={`text-xs font-bold uppercase ${
-                  agenda.priority === 'primary' ? 'text-blue-600' : 'text-slate-500'
+                  agenda.priority === 'primary'
+                    ? 'text-blue-600 dark:text-blue-400'
+                    : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
                 {agenda.priority}
               </span>
-              <span className="text-sm font-medium text-slate-800">{agenda.type}</span>
+              <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{agenda.type}</span>
             </div>
-            <p className="text-sm text-slate-600">{agenda.evidence}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300">{agenda.evidence}</p>
           </div>
         ))}
       </div>

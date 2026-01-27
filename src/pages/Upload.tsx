@@ -124,29 +124,29 @@ export default function Upload() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-32">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-32">
       {/* Header */}
       <div className="p-4 max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-4">
-          <Link to="/" className="text-sm text-slate-500 hover:text-blue-600">
+          <Link to="/" className="text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400">
             ← Back
           </Link>
           <button
             onClick={() => downloadConsoleLogs()}
-            className="text-xs bg-slate-200 hover:bg-slate-300 text-slate-600 px-3 py-1 rounded flex items-center gap-1"
+            className="text-xs bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 px-3 py-1 rounded flex items-center gap-1"
           >
             <Download size={12} /> Debug
           </button>
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-800 mb-4">Match Explore</h1>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-50 mb-4">Match Explore</h1>
 
         {/* Warning if no user profile */}
         {userContextLoaded && !hasUserProfile && state.phase === 'idle' && (
-          <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg flex items-start text-sm">
-            <User className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0 text-amber-600" />
+          <div className="mb-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 p-3 rounded-lg flex items-start text-sm">
+            <User className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
             <div>
-              <Link to="/my-profile" className="font-bold underline hover:text-amber-900">
+              <Link to="/my-profile" className="font-bold underline hover:text-amber-900 dark:hover:text-amber-100">
                 Create your profile
               </Link>
               {' '}for personalized compatibility insights.
@@ -174,9 +174,9 @@ export default function Upload() {
 
           {/* Abort Button */}
           {canAbort && (
-            <div className="sticky top-[88px] z-10 bg-white/95 backdrop-blur-sm border-b border-slate-100 px-4 py-2">
+            <div className="sticky top-[88px] z-10 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-100 dark:border-slate-700 px-4 py-2">
               <div className="max-w-2xl mx-auto flex justify-between items-center">
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-slate-500 dark:text-slate-400">
                   {state.phase === 'extracting' && 'Extracting frames...'}
                   {state.phase.startsWith('chunk-') && `Exploring (chunk ${state.currentChunk + 1}/4)...`}
                   {state.phase === 'consolidating' && 'Finishing up...'}
@@ -199,7 +199,7 @@ export default function Upload() {
                   state={getCardState(1)}
                   index={0}
                 >
-                  <div className="text-sm text-slate-600 space-y-1">
+                  <div className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
                     {state.profile.identity.name && (
                       <p><span className="font-medium">Name:</span> {state.profile.identity.name}</p>
                     )}
@@ -243,7 +243,7 @@ export default function Upload() {
                   index={3}
                 >
                   {state.profile.prompts.found.length === 0 ? (
-                    <p className="text-sm text-slate-500 italic">No prompts detected</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">No prompts detected</p>
                   ) : (
                     <div className="space-y-3">
                       {state.profile.prompts.found.slice(0, 3).map((prompt, i) => (
@@ -252,14 +252,14 @@ export default function Upload() {
                           initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: i * 0.1 }}
-                          className="bg-slate-50 rounded-lg p-2"
+                          className="bg-slate-50 dark:bg-slate-700 rounded-lg p-2"
                         >
-                          <p className="text-xs text-slate-500 font-medium">{prompt.question}</p>
-                          <p className="text-sm text-slate-700 mt-1">"{prompt.answer}"</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{prompt.question}</p>
+                          <p className="text-sm text-slate-700 dark:text-slate-200 mt-1">"{prompt.answer}"</p>
                         </motion.div>
                       ))}
                       {state.profile.prompts.found.length > 3 && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           +{state.profile.prompts.found.length - 3} more prompts
                         </p>
                       )}
@@ -301,16 +301,16 @@ export default function Upload() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-red-50 border border-red-200 rounded-xl p-4"
+                className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl p-4"
               >
-                <h3 className="font-medium text-red-800">Analysis Error</h3>
-                <p className="text-sm text-red-600 mt-1">{state.error}</p>
+                <h3 className="font-medium text-red-800 dark:text-red-200">Analysis Error</h3>
+                <p className="text-sm text-red-600 dark:text-red-300 mt-1">{state.error}</p>
                 <button
                   onClick={() => {
                     reset();
                     setFile(null);
                   }}
-                  className="mt-3 text-sm text-red-700 font-medium hover:underline"
+                  className="mt-3 text-sm text-red-700 dark:text-red-300 font-medium hover:underline"
                 >
                   Try Again
                 </button>
@@ -341,7 +341,7 @@ export default function Upload() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center p-4"
             onClick={() => setShowAbortModal(false)}
           >
             <motion.div
@@ -349,28 +349,28 @@ export default function Upload() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl"
+              className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-xl"
             >
-              <h3 className="text-lg font-bold text-slate-800 mb-2">Stop Analysis?</h3>
-              <p className="text-sm text-slate-600 mb-4">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-50 mb-2">Stop Analysis?</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
                 You've already discovered some insights about this profile.
               </p>
               <div className="space-y-2">
                 <button
                   onClick={() => handleAbortConfirm(true)}
-                  className="w-full py-3 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 transition-colors"
+                  className="w-full py-3 bg-amber-500 dark:bg-amber-600 text-white rounded-xl font-medium hover:bg-amber-600 dark:hover:bg-amber-500 transition-colors"
                 >
                   Save Progress & View
                 </button>
                 <button
                   onClick={() => handleAbortConfirm(false)}
-                  className="w-full py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                  className="w-full py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                 >
                   Discard & Start Over
                 </button>
                 <button
                   onClick={() => setShowAbortModal(false)}
-                  className="w-full py-2 text-slate-500 text-sm hover:text-slate-700"
+                  className="w-full py-2 text-slate-500 dark:text-slate-400 text-sm hover:text-slate-700 dark:hover:text-slate-300"
                 >
                   Continue Analysis
                 </button>

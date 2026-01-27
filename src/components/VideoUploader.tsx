@@ -14,12 +14,12 @@ export default function VideoUploader({ onFileSelect }: VideoUploaderProps) {
   const handleFile = useCallback((file: File) => {
     if (file && file.type.startsWith('video/')) {
       setSelectedFileName(file.name);
-      
+
       // ONLY call this if it exists
       if (onFileSelect) {
         onFileSelect(file);
       }
-      
+
     } else {
       alert("Please upload a video file");
     }
@@ -59,11 +59,15 @@ export default function VideoUploader({ onFileSelect }: VideoUploaderProps) {
 
   return (
     <div className="w-full">
-      <div 
+      <div
         className={clsx(
           "relative border-2 border-dashed rounded-xl p-8 transition-all duration-200 ease-in-out text-center",
-          dragActive ? "border-blue-500 bg-blue-50 scale-[1.02]" : "border-slate-300 hover:border-blue-400 hover:bg-slate-50",
-          selectedFileName ? "bg-green-50 border-green-500 border-solid" : ""
+          dragActive
+            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-[1.02]"
+            : "border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-700/50",
+          selectedFileName
+            ? "bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-400 border-solid"
+            : ""
         )}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -81,18 +85,18 @@ export default function VideoUploader({ onFileSelect }: VideoUploaderProps) {
         <div className="flex flex-col items-center justify-center space-y-4">
           {selectedFileName ? (
             <>
-              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2">
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mb-2">
                 <FileVideo size={32} />
               </div>
               <div className="z-20">
-                <p className="text-lg font-medium text-slate-800 break-all">{selectedFileName}</p>
-                <p className="text-sm text-slate-500 mt-1">Ready to analyze</p>
-                <button 
+                <p className="text-lg font-medium text-slate-800 dark:text-slate-100 break-all">{selectedFileName}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Ready to analyze</p>
+                <button
                   onClick={(e) => {
                     e.preventDefault(); // Prevent input click bubbling
                     clearSelection();
                   }}
-                  className="mt-4 inline-flex items-center text-sm text-red-600 hover:text-red-700 font-medium px-3 py-1 rounded-md hover:bg-red-50 transition-colors z-20 relative pointer-events-auto"
+                  className="mt-4 inline-flex items-center text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium px-3 py-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors z-20 relative pointer-events-auto"
                 >
                   <X size={16} className="mr-1" /> Remove Video
                 </button>
@@ -100,14 +104,14 @@ export default function VideoUploader({ onFileSelect }: VideoUploaderProps) {
             </>
           ) : (
             <>
-              <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-2">
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-2">
                 <Upload size={32} />
               </div>
               <div>
-                <p className="text-lg font-medium text-slate-800">
+                <p className="text-lg font-medium text-slate-800 dark:text-slate-100">
                   Tap to upload screen recording
                 </p>
-                <p className="text-sm text-slate-500 mt-2">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                   Supports iPhone Recordings (.MOV, .MP4)
                 </p>
               </div>

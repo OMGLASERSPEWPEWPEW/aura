@@ -47,17 +47,17 @@ export default function Home() {
   // Helper to get color based on app name
   const getAppBadge = (appName?: string) => {
     const app = (appName || "").toLowerCase();
-    if (app.includes('tinder')) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-600 border border-pink-200">Tinder</span>;
-    if (app.includes('bumble')) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200">Bumble</span>;
-    if (app.includes('hinge')) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">Hinge</span>;
-    return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">Profile</span>;
+    if (app.includes('tinder')) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 border border-pink-200 dark:border-pink-800">Tinder</span>;
+    if (app.includes('bumble')) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800">Bumble</span>;
+    if (app.includes('hinge')) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800">Hinge</span>;
+    return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600">Profile</span>;
   };
 
   // Helper to get analysis phase badge
   const getAnalysisPhaseBadge = (analysisPhase?: string) => {
     if (analysisPhase === 'quick') {
       return (
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 flex items-center gap-1">
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
           <Zap size={10} /> Quick
         </span>
       );
@@ -70,10 +70,10 @@ export default function Home() {
     if (!virtueScores || virtueScores.length === 0) return null;
     const avg = Math.round(virtueScores.reduce((sum, v) => sum + v.score, 0) / virtueScores.length);
     const colorClass = avg >= 7
-      ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
       : avg >= 5
-        ? 'bg-amber-100 text-amber-700 border-amber-200'
-        : 'bg-slate-100 text-slate-600 border-slate-200';
+        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600';
     return (
       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${colorClass}`}>
         <Star size={10} /> {avg}/10
@@ -82,7 +82,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 pb-24">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 pb-24">
       {/* Header */}
       <div className="max-w-md mx-auto mb-8">
         {/* Top row: Logo and buttons */}
@@ -92,7 +92,7 @@ export default function Home() {
             {/* My Profile Button */}
             <Link
               to="/my-profile"
-              className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
             >
               <Brain size={20} />
               <span className="text-sm font-medium hidden sm:inline">My Profile</span>
@@ -103,7 +103,7 @@ export default function Home() {
         </div>
 
         {/* Tagline - moved down with more spacing */}
-        <p className="text-slate-500 text-sm mt-4">Decode Emotions. Navigate Life.</p>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mt-4">Decode Emotions. Navigate Life.</p>
 
         {/* Sync Status - below account button area */}
         <div className="mt-3">
@@ -115,11 +115,11 @@ export default function Home() {
         {/* Empty State */}
         {profileList.length === 0 && (
           <div className="text-center py-12">
-            <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
+            <div className="bg-white dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100 dark:border-slate-700">
                 <Plus className="text-slate-400" size={32} />
             </div>
-            <h3 className="text-slate-900 font-medium mb-2">No matches yet</h3>
-            <p className="text-slate-500 text-sm mb-6">Upload your first screen recording to start.</p>
+            <h3 className="text-slate-900 dark:text-slate-50 font-medium mb-2">No matches yet</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Upload your first screen recording to start.</p>
           </div>
         )}
 
@@ -129,14 +129,14 @@ export default function Home() {
             <Link
               key={profile.id}
               to={`/profile/${profile.id}`}
-              className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-start space-x-4 hover:shadow-md transition-all active:scale-[0.98]"
+              className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-start space-x-4 hover:shadow-md transition-all active:scale-[0.98]"
             >
               {/* Thumbnail */}
-              <div className="w-20 h-24 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 relative">
+              <div className="w-20 h-24 bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden flex-shrink-0 relative">
                 {profile.thumbnail ? (
                   <img src={profile.thumbnail as string} alt={profile.name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-300">
+                  <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-500">
                     <User />
                   </div>
                 )}
@@ -147,7 +147,7 @@ export default function Home() {
                 <div className="flex justify-between items-start">
                     <div className="flex flex-col">
                         <div className="flex items-center space-x-2 mb-1 flex-wrap gap-1">
-                             <h3 className="font-bold text-slate-900 truncate text-lg leading-tight">{profile.name}</h3>
+                             <h3 className="font-bold text-slate-900 dark:text-slate-50 truncate text-lg leading-tight">{profile.name}</h3>
                              {getAppBadge(profile.appName)}
                              {getAnalysisPhaseBadge(profile.analysisPhase)}
                              {getVirtueScoreBadge(profile.virtue_scores)}
@@ -158,7 +158,7 @@ export default function Home() {
                     {/* Delete Button */}
                     <button
                         onClick={(e) => handleDelete(e, profile.id)}
-                        className="p-2 text-slate-300 hover:text-red-500 transition-colors -mt-2 -mr-2"
+                        className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors -mt-2 -mr-2"
                     >
                         <Trash2 size={18} />
                     </button>
@@ -170,15 +170,15 @@ export default function Home() {
                     <>
                       {/* Virtue Sentence (if available) */}
                       {profile.virtueSentence && (
-                        <p className="text-sm text-slate-600 italic mb-1 line-clamp-1">
+                        <p className="text-sm text-slate-600 dark:text-slate-300 italic mb-1 line-clamp-1">
                           {profile.virtueSentence}
                         </p>
                       )}
-                      <p className="text-sm text-slate-500 mb-2 truncate">
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 truncate">
                         {profile.age ? `${profile.age} • ` : ''}
                         {basics.location || 'Unknown Location'}
                       </p>
-                      <p className="text-xs text-slate-600 line-clamp-2 bg-slate-50 p-2 rounded border border-slate-100">
+                      <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 bg-slate-50 dark:bg-slate-700 p-2 rounded border border-slate-100 dark:border-slate-600">
                         "{overall.summary}"
                       </p>
                     </>
@@ -193,7 +193,7 @@ export default function Home() {
       {/* FAB */}
       <Link
         to="/upload"
-        className="fixed bottom-8 right-8 w-14 h-14 bg-slate-900 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-slate-800 transition-colors z-50"
+        className="fixed bottom-8 right-8 w-14 h-14 bg-slate-900 dark:bg-slate-50 text-white dark:text-slate-900 rounded-full shadow-xl flex items-center justify-center hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors z-50"
       >
         <Plus size={28} />
       </Link>

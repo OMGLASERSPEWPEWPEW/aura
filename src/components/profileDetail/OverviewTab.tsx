@@ -99,11 +99,11 @@ export function OverviewTab({
     <div className="space-y-8">
       {/* Warning if no user profile */}
       {!hasUserProfile && !hasCompatibility && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-lg flex items-start">
-          <User className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-amber-600" />
+        <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 p-4 rounded-lg flex items-start">
+          <User className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
           <div>
             <p className="text-sm">
-              <Link to="/my-profile" className="font-bold underline hover:text-amber-900">
+              <Link to="/my-profile" className="font-bold underline hover:text-amber-900 dark:hover:text-amber-100">
                 Create your profile
               </Link>{' '}
               for personalized compatibility insights.
@@ -114,13 +114,13 @@ export function OverviewTab({
 
       {/* Feedback when user needs to run synthesis */}
       {hasUserProfile && !virtues11 && !isLoadingVirtues11 && !userVirtueProfile && (
-        <div className="bg-indigo-50 border border-indigo-200 text-indigo-800 p-4 rounded-lg flex items-start">
-          <User className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-indigo-600" />
+        <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 text-indigo-800 dark:text-indigo-200 p-4 rounded-lg flex items-start">
+          <User className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-indigo-600 dark:text-indigo-400" />
           <div>
             <p className="text-sm font-medium mb-1">Compatibility scores not available</p>
-            <p className="text-xs text-indigo-600">
+            <p className="text-xs text-indigo-600 dark:text-indigo-400">
               Run synthesis on your profile to enable 11 Virtues matching.{' '}
-              <Link to="/my-profile" className="font-bold underline hover:text-indigo-900">
+              <Link to="/my-profile" className="font-bold underline hover:text-indigo-900 dark:hover:text-indigo-100">
                 Set up now
               </Link>
             </p>
@@ -133,12 +133,12 @@ export function OverviewTab({
 
       {/* Match Summary - brief read on the match */}
       {overallSummary && (
-        <section className="bg-slate-50 p-5 rounded-xl border border-slate-200">
-          <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
-            <FileText size={18} className="text-slate-600" />
+        <section className="bg-slate-50 dark:bg-slate-700 p-5 rounded-xl border border-slate-200 dark:border-slate-600">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-3 flex items-center gap-2">
+            <FileText size={18} className="text-slate-600 dark:text-slate-400" />
             The Read on {matchName}
           </h2>
-          <p className="text-sm text-slate-700 leading-relaxed">
+          <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
             {overallSummary}
           </p>
         </section>
@@ -146,26 +146,26 @@ export function OverviewTab({
 
       {/* 11 Virtues Compatibility Card - show loading or results */}
       {isLoadingVirtues11 && (
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-200">
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 p-6 rounded-xl border border-indigo-200 dark:border-indigo-700">
           <div className="flex flex-col items-center justify-center py-8">
             <div className="relative mb-4">
-              <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center">
-                <Sparkles className="w-8 h-8 text-indigo-600 animate-pulse" />
+              <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-800 flex items-center justify-center">
+                <Sparkles className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-pulse" />
               </div>
               <div className="absolute -bottom-1 -right-1">
-                <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
+                <Loader2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400 animate-spin" />
               </div>
             </div>
-            <h3 className="font-bold text-indigo-900 text-lg mb-1">Diving into Virtues...</h3>
-            <p className="text-sm text-indigo-600 text-center max-w-xs">
+            <h3 className="font-bold text-indigo-900 dark:text-indigo-100 text-lg mb-1">Diving into Virtues...</h3>
+            <p className="text-sm text-indigo-600 dark:text-indigo-400 text-center max-w-xs">
               Analyzing compatibility across all 11 virtues
             </p>
           </div>
           <div className="space-y-3 mt-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="animate-pulse">
-                <div className="h-4 bg-indigo-200/50 rounded w-1/3 mb-2" />
-                <div className="h-2.5 bg-indigo-200/50 rounded-full" />
+                <div className="h-4 bg-indigo-200/50 dark:bg-indigo-700/50 rounded w-1/3 mb-2" />
+                <div className="h-2.5 bg-indigo-200/50 dark:bg-indigo-700/50 rounded-full" />
               </div>
             ))}
           </div>

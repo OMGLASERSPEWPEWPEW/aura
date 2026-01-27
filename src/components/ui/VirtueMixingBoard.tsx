@@ -74,9 +74,9 @@ export function VirtueMixingBoard({
 
   // Get realm score color
   const getRealmScoreColor = (score: number): string => {
-    if (score >= 75) return 'text-emerald-600';
-    if (score >= 50) return 'text-amber-600';
-    return 'text-red-600';
+    if (score >= 75) return 'text-emerald-600 dark:text-emerald-400';
+    if (score >= 50) return 'text-amber-600 dark:text-amber-400';
+    return 'text-red-600 dark:text-red-400';
   };
 
   return (
@@ -85,37 +85,37 @@ export function VirtueMixingBoard({
       <div className="flex justify-end">
         <button
           onClick={() => setShowHelp(!showHelp)}
-          className="p-1.5 rounded-full hover:bg-slate-100 transition-colors"
+          className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           aria-label="What are the 11 Virtues?"
         >
-          <HelpCircle size={18} className="text-slate-500" />
+          <HelpCircle size={18} className="text-slate-500 dark:text-slate-400" />
         </button>
       </div>
 
       {showHelp && (
-        <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200 relative mb-4">
+        <div className="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-lg border border-indigo-200 dark:border-indigo-800 relative mb-4">
           <button
             onClick={() => setShowHelp(false)}
-            className="absolute top-2 right-2 p-1 hover:bg-indigo-100 rounded-full"
+            className="absolute top-2 right-2 p-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-full"
           >
-            <X size={14} className="text-indigo-600" />
+            <X size={14} className="text-indigo-600 dark:text-indigo-400" />
           </button>
-          <h4 className="font-bold text-indigo-900 text-sm mb-2">The 11 Virtues of Love</h4>
-          <p className="text-sm text-indigo-800 mb-2">
+          <h4 className="font-bold text-indigo-900 dark:text-indigo-100 text-sm mb-2">The 11 Virtues of Love</h4>
+          <p className="text-sm text-indigo-800 dark:text-indigo-200 mb-2">
             A framework for understanding romantic compatibility across three realms:
           </p>
-          <ul className="text-sm text-indigo-800 space-y-1 ml-4 list-disc mb-3">
-            <li><strong className="text-rose-600">Biological</strong> - Chemistry and physical compatibility</li>
-            <li><strong className="text-amber-600">Emotional</strong> - How you connect and handle conflict</li>
-            <li><strong className="text-indigo-600">Cerebral</strong> - Long-term intellectual compatibility</li>
+          <ul className="text-sm text-indigo-800 dark:text-indigo-200 space-y-1 ml-4 list-disc mb-3">
+            <li><strong className="text-rose-600 dark:text-rose-400">Biological</strong> - Chemistry and physical compatibility</li>
+            <li><strong className="text-amber-600 dark:text-amber-400">Emotional</strong> - How you connect and handle conflict</li>
+            <li><strong className="text-indigo-600 dark:text-indigo-400">Cerebral</strong> - Long-term intellectual compatibility</li>
           </ul>
           {showMatch && (
             <>
-              <p className="text-sm text-indigo-800 mb-2">Compatibility verdicts:</p>
-              <ul className="text-sm text-indigo-800 space-y-1 ml-4 list-disc">
-                <li><span className="text-emerald-600 font-bold">Sympatico</span> - Well aligned</li>
-                <li><span className="text-amber-600 font-bold">Friction</span> - Some tension, needs discussion</li>
-                <li><span className="text-red-600 font-bold">Danger Zone</span> - Significant mismatch</li>
+              <p className="text-sm text-indigo-800 dark:text-indigo-200 mb-2">Compatibility verdicts:</p>
+              <ul className="text-sm text-indigo-800 dark:text-indigo-200 space-y-1 ml-4 list-disc">
+                <li><span className="text-emerald-600 dark:text-emerald-400 font-bold">Sympatico</span> - Well aligned</li>
+                <li><span className="text-amber-600 dark:text-amber-400 font-bold">Friction</span> - Some tension, needs discussion</li>
+                <li><span className="text-red-600 dark:text-red-400 font-bold">Danger Zone</span> - Significant mismatch</li>
               </ul>
             </>
           )}
@@ -132,18 +132,18 @@ export function VirtueMixingBoard({
         return (
           <div
             key={realm.id}
-            className={`${realm.bgClass} rounded-xl border ${realm.borderClass} overflow-hidden`}
+            className={`${realm.bgClass} dark:bg-opacity-20 rounded-xl border ${realm.borderClass} dark:border-opacity-50 overflow-hidden`}
           >
             {/* Realm header */}
             <button
               onClick={() => setExpandedRealm(isExpanded ? null : realm.id)}
-              className="w-full p-3 flex items-center justify-between hover:bg-white/30 transition-colors"
+              className="w-full p-3 flex items-center justify-between hover:bg-white/30 dark:hover:bg-white/10 transition-colors"
             >
               <div className="flex items-center gap-2">
                 <RealmIcon size={18} className={realm.colorClass} />
                 <div className="text-left">
                   <h4 className={`font-bold text-sm ${realm.colorClass}`}>{realm.name}</h4>
-                  <p className="text-xs text-slate-600">{realm.subtitle}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">{realm.subtitle}</p>
                 </div>
               </div>
 
@@ -164,7 +164,7 @@ export function VirtueMixingBoard({
 
             {/* Virtue faders */}
             {isExpanded && (
-              <div className="px-4 pb-4 space-y-1 border-t border-white/50">
+              <div className="px-4 pb-4 space-y-1 border-t border-white/50 dark:border-white/10">
                 {realmVirtues.map((virtue) => {
                   const userScore = getUserScore(virtue.id);
                   const compat = getCompatibility(virtue.id);

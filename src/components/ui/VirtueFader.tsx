@@ -50,11 +50,11 @@ export function VirtueFader({
       {/* Header row: virtue name + verdict */}
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-1.5">
-          <span className={`font-medium ${compact ? 'text-xs' : 'text-sm'} text-slate-800`}>
+          <span className={`font-medium ${compact ? 'text-xs' : 'text-sm'} text-slate-800 dark:text-slate-100`}>
             {virtue.name}
           </span>
           {virtue.critical && (
-            <span className="text-[10px] bg-red-100 text-red-700 px-1 py-0.5 rounded font-bold uppercase">
+            <span className="text-[10px] bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-1 py-0.5 rounded font-bold uppercase">
               Critical
             </span>
           )}
@@ -72,7 +72,7 @@ export function VirtueFader({
       {/* The fader track */}
       <div className="relative">
         {/* Background track */}
-        <div className={`w-full ${compact ? 'h-2' : 'h-3'} bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-full relative`}>
+        <div className={`w-full ${compact ? 'h-2' : 'h-3'} bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 dark:from-slate-600 dark:via-slate-700 dark:to-slate-600 rounded-full relative`}>
           {/* Connection line between scores (only when showing match) */}
           {showMatch && matchScore !== undefined && (
             <div
@@ -83,7 +83,7 @@ export function VirtueFader({
                   ? 'bg-amber-400'
                   : verdict === 'danger'
                   ? 'bg-red-400'
-                  : 'bg-slate-300'
+                  : 'bg-slate-300 dark:bg-slate-500'
               }`}
               style={{
                 left: `${Math.min(userScore, matchScore)}%`,
@@ -94,7 +94,7 @@ export function VirtueFader({
 
           {/* User score indicator */}
           <div
-            className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 ${compact ? 'w-3 h-3' : 'w-4 h-4'} rounded-full bg-indigo-600 border-2 border-white shadow-sm z-10`}
+            className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 ${compact ? 'w-3 h-3' : 'w-4 h-4'} rounded-full bg-indigo-600 border-2 border-white dark:border-slate-800 shadow-sm z-10`}
             style={{ left: `${userScore}%` }}
             title={`You: ${userScore}`}
           />
@@ -110,7 +110,7 @@ export function VirtueFader({
                   : verdict === 'danger'
                   ? 'bg-red-500'
                   : 'bg-slate-500'
-              } border-2 border-white shadow-sm z-10`}
+              } border-2 border-white dark:border-slate-800 shadow-sm z-10`}
               style={{ left: `${matchScore}%` }}
               title={`Match: ${matchScore}`}
             />
@@ -119,10 +119,10 @@ export function VirtueFader({
 
         {/* Spectrum labels */}
         <div className={`flex justify-between ${compact ? 'mt-0.5' : 'mt-1'}`}>
-          <span className={`${compact ? 'text-[9px]' : 'text-[10px]'} text-slate-500`}>
+          <span className={`${compact ? 'text-[9px]' : 'text-[10px]'} text-slate-500 dark:text-slate-400`}>
             {virtue.lowLabel}
           </span>
-          <span className={`${compact ? 'text-[9px]' : 'text-[10px]'} text-slate-500`}>
+          <span className={`${compact ? 'text-[9px]' : 'text-[10px]'} text-slate-500 dark:text-slate-400`}>
             {virtue.highLabel}
           </span>
         </div>
@@ -132,27 +132,27 @@ export function VirtueFader({
       {showMatch && matchScore !== undefined && (
         <div className={`flex items-center justify-between ${compact ? 'mt-1' : 'mt-1.5'}`}>
           <div className={`flex items-center gap-2 ${compact ? 'text-[10px]' : 'text-xs'}`}>
-            <span className="text-indigo-600 font-medium">You: {userScore}</span>
-            <span className="text-slate-400">|</span>
-            <span className={`font-medium ${verdictColors?.text || 'text-slate-600'}`}>
+            <span className="text-indigo-600 dark:text-indigo-400 font-medium">You: {userScore}</span>
+            <span className="text-slate-400 dark:text-slate-500">|</span>
+            <span className={`font-medium ${verdictColors?.text || 'text-slate-600 dark:text-slate-300'}`}>
               Match: {matchScore}
             </span>
-            <span className="text-slate-400">|</span>
-            <span className="text-slate-500">Gap: {delta}</span>
+            <span className="text-slate-400 dark:text-slate-500">|</span>
+            <span className="text-slate-500 dark:text-slate-400">Gap: {delta}</span>
           </div>
         </div>
       )}
 
       {/* Just user score when not showing match */}
       {!showMatch && (
-        <div className={`${compact ? 'mt-1' : 'mt-1.5'} ${compact ? 'text-[10px]' : 'text-xs'} text-indigo-600 font-medium`}>
+        <div className={`${compact ? 'mt-1' : 'mt-1.5'} ${compact ? 'text-[10px]' : 'text-xs'} text-indigo-600 dark:text-indigo-400 font-medium`}>
           Score: {userScore}
         </div>
       )}
 
       {/* Compatibility note (only for match view) */}
       {showMatch && note && (
-        <p className={`${compact ? 'text-[10px]' : 'text-xs'} text-slate-500 ${compact ? 'mt-0.5' : 'mt-1'} italic`}>
+        <p className={`${compact ? 'text-[10px]' : 'text-xs'} text-slate-500 dark:text-slate-400 ${compact ? 'mt-0.5' : 'mt-1'} italic`}>
           {note}
         </p>
       )}

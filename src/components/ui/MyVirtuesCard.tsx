@@ -51,20 +51,20 @@ export function MyVirtuesCard({
   };
 
   return (
-    <section className="bg-white rounded-xl border border-indigo-200 overflow-hidden">
+    <section className="bg-white dark:bg-slate-800 rounded-xl border border-indigo-200 dark:border-indigo-800 overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b border-indigo-100">
+      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 p-4 border-b border-indigo-100 dark:border-indigo-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles size={20} className="text-indigo-600" />
-            <h3 className="font-bold text-slate-900">Your 11 Virtues Profile</h3>
+            <Sparkles size={20} className="text-indigo-600 dark:text-indigo-400" />
+            <h3 className="font-bold text-slate-900 dark:text-slate-50">Your 11 Virtues Profile</h3>
           </div>
 
           {onRegenerate && (
             <button
               onClick={onRegenerate}
               disabled={isRegenerating}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <RefreshCw size={14} className={isRegenerating ? 'animate-spin' : ''} />
               {isRegenerating ? 'Regenerating...' : 'Regenerate'}
@@ -72,7 +72,7 @@ export function MyVirtuesCard({
           )}
         </div>
 
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
           Last updated: {formatDate(lastUpdated)}
         </p>
       </div>
@@ -80,31 +80,31 @@ export function MyVirtuesCard({
       <div className="p-4 space-y-4">
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-            <AlertCircle size={16} className="text-red-600 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-red-700">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-start gap-2">
+            <AlertCircle size={16} className="text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
           </div>
         )}
 
         {/* Realm Summaries */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
-            <h4 className="font-bold text-xs uppercase text-rose-600 mb-1">
+          <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg p-3">
+            <h4 className="font-bold text-xs uppercase text-rose-600 dark:text-rose-400 mb-1">
               Biological
             </h4>
-            <p className="text-xs text-slate-700">{getRealmSummary('biological')}</p>
+            <p className="text-xs text-slate-700 dark:text-slate-300">{getRealmSummary('biological')}</p>
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <h4 className="font-bold text-xs uppercase text-amber-600 mb-1">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+            <h4 className="font-bold text-xs uppercase text-amber-600 dark:text-amber-400 mb-1">
               Emotional
             </h4>
-            <p className="text-xs text-slate-700">{getRealmSummary('emotional')}</p>
+            <p className="text-xs text-slate-700 dark:text-slate-300">{getRealmSummary('emotional')}</p>
           </div>
-          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
-            <h4 className="font-bold text-xs uppercase text-indigo-600 mb-1">
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3">
+            <h4 className="font-bold text-xs uppercase text-indigo-600 dark:text-indigo-400 mb-1">
               Cerebral
             </h4>
-            <p className="text-xs text-slate-700">{getRealmSummary('cerebral')}</p>
+            <p className="text-xs text-slate-700 dark:text-slate-300">{getRealmSummary('cerebral')}</p>
           </div>
         </div>
 
@@ -117,7 +117,7 @@ export function MyVirtuesCard({
         />
 
         {/* Info Footer */}
-        <p className="text-xs text-slate-500 text-center pt-2 border-t border-slate-100">
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center pt-2 border-t border-slate-100 dark:border-slate-700">
           Your virtue scores are extracted from your backstory and self-analysis.
           Update those to refine your profile.
         </p>

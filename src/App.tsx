@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { SyncProvider } from './contexts/SyncContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ErrorBoundary, RouteErrorBoundary } from './components/errors';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Home from './pages/Home';
@@ -20,9 +21,10 @@ function App() {
     <ErrorBoundary level="page" componentName="App">
       <BrowserRouter>
         <AuthProvider>
-          <ToastProvider>
-            <SyncProvider>
-              <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+          <ThemeProvider>
+            <ToastProvider>
+              <SyncProvider>
+                <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-50 font-sans">
                 <Routes>
                   {/* Public auth routes - no login required */}
                   <Route path="/login" element={<RouteErrorBoundary routeName="Login"><Login /></RouteErrorBoundary>} />
@@ -38,9 +40,10 @@ function App() {
                   <Route path="/upload" element={<ProtectedRoute><RouteErrorBoundary routeName="Upload"><Upload /></RouteErrorBoundary></ProtectedRoute>} />
                   <Route path="/mirror" element={<ProtectedRoute><RouteErrorBoundary routeName="Mirror"><MyProfile /></RouteErrorBoundary></ProtectedRoute>} />
                 </Routes>
-              </div>
-            </SyncProvider>
-          </ToastProvider>
+                </div>
+              </SyncProvider>
+            </ToastProvider>
+          </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

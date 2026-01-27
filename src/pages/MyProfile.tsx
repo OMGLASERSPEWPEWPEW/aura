@@ -543,25 +543,25 @@ export default function MyProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-24">
       {/* Header */}
-      <div className="bg-white shadow-sm p-4 sticky top-0 z-20">
+      <div className="bg-white dark:bg-slate-800 shadow-sm dark:shadow-slate-900/50 p-4 sticky top-0 z-20">
         <div className="flex items-center justify-between max-w-2xl mx-auto">
           <div className="flex items-center gap-3">
             <Link
               to="/"
-              className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center hover:bg-slate-200 transition-colors"
+              className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
             >
-              <ArrowLeft size={20} className="text-slate-600" />
+              <ArrowLeft size={20} className="text-slate-600 dark:text-slate-300" />
             </Link>
             <Logo size="lg" showText={false} />
-            <p className="text-xs text-slate-500">Build your dating intelligence</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Build your dating intelligence</p>
           </div>
         </div>
       </div>
 
       {/* Tab Navigation - 4 tabs */}
-      <div className="bg-white border-b border-slate-200 sticky top-[72px] z-10">
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-[72px] z-10">
         <div className="flex max-w-2xl mx-auto">
           {TABS.map((tab) => {
             const Icon = tab.icon;
@@ -574,14 +574,14 @@ export default function MyProfile() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 py-3 px-3 flex flex-col items-center gap-1 border-b-2 transition-all ${
                   isActive
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                    ? 'border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
                 <div className="relative">
                   <Icon size={20} />
                   {hasContent && (
-                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
+                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-slate-800" />
                   )}
                 </div>
                 <span className="text-xs font-medium">{tab.label}</span>

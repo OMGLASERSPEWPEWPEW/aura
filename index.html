@@ -28,6 +28,29 @@
     <meta name="twitter:image" content="/og-image.png" />
 
     <title>Aura - Decode Emotions. Navigate Life.</title>
+
+    <!-- Dark mode flash prevention - must run before body renders -->
+    <script>
+      (function() {
+        var theme = 'system';
+        try {
+          var stored = localStorage.getItem('aura-theme');
+          if (stored) {
+            var parsed = JSON.parse(stored);
+            if (parsed === 'system' || parsed === 'light' || parsed === 'dark') {
+              theme = parsed;
+            }
+          }
+        } catch (e) { /* Invalid JSON, use default */ }
+        var isDark = theme === 'dark' ||
+          (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', '#0f172a');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
