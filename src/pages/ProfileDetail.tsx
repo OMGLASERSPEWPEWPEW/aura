@@ -64,7 +64,7 @@ export default function ProfileDetail() {
     if (
       profile?.id &&
       compatibilityScores.virtues11 &&
-      !profile.virtueSentence &&
+      (!profile.virtueSentence || !profile.essenceImage) &&
       !isGeneratingEssence &&
       !essenceGenerated
     ) {

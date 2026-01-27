@@ -115,6 +115,17 @@ export async function generateAndSaveMoodboard(
 ): Promise<MoodboardGenerationResult> {
   console.log('[Moodboard] Generating and saving mood board for profile', profileId);
 
+  // Check if moodboard already exists to prevent redundant generation
+  const existingProfile = await db.profiles.get(profileId);
+  if (existingProfile?.moodboardImage) {
+    console.log('[Moodboard] Image already exists, skipping generation');
+    return {
+      success: true,
+      moodboardImage: existingProfile.moodboardImage,
+      moodboardPrompt: existingProfile.moodboardPrompt,
+    };
+  }
+
   let lastError: string | undefined;
 
   for (let attempt = 0; attempt <= retries; attempt++) {

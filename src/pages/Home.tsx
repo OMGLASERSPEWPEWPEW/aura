@@ -102,8 +102,11 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Tagline - moved down with more spacing */}
-        <p className="text-slate-500 dark:text-slate-400 text-sm mt-4">Decode Emotions. Navigate Life.</p>
+        {/* Taglines - moved down with more spacing */}
+        <div className="flex flex-col mt-4">
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Decode Emotions. Navigate Life.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">They made love a game. Let's even the odds.</p>
+        </div>
 
         {/* Sync Status - below account button area */}
         <div className="mt-3">

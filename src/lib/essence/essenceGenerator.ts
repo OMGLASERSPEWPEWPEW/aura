@@ -142,6 +142,17 @@ export async function generateAndSaveEssenceImage(
     };
   }
 
+  // Check if essence image already exists to prevent redundant generation
+  if (profile.essenceImage) {
+    console.log('[Essence] Image already exists, skipping generation');
+    return {
+      success: true,
+      virtueSentence: profile.virtueSentence,
+      essenceImage: profile.essenceImage,
+      essencePrompt: profile.essencePrompt,
+    };
+  }
+
   // Generate with retry logic
   let lastError: string | undefined;
 
