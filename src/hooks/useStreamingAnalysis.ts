@@ -10,8 +10,10 @@ import {
   createInitialAccumulatedProfile,
   type AccumulatedProfile,
 } from '../lib/ai';
-import { db, type Profile } from '../lib/db';
+import { db, type Profile, type ProfileAnalysis } from '../lib/db';
 import type { StreamingPhase, FrameQualityScore } from '../lib/streaming/types';
+import { scoreMatchVirtues11 } from '../lib/ai';
+import { generateFullEssence } from '../lib/essence';
 import {
   scoreAllFrames,
   generateQualityHints,
@@ -211,6 +213,46 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
 
     return profileId;
   }, [syncProfileToServer]);
+
+  // Start essence generation in background (virtues + DALL-E image)
+  const startEssenceGeneration = useCallback(async (profileId: number) => {
+    console.log('useStreamingAnalysis: Starting essence generation for profile', profileId);
+
+    // Get user's virtue profile
+    const userIdentity = await db.userIdentity.get(1);
+    const userVirtueProfile = userIdentity?.synthesis?.virtue_profile;
+
+    if (!userVirtueProfile || !userVirtueProfile.scores || userVirtueProfile.scores.length === 0) {
+      console.log('useStreamingAnalysis: No user virtue profile, skipping essence generation');
+      return;
+    }
+
+    // Get the profile with analysis
+    const profile = await db.profiles.get(profileId);
+    if (!profile || !profile.analysis) {
+      console.log('useStreamingAnalysis: Profile or analysis not found');
+      return;
+    }
+
+    // Compute virtues_11 for this match
+    console.log('useStreamingAnalysis: Computing virtues_11...');
+    const matchAnalysis = profile.analysis as ProfileAnalysis;
+    const virtues11 = await scoreMatchVirtues11(matchAnalysis, userVirtueProfile);
+
+    // Save virtues_11 to profile
+    await db.profiles.update(profileId, { virtues_11: virtues11 });
+    console.log('useStreamingAnalysis: Saved virtues_11 for profile', profileId);
+
+    // Now generate essence (virtue sentence + DALL-E image)
+    console.log('useStreamingAnalysis: Starting DALL-E essence generation...');
+    const result = await generateFullEssence(profileId);
+
+    if (result.success) {
+      console.log('useStreamingAnalysis: Essence generated successfully!');
+    } else {
+      console.log('useStreamingAnalysis: Essence generation failed:', result.error);
+    }
+  }, []);
 
   // Start streaming analysis
   const startAnalysis = useCallback(async (file: File) => {
@@ -466,8 +508,11 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
         savedProfileId: profileId,
       });
 
-      // Note: Essence generation is triggered from ProfileDetail page
-      // after virtues_11 are computed by useCompatibilityScores
+      // Start essence generation in background (non-blocking)
+      // This computes virtues_11 and generates the DALL-E image
+      startEssenceGeneration(profileId).catch(err => {
+        console.log('useStreamingAnalysis: Essence generation deferred:', err);
+      });
 
     } catch (error) {
       if (error instanceof Error && error.message === 'The user aborted a request.') {
