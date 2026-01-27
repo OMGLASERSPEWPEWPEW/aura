@@ -273,6 +273,10 @@ interface Profile {
   essenceImage?: Blob;          // AI-generated abstract visualization
   essencePrompt?: string;       // Prompt used for generation (debugging/regeneration)
 
+  // Mood Board: AI-generated lifestyle visualization
+  moodboardImage?: Blob;        // AI-generated lifestyle scene via DALL-E 3
+  moodboardPrompt?: string;     // Prompt used for generation (debugging/regeneration)
+
   // Sync fields - links to Supabase
   serverId?: string; // UUID from Supabase match_profiles table
   thumbnailPath?: string; // Storage path (replaces base64 thumbnail after sync)
@@ -669,6 +673,18 @@ db.version(15).stores({
     }
   });
 });
+
+// Version 16: Add Mood Board fields for lifestyle-focused AI-generated images
+// moodboardImage: AI-generated lifestyle scene via DALL-E 3
+// moodboardPrompt: The prompt used for generation (for debugging/regeneration)
+db.version(16).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase, serverId',
+  userIdentity: '++id, lastUpdated, supabaseUserId, serverId',
+  coachingSessions: '++id, profileId, timestamp, serverId',
+  matchChats: '++id, profileId, timestamp, serverId',
+  inferenceHistory: '++id, timestamp, feature, userId, success'
+});
+// No upgrade needed - new fields start as undefined
 
 export { db };
 // Re-export aspect types for convenience (legacy)

@@ -14,6 +14,7 @@ import { db, type Profile, type ProfileAnalysis } from '../lib/db';
 import type { StreamingPhase, FrameQualityScore } from '../lib/streaming/types';
 import { scoreMatchVirtues11 } from '../lib/ai';
 import { generateFullEssence } from '../lib/essence';
+import { generateAndSaveMoodboard } from '../lib/moodboard';
 import {
   scoreAllFrames,
   generateQualityHints,
@@ -213,6 +214,24 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
 
     return profileId;
   }, [syncProfileToServer]);
+
+  // Start mood board generation in background (after chunk 3)
+  // This generates a lifestyle-focused image based on profile content
+  const startMoodboardGeneration = useCallback(async (profileId: number, accumulatedProfile: AccumulatedProfile) => {
+    console.log('useStreamingAnalysis: Starting mood board generation for profile', profileId);
+
+    try {
+      const result = await generateAndSaveMoodboard(profileId, accumulatedProfile);
+
+      if (result.success) {
+        console.log('useStreamingAnalysis: Mood board generated successfully!');
+      } else {
+        console.log('useStreamingAnalysis: Mood board generation failed:', result.error);
+      }
+    } catch (error) {
+      console.log('useStreamingAnalysis: Mood board generation error:', error);
+    }
+  }, []);
 
   // Start essence generation in background (virtues + DALL-E image)
   const startEssenceGeneration = useCallback(async (profileId: number) => {
@@ -421,6 +440,20 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
               });
             autoSavePromiseRef.current = savePromise;
           }
+
+          // Start mood board generation after chunk 3 (chunkIndex === 2)
+          // This runs in the background while chunk 4 processes
+          if (chunkIndex === 2) {
+            const currentProfileId = savedProfileIdRef.current;
+            if (currentProfileId) {
+              console.log('useStreamingAnalysis: Chunk 3 complete, starting mood board generation');
+              startMoodboardGeneration(currentProfileId, profile).catch(err => {
+                console.log('useStreamingAnalysis: Mood board generation deferred:', err);
+              });
+            } else {
+              console.log('useStreamingAnalysis: No profile ID yet, deferring mood board generation');
+            }
+          }
         },
         onError: (error, chunkIndex) => {
           const chunkError = new ChunkAnalysisError(chunkIndex, 4, {
@@ -534,7 +567,7 @@ export function useStreamingAnalysis(): UseStreamingAnalysisReturn {
     } finally {
       abortControllerRef.current = null;
     }
-  }, [safeSetState, saveToDatabase, updateProfile, state.savedProfileId]);
+  }, [safeSetState, saveToDatabase, updateProfile, state.savedProfileId, startMoodboardGeneration]);
 
   // Abort analysis
   const abort = useCallback(async (saveProgress: boolean) => {

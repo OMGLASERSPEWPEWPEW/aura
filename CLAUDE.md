@@ -93,7 +93,7 @@ npm run dev       # Start dev server (localhost:5173)
 npm run build     # TypeScript check + Vite production build
 npm run lint      # ESLint check
 npm run preview   # Preview production build
-npm run test:run  # Run all unit tests (997 tests)
+npm run test:run  # Run all unit tests (1049 tests)
 npm run test:e2e  # Run Playwright e2e tests (362 tests)
 ```
 
@@ -113,9 +113,11 @@ npm run test:e2e  # Run Playwright e2e tests (362 tests)
 ```
 Video Upload -> Frame Extraction (Canvas) -> AI Analysis -> IndexedDB -> UI
                                                     |
-                                            [Essence Generation]
+                                    [Mood Board Generation] (after chunk 3)
                                                     |
-                                    Virtue Sentence + DALL-E Image
+                                    [Essence Generation] (after complete)
+                                                    |
+                                    Virtue Sentence + DALL-E Images
 ```
 
 ### Streaming Analysis Architecture
@@ -172,8 +174,28 @@ Analysis Complete -> Compute virtues_11 -> Generate Virtue Sentence -> Call DALL
 
 **Cost:** ~$0.04 per essence image (DALL-E 3 standard quality)
 
+### Mood Board System
+
+During analysis (after chunk 3 completes, ~75% through), the app generates a "Mood Board" lifestyle scene:
+
+```
+Chunk 3 Complete -> Extract Lifestyle Themes -> Build DALL-E Prompt -> Generate Image -> Save to Profile
+```
+
+**Components:**
+1. **Theme Extraction**: Claude analyzes partial profile data to identify 3 lifestyle themes (e.g., "urban nightlife", "outdoor adventures", "cozy homebody")
+2. **Mood Board Image**: DALL-E 3 generates a cinematic lifestyle scene based on extracted themes
+3. **Carousel Position**: Mood Board appears first (amber "Lifestyle" badge), before Essence (purple) and Photo
+
 **Key Files:**
-- `src/hooks/useStreamingAnalysis.ts` - State machine hook, progressive thumbnail logic, essence generation trigger
+- `src/lib/moodboard/themeExtractor.ts` - Extracts lifestyle themes from partial analysis
+- `src/lib/moodboard/promptBuilder.ts` - Builds DALL-E prompt from themes
+- `src/lib/moodboard/moodboardGenerator.ts` - Orchestrates full generation flow
+
+**Cost:** ~$0.043 per mood board (~$0.003 theme extraction + $0.04 DALL-E 3)
+
+**Key Files:**
+- `src/hooks/useStreamingAnalysis.ts` - State machine hook, progressive thumbnail logic, mood board and essence triggers
 - `src/lib/frameQuality.ts` - Frame quality scoring (brightness, variance, edge detection)
 - `src/lib/streaming/types.ts` - Streaming types and chunk definitions
 - `src/lib/ai.ts` - `analyzeProfileStreaming()` and merge functions
@@ -192,6 +214,7 @@ Analysis Complete -> Compute virtues_11 -> Generate Virtue Sentence -> Call DALL
 - `src/lib/` - Core business logic
   - `api/` - Anthropic API client (`anthropicClient.ts`, `config.ts`, `jsonExtractor.ts`)
   - `essence/` - Essence Identity generation (virtue sentences, DALL-E prompts, image generation)
+  - `moodboard/` - Mood Board generation (theme extraction, DALL-E prompts, lifestyle scenes)
   - `utils/` - Shared utilities (`userContext.ts`, `profileHelpers.ts`, `thumbnailUtils.ts`)
   - `streaming/` - Streaming analysis types and chunk definitions
   - `virtues/` - 11 Virtues system (scoring, compatibility, migration)
@@ -242,6 +265,8 @@ Two tables in `AuraDB`:
   - `virtueSentence` - Generated one-line personality summary
   - `essenceImage` - DALL-E generated Blob image
   - `essencePrompt` - The prompt used to generate the essence image
+  - `moodboardImage` - DALL-E generated lifestyle scene Blob
+  - `moodboardPrompt` - The prompt used for mood board generation
 - `userIdentity` - Single record (id=1) for user's own profile data
   - `manualEntry.livingSituation` - User's living situation: 'solo' | 'roommates' | 'caregiving'
 
@@ -259,7 +284,7 @@ When planning multi-step tasks, create a todo list to track progress. Update tas
 
 ### Test Maintenance
 Tests live alongside the code they cover:
-- **Unit tests** (`*.test.ts` files) - 997 tests via Vitest
+- **Unit tests** (`*.test.ts` files) - 1049 tests via Vitest
 - **E2E tests** (`e2e/*.spec.ts` files) - 362 tests via Playwright
 
 When making code changes:

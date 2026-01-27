@@ -1,28 +1,33 @@
 // src/components/profileDetail/ProfileHeader.tsx
 import { Link } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, MapPin, Briefcase, GraduationCap, Sparkles } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, MapPin, Briefcase, GraduationCap, Sparkles, Palette } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Profile, ProfileBasics } from '../../lib/db';
+import { useThumbnailUrl } from '../../lib/utils/thumbnailUtils';
 
 interface ProfileHeaderProps {
   profile: Profile;
   basics: ProfileBasics;
   isGeneratingEssence?: boolean;
+  isGeneratingMoodboard?: boolean;
 }
 
 /**
  * Header section with swipeable image carousel and basic info.
- * Shows essence image (AI-generated) and thumbnail photo.
+ * Shows mood board, essence image, and thumbnail photo.
+ * Order: Mood Board (lifestyle) → Essence (abstract) → Photo (original)
  */
-export function ProfileHeader({ profile, basics, isGeneratingEssence = false }: ProfileHeaderProps) {
-  // Convert essenceImage Blob to Object URL for display
+export function ProfileHeader({ profile, basics, isGeneratingEssence = false, isGeneratingMoodboard = false }: ProfileHeaderProps) {
+  // Convert Blob images to Object URLs for display
   const [essenceImageUrl, setEssenceImageUrl] = useState<string | null>(null);
+  const [moodboardImageUrl, setMoodboardImageUrl] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Touch handling for swipe
   const touchStartX = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Handle essence image URL
   useEffect(() => {
     if (profile.essenceImage instanceof Blob) {
       const url = URL.createObjectURL(profile.essenceImage);
@@ -33,15 +38,34 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false }: 
     }
   }, [profile.essenceImage]);
 
-  // Build images array: [essence (if available), thumbnail]
-  const images: { src: string; label: string; isEssence: boolean }[] = [];
+  // Handle moodboard image URL
+  useEffect(() => {
+    if (profile.moodboardImage instanceof Blob) {
+      const url = URL.createObjectURL(profile.moodboardImage);
+      setMoodboardImageUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setMoodboardImageUrl(null);
+    }
+  }, [profile.moodboardImage]);
 
-  if (essenceImageUrl) {
-    images.push({ src: essenceImageUrl, label: 'Essence', isEssence: true });
+  // Handle thumbnail (can be string or Blob)
+  const thumbnailUrl = useThumbnailUrl(profile.thumbnail);
+
+  // Build images array: [moodboard (if available), essence (if available), thumbnail]
+  // Order: Mood Board → Essence → Photo (concrete first)
+  const images: { src: string; label: string; type: 'moodboard' | 'essence' | 'photo' }[] = [];
+
+  if (moodboardImageUrl) {
+    images.push({ src: moodboardImageUrl, label: 'Lifestyle', type: 'moodboard' });
   }
 
-  if (profile.thumbnail) {
-    images.push({ src: profile.thumbnail as string, label: 'Photo', isEssence: false });
+  if (essenceImageUrl) {
+    images.push({ src: essenceImageUrl, label: 'Essence', type: 'essence' });
+  }
+
+  if (thumbnailUrl) {
+    images.push({ src: thumbnailUrl, label: 'Photo', type: 'photo' });
   }
 
   const hasMultipleImages = images.length > 1;
@@ -97,7 +121,7 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false }: 
         {currentImage ? (
           <img
             src={currentImage.src}
-            className={`w-full h-full object-cover ${!currentImage.isEssence ? 'opacity-80' : ''}`}
+            className={`w-full h-full object-cover ${currentImage.type === 'photo' ? 'opacity-80' : ''}`}
             alt={currentImage.label}
           />
         ) : (
@@ -127,16 +151,34 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false }: 
           </div>
         )}
 
-        {/* Image type indicator */}
-        {currentImage?.isEssence && (
+        {/* Image type indicator - Moodboard (Lifestyle) */}
+        {currentImage?.type === 'moodboard' && (
+          <div className="absolute top-6 right-6 px-3 py-1.5 bg-amber-500/90 rounded-full flex items-center gap-1.5 text-sm font-medium text-white shadow-md z-10">
+            <Palette size={14} />
+            Lifestyle
+          </div>
+        )}
+
+        {/* Image type indicator - Essence */}
+        {currentImage?.type === 'essence' && (
           <div className="absolute top-6 right-6 px-3 py-1.5 bg-purple-500/90 rounded-full flex items-center gap-1.5 text-sm font-medium text-white shadow-md z-10">
             <Sparkles size={14} />
             Essence
           </div>
         )}
 
+        {/* Loading indicator when generating moodboard */}
+        {isGeneratingMoodboard && !moodboardImageUrl && (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
+            <div className="text-center text-white">
+              <Palette className="mx-auto mb-2 animate-pulse" size={32} />
+              <p className="text-sm font-medium">Creating Lifestyle...</p>
+            </div>
+          </div>
+        )}
+
         {/* Loading indicator when generating essence */}
-        {isGeneratingEssence && !essenceImageUrl && (
+        {isGeneratingEssence && !essenceImageUrl && !isGeneratingMoodboard && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
             <div className="text-center text-white">
               <Sparkles className="mx-auto mb-2 animate-pulse" size={32} />
