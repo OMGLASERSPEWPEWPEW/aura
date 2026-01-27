@@ -151,7 +151,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       if (identity) {
         await db.userIdentity.update(1, {
           settings: {
-            ...identity.settings,
+            autoCompatibility: identity.settings?.autoCompatibility ?? true,
             theme: newTheme,
           },
           lastUpdated: new Date(),

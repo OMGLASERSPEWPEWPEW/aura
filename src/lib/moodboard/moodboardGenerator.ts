@@ -1,7 +1,7 @@
 // src/lib/moodboard/moodboardGenerator.ts
 // Orchestrate mood board generation: theme extraction -> prompt building -> DALL-E image
 
-import { db, type Profile } from '../db';
+import { db } from '../db';
 import { generateImage, base64ToImageBlob } from '../essence/dalleClient';
 import { logInference } from '../inference';
 import { extractThemes } from './themeExtractor';

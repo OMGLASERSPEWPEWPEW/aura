@@ -19,6 +19,8 @@ export type InferenceFeature =
   | 'conversation_coaching'
   | 'zodiac_compatibility'
   | 'essence_image_generation'  // DALL-E 3 image generation for essence identity
+  | 'moodboard_theme_extraction'  // Claude theme extraction for mood board
+  | 'moodboard_image_generation'  // DALL-E 3 image generation for mood board
   | 'unknown';
 
 /**
@@ -39,6 +41,8 @@ export const FEATURE_LABELS: Record<InferenceFeature, string> = {
   conversation_coaching: 'Conversation Coaching',
   zodiac_compatibility: 'Zodiac Compatibility',
   essence_image_generation: 'Essence Portrait',
+  moodboard_theme_extraction: 'Mood Board',
+  moodboard_image_generation: 'Mood Board',
   unknown: 'AI Analysis',
 };
 
@@ -59,6 +63,8 @@ export const FEATURE_VALUE_DESCRIPTIONS: Record<InferenceFeature, string> = {
   conversation_coaching: 'Response suggestions provided',
   zodiac_compatibility: 'Zodiac insights generated',
   essence_image_generation: 'Personality portrait created',
+  moodboard_theme_extraction: 'Lifestyle themes identified',
+  moodboard_image_generation: 'Lifestyle scene created',
   unknown: 'AI insights generated',
 };
 

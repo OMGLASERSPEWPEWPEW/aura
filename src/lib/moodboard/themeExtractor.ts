@@ -20,7 +20,7 @@ function buildExtractionPrompt(input: ThemeExtractionInput): string {
   }
 
   if (input.photoDescriptions.length > 0) {
-    sections.push(`Photo Descriptions:\n${input.photoDescriptions.map((d, i) => `- ${d}`).join('\n')}`);
+    sections.push(`Photo Descriptions:\n${input.photoDescriptions.map((d) => `- ${d}`).join('\n')}`);
   }
 
   if (input.promptAnswers.length > 0) {
