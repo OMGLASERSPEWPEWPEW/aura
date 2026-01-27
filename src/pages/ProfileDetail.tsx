@@ -1,13 +1,13 @@
 // src/pages/ProfileDetail.tsx
 import { useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { db } from '../lib/db';
 import type { UserIdentity, ProfileAnalysis } from '../lib/db';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
 import { hasUserProfile as checkHasUserProfile } from '../lib/utils/userContext';
-import { generateFullEssence } from '../lib/essence';
+import { generateAndSaveEssenceImage } from '../lib/essence';
 
 import {
   useCopyToClipboard,
@@ -54,43 +54,36 @@ export default function ProfileDetail() {
     loadUserIdentity();
   }, []);
 
-  // Generate essence when virtues_11 becomes available
-  // This runs after useCompatibilityScores computes virtues_11
+  // Manual essence image generation (user-triggered for cost control ~$0.04)
+  // Virtue sentence is generated automatically (free), but DALL-E image requires user action
   const [isGeneratingEssence, setIsGeneratingEssence] = useState(false);
-  const [essenceGenerated, setEssenceGenerated] = useState(false);
 
-  useEffect(() => {
-    // Only generate once per profile view, when conditions are met
-    if (
-      profile?.id &&
-      compatibilityScores.virtues11 &&
-      (!profile.virtueSentence || !profile.essenceImage) &&
-      !isGeneratingEssence &&
-      !essenceGenerated
-    ) {
-      console.log('[ProfileDetail] Generating essence for profile:', profile.id);
-      setIsGeneratingEssence(true);
+  const handleGenerateEssence = useCallback(async () => {
+    if (!profile?.id) return;
 
-      // Update profile with virtues_11 first (so essence generator can use it)
-      db.profiles.update(profile.id, {
-        virtues_11: compatibilityScores.virtues11,
-      }).then(() => {
-        // Now generate essence
-        return generateFullEssence(profile.id);
-      }).then(result => {
-        if (result.success) {
-          console.log('[ProfileDetail] Essence generated:', result.virtueSentence?.substring(0, 50));
-        } else {
-          console.log('[ProfileDetail] Essence generation failed:', result.error);
-        }
-        setEssenceGenerated(true);
-        setIsGeneratingEssence(false);
-      }).catch(err => {
-        console.error('[ProfileDetail] Essence generation error:', err);
-        setIsGeneratingEssence(false);
-      });
+    setIsGeneratingEssence(true);
+    try {
+      // Ensure virtues_11 is saved to profile first (needed for image generation)
+      if (compatibilityScores.virtues11) {
+        await db.profiles.update(profile.id, {
+          virtues_11: compatibilityScores.virtues11,
+        });
+      }
+
+      const result = await generateAndSaveEssenceImage(profile.id);
+      if (result.success) {
+        console.log('[ProfileDetail] Essence image generated successfully');
+      } else {
+        console.error('[ProfileDetail] Essence generation failed:', result.error);
+        alert(`Failed to generate essence: ${result.error}`);
+      }
+    } catch (err) {
+      console.error('[ProfileDetail] Essence generation error:', err);
+      alert('Failed to generate essence image. Please try again.');
+    } finally {
+      setIsGeneratingEssence(false);
     }
-  }, [profile?.id, profile?.virtueSentence, compatibilityScores.virtues11, isGeneratingEssence, essenceGenerated]);
+  }, [profile?.id, compatibilityScores.virtues11]);
 
   // Loading state
   if (!profile) {
@@ -115,7 +108,12 @@ export default function ProfileDetail() {
 
   return (
     <div className="pb-24 bg-white dark:bg-slate-900 min-h-screen">
-      <ProfileHeader profile={profile} basics={basics} isGeneratingEssence={isGeneratingEssence} />
+      <ProfileHeader
+        profile={profile}
+        basics={basics}
+        isGeneratingEssence={isGeneratingEssence}
+        onGenerateEssence={handleGenerateEssence}
+      />
 
       {/* Tab Navigation */}
       <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />

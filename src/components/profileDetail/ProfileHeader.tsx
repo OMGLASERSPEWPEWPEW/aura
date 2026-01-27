@@ -1,6 +1,6 @@
 // src/components/profileDetail/ProfileHeader.tsx
 import { Link } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, MapPin, Briefcase, GraduationCap, Sparkles, Palette } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, MapPin, Briefcase, GraduationCap, Sparkles, Palette, Lock } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Profile, ProfileBasics } from '../../lib/db';
 import { useThumbnailUrl } from '../../lib/utils/thumbnailUtils';
@@ -10,14 +10,15 @@ interface ProfileHeaderProps {
   basics: ProfileBasics;
   isGeneratingEssence?: boolean;
   isGeneratingMoodboard?: boolean;
+  onGenerateEssence?: () => void;
 }
 
 /**
  * Header section with swipeable image carousel and basic info.
- * Shows mood board, essence image, and thumbnail photo.
+ * Shows mood board, essence image (or locked placeholder), and thumbnail photo.
  * Order: Mood Board (lifestyle) → Essence (abstract) → Photo (original)
  */
-export function ProfileHeader({ profile, basics, isGeneratingEssence = false, isGeneratingMoodboard = false }: ProfileHeaderProps) {
+export function ProfileHeader({ profile, basics, isGeneratingEssence = false, isGeneratingMoodboard = false, onGenerateEssence }: ProfileHeaderProps) {
   // Convert Blob images to Object URLs for display
   const [essenceImageUrl, setEssenceImageUrl] = useState<string | null>(null);
   const [moodboardImageUrl, setMoodboardImageUrl] = useState<string | null>(null);
@@ -78,9 +79,15 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
   // Handle thumbnail (can be string or Blob)
   const thumbnailUrl = useThumbnailUrl(profile.thumbnail);
 
-  // Build images array: [moodboard (if available), essence (if available), thumbnail]
+  // Build images array: [moodboard (if available), essence or locked placeholder, thumbnail]
   // Order: Mood Board → Essence → Photo (concrete first)
-  const images: { src: string; label: string; type: 'moodboard' | 'essence' | 'photo' }[] = [];
+  type CarouselImage = {
+    src?: string;
+    label: string;
+    type: 'moodboard' | 'essence' | 'essence-locked' | 'photo';
+    virtueSentence?: string;
+  };
+  const images: CarouselImage[] = [];
 
   if (moodboardImageUrl) {
     images.push({ src: moodboardImageUrl, label: 'Lifestyle', type: 'moodboard' });
@@ -88,6 +95,13 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
 
   if (essenceImageUrl) {
     images.push({ src: essenceImageUrl, label: 'Essence', type: 'essence' });
+  } else if (profile.virtueSentence) {
+    // Show locked placeholder when virtue sentence exists but image doesn't
+    images.push({
+      label: 'Essence',
+      type: 'essence-locked',
+      virtueSentence: profile.virtueSentence,
+    });
   }
 
   if (thumbnailUrl) {
@@ -144,7 +158,30 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {currentImage ? (
+        {currentImage?.type === 'essence-locked' ? (
+          // Locked essence placeholder - shows virtue sentence teaser with generate button
+          <div className="w-full h-full bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 flex flex-col items-center justify-center p-6 text-white">
+            <Lock size={40} className="mb-3 opacity-80" />
+            <p className="text-lg font-medium text-center mb-2 px-4 leading-relaxed">
+              &ldquo;{currentImage.virtueSentence}&rdquo;
+            </p>
+            <p className="text-sm opacity-70 mb-5">Generate to reveal abstract essence</p>
+            <button
+              onClick={onGenerateEssence}
+              disabled={isGeneratingEssence || !onGenerateEssence}
+              className="px-5 py-2.5 bg-white/20 hover:bg-white/30 disabled:bg-white/10 disabled:cursor-not-allowed rounded-full font-medium text-sm transition-colors backdrop-blur-sm border border-white/30"
+            >
+              {isGeneratingEssence ? (
+                <span className="flex items-center gap-2">
+                  <Sparkles size={16} className="animate-pulse" />
+                  Generating...
+                </span>
+              ) : (
+                'Generate Essence (~$0.04)'
+              )}
+            </button>
+          </div>
+        ) : currentImage?.src ? (
           <img
             src={currentImage.src}
             className={`w-full h-full object-cover ${currentImage.type === 'photo' ? 'opacity-80' : ''}`}
@@ -193,6 +230,14 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
           </div>
         )}
 
+        {/* Image type indicator - Essence Locked */}
+        {currentImage?.type === 'essence-locked' && (
+          <div className="absolute top-6 right-6 px-3 py-1.5 bg-purple-500/60 rounded-full flex items-center gap-1.5 text-sm font-medium text-white shadow-md z-10">
+            <Lock size={14} />
+            Essence
+          </div>
+        )}
+
         {/* Loading indicator when generating moodboard */}
         {isGeneratingMoodboard && !moodboardImageUrl && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
@@ -203,8 +248,8 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
           </div>
         )}
 
-        {/* Loading indicator when generating essence */}
-        {isGeneratingEssence && !essenceImageUrl && !isGeneratingMoodboard && (
+        {/* Loading indicator when generating essence (only when NOT on locked view, which has its own button state) */}
+        {isGeneratingEssence && !essenceImageUrl && !isGeneratingMoodboard && currentImage?.type !== 'essence-locked' && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
             <div className="text-center text-white">
               <Sparkles className="mx-auto mb-2 animate-pulse" size={32} />
