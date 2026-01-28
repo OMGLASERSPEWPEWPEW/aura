@@ -47,6 +47,14 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
 
+  // Visual regression testing defaults
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.01, // 1% tolerance for pixel differences
+      animations: 'disabled',
+    },
+  },
+
   // Configure projects for major browsers
   projects: [
     // Setup project - authenticates and saves state

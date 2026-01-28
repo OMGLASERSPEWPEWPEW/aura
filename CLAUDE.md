@@ -79,6 +79,7 @@ This helps the user track session progress when returning after breaks.
 |-------|------------|-------------|
 | `/evolution` | **User-invoked only** | Collective agent self-improvement. Run at end of sessions or after milestones. |
 | `/new-feature` | **User-invoked only** | Guided feature development workflow |
+| `/docs-check` | **User-invoked only** | Pre-push documentation review. Analyzes git changes and suggests doc updates. |
 
 **Note:** Skills are NEVER auto-triggered. They must be explicitly invoked by the user with `/<skill-name>`.
 
