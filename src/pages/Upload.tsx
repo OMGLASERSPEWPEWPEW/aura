@@ -159,6 +159,21 @@ export default function Upload() {
       {state.phase === 'idle' && (
         <div className="px-4 max-w-2xl mx-auto">
           <VideoUploader onFileSelect={handleFileSelect} />
+
+          {/* Recording Guide */}
+          <div className="mt-4 bg-slate-50 dark:bg-slate-700 p-4 rounded-xl text-sm text-slate-600 dark:text-slate-300">
+            <h4 className="font-semibold text-slate-900 dark:text-slate-50 mb-2">
+              How to record a match:
+            </h4>
+            <ol className="list-decimal pl-4 space-y-1">
+              <li>Open your dating app and find their profile</li>
+              <li>Start a screen recording on your phone</li>
+              <li>Slowly scroll through their entire profile</li>
+              <li>Pause briefly on each photo (2-3 seconds)</li>
+              <li>Make sure to capture any prompts or bio text</li>
+              <li>Stop recording and upload here</li>
+            </ol>
+          </div>
         </div>
       )}
 
