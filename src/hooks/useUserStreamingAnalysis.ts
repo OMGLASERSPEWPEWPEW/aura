@@ -1,8 +1,7 @@
 // src/hooks/useUserStreamingAnalysis.ts
 // State machine hook for streaming user profile analysis
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { extractFramesChunked, type ChunkInfo } from '../lib/frameExtraction';
+import { useCallback } from 'react';
 import {
   analyzeUserProfileStreaming,
   accumulatedUserToSynthesis,
@@ -10,36 +9,15 @@ import {
   createInitialAccumulatedUserProfile,
 } from '../lib/ai';
 import { db, type UserSynthesis, type VideoAnalysis } from '../lib/db';
-import type { StreamingPhase } from '../lib/streaming/types';
-import {
-  scoreAllFrames,
-  generateQualityHints,
-  validateThumbnailChoice,
-  findBestFrameIndex,
-  type FrameQualityScore,
-} from '../lib/frameQuality';
 import { saveUserIdentityWithSync } from '../lib/sync';
+import { SyncError, StorageError } from '../lib/errors';
 import {
-  SyncError,
-  StorageError,
-  FrameExtractionError,
-  ChunkAnalysisError,
-  AuraError,
-} from '../lib/errors';
+  useStreamingAnalysisCore,
+  type StreamingAnalysisStateBase,
+  type ChunkAnalysisOptions,
+} from './useStreamingAnalysisCore';
 
-export interface UserStreamingAnalysisState {
-  phase: StreamingPhase;
-  profile: AccumulatedUserProfile;
-  frames: string[][];
-  allFrames: string[];
-  currentChunk: number;
-  totalChunks: number;
-  error: string | null;
-  chunkLatencies: number[];
-  thumbnailFrame: string | null;
-  frameScores: FrameQualityScore[];
-  thumbnailOverridden: boolean;
-}
+export type UserStreamingAnalysisState = StreamingAnalysisStateBase<AccumulatedUserProfile>;
 
 export interface UseUserStreamingAnalysisOptions {
   /** User ID for syncing to server. If provided, saves will sync to Supabase. */
@@ -56,393 +34,151 @@ export interface UseUserStreamingAnalysisReturn {
   isProcessing: boolean;
 }
 
-const INITIAL_STATE: UserStreamingAnalysisState = {
-  phase: 'idle',
-  profile: createInitialAccumulatedUserProfile(),
-  frames: [],
-  allFrames: [],
-  currentChunk: 0,
-  totalChunks: 4,
-  error: null,
-  chunkLatencies: [],
-  thumbnailFrame: null,
-  frameScores: [],
-  thumbnailOverridden: false,
-};
-
-export function useUserStreamingAnalysis(options: UseUserStreamingAnalysisOptions = {}): UseUserStreamingAnalysisReturn {
+export function useUserStreamingAnalysis(
+  options: UseUserStreamingAnalysisOptions = {}
+): UseUserStreamingAnalysisReturn {
   const { userId } = options;
-  const [state, setState] = useState<UserStreamingAnalysisState>(INITIAL_STATE);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const isMountedRef = useRef(true);
-  const autoSavePromiseRef = useRef<Promise<void> | null>(null);
-  const allFrameScoresRef = useRef<FrameQualityScore[]>([]);
-
-  // Track mounted state
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  // Derived state
-  const canAbort = ['extracting', 'chunk-1', 'chunk-2', 'chunk-3', 'chunk-4'].includes(state.phase);
-  const hasMinimumViableProfile =
-    state.profile.identity.name !== null || state.profile.identity.age !== null;
-  const isProcessing = canAbort || state.phase === 'consolidating';
-
-  // Safe state update
-  const safeSetState = useCallback((update: Partial<UserStreamingAnalysisState> | ((prev: UserStreamingAnalysisState) => UserStreamingAnalysisState)) => {
-    if (isMountedRef.current) {
-      setState(prev => typeof update === 'function' ? update(prev) : { ...prev, ...update });
-    }
-  }, []);
-
-  // Reset to initial state
-  const reset = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    autoSavePromiseRef.current = null;
-    allFrameScoresRef.current = [];
-    setState(INITIAL_STATE);
-  }, []);
 
   // Save synthesis to database
-  const saveSynthesis = useCallback(async (
-    profile: AccumulatedUserProfile,
-    allFrames: string[]
-  ): Promise<void> => {
-    // Convert accumulated profile to UserSynthesis format
-    const synthesisData = accumulatedUserToSynthesis(profile);
+  const saveSynthesis = useCallback(
+    async (profile: AccumulatedUserProfile, allFrames: string[]): Promise<void> => {
+      // Convert accumulated profile to UserSynthesis format
+      const synthesisData = accumulatedUserToSynthesis(profile);
 
-    // Build inputs used array
-    const inputsUsed: string[] = ['video'];
+      // Build inputs used array
+      const inputsUsed: string[] = ['video'];
 
-    // Get existing user identity to preserve other fields
-    const existingIdentity = await db.userIdentity.get(1);
+      // Get existing user identity to preserve other fields
+      const existingIdentity = await db.userIdentity.get(1);
 
-    // Build video analysis object
-    const videoAnalysis: VideoAnalysis = {
-      frames: allFrames,
-      thumbnailIndex: profile.photos.thumbnailIndex,
-      extractedAt: new Date(),
-    };
+      // Build video analysis object
+      const videoAnalysis: VideoAnalysis = {
+        frames: allFrames,
+        thumbnailIndex: profile.photos.thumbnailIndex,
+        extractedAt: new Date(),
+      };
 
-    // Build full synthesis
-    const synthesis: UserSynthesis = {
-      meta: {
-        lastUpdated: new Date(),
-        inputsUsed,
-      },
-      basics: synthesisData.basics,
-      photos: synthesisData.photos,
-      psychological_profile: synthesisData.psychological_profile,
-      behavioral_insights: {
-        communication_style: synthesisData.behavioral_insights.communication_style,
-        attachment_patterns: synthesisData.behavioral_insights.attachment_patterns,
-        attachment_confidence: synthesisData.behavioral_insights.attachment_confidence,
-        growth_areas: synthesisData.behavioral_insights.growth_areas,
-        strengths: synthesisData.behavioral_insights.strengths,
-      },
-      dating_strategy: synthesisData.dating_strategy,
-    };
+      // Build full synthesis
+      const synthesis: UserSynthesis = {
+        meta: {
+          lastUpdated: new Date(),
+          inputsUsed,
+        },
+        basics: synthesisData.basics,
+        photos: synthesisData.photos,
+        psychological_profile: synthesisData.psychological_profile,
+        behavioral_insights: {
+          communication_style: synthesisData.behavioral_insights.communication_style,
+          attachment_patterns: synthesisData.behavioral_insights.attachment_patterns,
+          attachment_confidence: synthesisData.behavioral_insights.attachment_confidence,
+          growth_areas: synthesisData.behavioral_insights.growth_areas,
+          strengths: synthesisData.behavioral_insights.strengths,
+        },
+        dating_strategy: synthesisData.dating_strategy,
+      };
 
-    // Update database
-    if (existingIdentity) {
-      await db.userIdentity.update(1, {
-        videoAnalysis,
-        synthesis,
-        lastUpdated: new Date(),
-      });
-    } else {
-      await db.userIdentity.put({
-        id: 1,
-        videoAnalysis,
-        synthesis,
-        dataExports: [],
-        photos: [],
-        textInputs: [],
-        manualEntry: {},
-        lastUpdated: new Date(),
-      });
-    }
-
-    console.log('useUserStreamingAnalysis: Saved synthesis to database');
-
-    // Sync to server if user is logged in
-    if (userId) {
-      try {
-        await saveUserIdentityWithSync({
+      // Update database
+      if (existingIdentity) {
+        await db.userIdentity.update(1, {
           videoAnalysis,
           synthesis,
-        }, userId);
-        console.log('useUserStreamingAnalysis: Synced to server');
-      } catch (error) {
-        // Non-critical: create typed error for debugging but don't throw
-        const syncError = new SyncError(
-          `Server sync failed: ${error instanceof Error ? error.message : String(error)}`,
-          { operation: 'push', cause: error instanceof Error ? error : undefined }
-        );
-        console.log('useUserStreamingAnalysis: Server sync deferred:', syncError.code);
-      }
-    }
-  }, [userId]);
-
-  // Start streaming analysis
-  const startAnalysis = useCallback(async (file: File) => {
-    console.log('useUserStreamingAnalysis: Starting analysis');
-
-    // Reset and create new abort controller
-    abortControllerRef.current = new AbortController();
-    allFrameScoresRef.current = [];
-
-    safeSetState({
-      ...INITIAL_STATE,
-      phase: 'extracting',
-    });
-
-    try {
-      // Phase 1: Extract frames in chunks
-      const frameChunks: string[][] = [];
-
-      await extractFramesChunked(file, {
-        chunkSize: 4,
-        totalFrames: 16,
-        onChunkReady: (chunk: ChunkInfo) => {
-          console.log(`useUserStreamingAnalysis: Frame chunk ${chunk.chunkIndex + 1}/${chunk.totalChunks} ready`);
-          frameChunks.push(chunk.frames);
-
-          safeSetState(prev => ({
-            ...prev,
-            frames: [...frameChunks],
-            allFrames: chunk.allFramesSoFar,
-          }));
-        },
-        onMetadataLoaded: (info) => {
-          console.log(`useUserStreamingAnalysis: Video metadata loaded, duration: ${info.duration}s`);
-        },
-      });
-
-      if (abortControllerRef.current?.signal.aborted) {
-        return;
+          lastUpdated: new Date(),
+        });
+      } else {
+        await db.userIdentity.put({
+          id: 1,
+          videoAnalysis,
+          synthesis,
+          dataExports: [],
+          photos: [],
+          textInputs: [],
+          manualEntry: {},
+          lastUpdated: new Date(),
+        });
       }
 
-      console.log(`useUserStreamingAnalysis: Frame extraction complete, ${frameChunks.length} chunks`);
+      console.log('useUserStreamingAnalysis: Saved synthesis to database');
 
-      // Score first chunk frames for thumbnail quality
-      const firstChunkFrames = frameChunks[0] || [];
-      let frameQualityScores: FrameQualityScore[] = [];
-      let qualityHints = '';
-
-      if (firstChunkFrames.length > 0) {
-        console.log('useUserStreamingAnalysis: Scoring frame quality for thumbnail selection');
+      // Sync to server if user is logged in
+      if (userId) {
         try {
-          frameQualityScores = await scoreAllFrames(firstChunkFrames);
-          qualityHints = generateQualityHints(frameQualityScores);
-          console.log('useUserStreamingAnalysis: Frame quality hints generated:', qualityHints);
-
-          allFrameScoresRef.current = frameQualityScores;
-
-          safeSetState(prev => ({
-            ...prev,
-            frameScores: frameQualityScores,
-          }));
-        } catch (error) {
-          // Non-critical: frame scoring failed, continue analysis without quality hints
-          const frameError = new FrameExtractionError('canvas_failed', {
-            message: 'Frame scoring failed, continuing without quality hints',
-            context: { frameCount: firstChunkFrames.length },
-            cause: error instanceof Error ? error : undefined,
-          });
-          console.log('useUserStreamingAnalysis:', frameError.code, frameError.message);
-        }
-      }
-
-      // Phase 2: Analyze chunks sequentially
-      safeSetState({ phase: 'chunk-1' });
-
-      let finalProfile = await analyzeUserProfileStreaming(frameChunks, {
-        signal: abortControllerRef.current?.signal,
-        frameQualityHints: qualityHints,
-        onChunkComplete: (chunkIndex, profile, latency) => {
-          console.log(`useUserStreamingAnalysis: Chunk ${chunkIndex + 1} complete, latency: ${latency}ms`);
-
-          const chunkPhases: StreamingPhase[] = ['chunk-1', 'chunk-2', 'chunk-3', 'chunk-4'];
-          const nextPhase = chunkIndex < 3 ? chunkPhases[chunkIndex + 1] : 'consolidating';
-
-          // Get thumbnail choice
-          let thumbnailIndex = profile.photos.thumbnailIndex;
-          let wasOverridden = false;
-
-          // After chunk 1, validate and potentially override thumbnail choice
-          if (chunkIndex === 0 && frameQualityScores.length > 0) {
-            const validation = validateThumbnailChoice(thumbnailIndex, frameQualityScores);
-            if (validation.wasOverridden) {
-              console.log(`useUserStreamingAnalysis: ${validation.reason}`);
-              thumbnailIndex = validation.finalIndex;
-              wasOverridden = true;
-              profile = {
-                ...profile,
-                photos: {
-                  ...profile.photos,
-                  thumbnailIndex: thumbnailIndex,
-                },
-              };
-            }
-          }
-
-          // Score frames for chunks 2-4 (non-blocking)
-          if (chunkIndex > 0 && chunkIndex < 4) {
-            const chunkFrames = frameChunks[chunkIndex];
-            if (chunkFrames && chunkFrames.length > 0) {
-              scoreAllFrames(chunkFrames).then(chunkScores => {
-                const adjustedScores = chunkScores.map(s => ({
-                  ...s,
-                  index: s.index + (chunkIndex * 4),
-                }));
-                allFrameScoresRef.current = [...allFrameScoresRef.current, ...adjustedScores];
-                console.log(`useUserStreamingAnalysis: Scored chunk ${chunkIndex + 1} frames, total scores: ${allFrameScoresRef.current.length}`);
-              }).catch(err => {
-                // Non-critical: chunk frame scoring failed, thumbnail selection continues with partial data
-                const frameError = new FrameExtractionError('canvas_failed', {
-                  message: `Failed to score chunk ${chunkIndex + 1} frames`,
-                  frameIndex: chunkIndex * 4,
-                  context: { chunkIndex },
-                  cause: err instanceof Error ? err : undefined,
-                });
-                console.log('useUserStreamingAnalysis:', frameError.code, frameError.message);
-              });
-            }
-          }
-
-          const thumbnailFrame = frameChunks.flat()[thumbnailIndex] || null;
-
-          safeSetState(prev => ({
-            ...prev,
-            phase: nextPhase,
-            profile: profile,
-            currentChunk: chunkIndex + 1,
-            chunkLatencies: [...prev.chunkLatencies, latency],
-            thumbnailFrame,
-            thumbnailOverridden: wasOverridden || prev.thumbnailOverridden,
-          }));
-
-          // Auto-save after first chunk (minimum viable profile)
-          if (chunkIndex === 0) {
-            const savePromise = saveSynthesis(profile, frameChunks.flat())
-              .then(() => {
-                console.log('useUserStreamingAnalysis: Auto-saved after chunk 1');
-              })
-              .catch(err => {
-                const storageError = new StorageError(
-                  `Auto-save failed: ${err instanceof Error ? err.message : String(err)}`,
-                  'local',
-                  { cause: err instanceof Error ? err : undefined }
-                );
-                console.log('useUserStreamingAnalysis: Auto-save deferred:', storageError.code);
-              });
-            autoSavePromiseRef.current = savePromise;
-          }
-        },
-        onError: (error, chunkIndex) => {
-          const chunkError = new ChunkAnalysisError(chunkIndex, 4, {
-            message: error instanceof Error ? error.message : String(error),
-            cause: error instanceof Error ? error : undefined,
-            context: { phase: `chunk-${chunkIndex + 1}` },
-          });
-          console.log('useUserStreamingAnalysis:', chunkError.code, chunkError.message);
-        },
-      });
-
-      if (abortControllerRef.current?.signal.aborted) {
-        return;
-      }
-
-      // Phase 3: Final save
-      console.log('useUserStreamingAnalysis: Analysis complete, saving final result');
-
-      // Wait for any in-flight auto-save
-      if (autoSavePromiseRef.current) {
-        try {
-          await autoSavePromiseRef.current;
-        } catch {
-          // Auto-save failed, will save now
-        }
-      }
-
-      // Final thumbnail upgrade check
-      const allScores = allFrameScoresRef.current;
-      if (allScores.length > 4) {
-        const currentThumbnailIndex = finalProfile.photos.thumbnailIndex;
-        const currentThumbnailScore = allScores.find(s => s.index === currentThumbnailIndex);
-        const bestOverallIndex = findBestFrameIndex(allScores);
-        const bestScore = allScores.find(s => s.index === bestOverallIndex);
-
-        const IMPROVEMENT_THRESHOLD = 15;
-        if (bestScore && currentThumbnailScore &&
-            bestScore.overallScore > currentThumbnailScore.overallScore + IMPROVEMENT_THRESHOLD) {
-          console.log(`useUserStreamingAnalysis: Upgrading thumbnail from frame ${currentThumbnailIndex} to frame ${bestOverallIndex}`);
-          finalProfile = {
-            ...finalProfile,
-            photos: {
-              ...finalProfile.photos,
-              thumbnailIndex: bestOverallIndex,
+          await saveUserIdentityWithSync(
+            {
+              videoAnalysis,
+              synthesis,
             },
-          };
+            userId
+          );
+          console.log('useUserStreamingAnalysis: Synced to server');
+        } catch (error) {
+          const syncError = new SyncError(
+            `Server sync failed: ${error instanceof Error ? error.message : String(error)}`,
+            { operation: 'push', cause: error instanceof Error ? error : undefined }
+          );
+          console.log('useUserStreamingAnalysis: Server sync deferred:', syncError.code);
         }
       }
+    },
+    [userId]
+  );
 
-      const allFrames = frameChunks.flat();
-      await saveSynthesis(finalProfile, allFrames);
+  // Use the core hook with user-profile-specific callbacks
+  const core = useStreamingAnalysisCore<AccumulatedUserProfile>({
+    hookName: 'useUserStreamingAnalysis',
 
-      safeSetState({
-        phase: 'complete',
-        profile: finalProfile,
+    createInitialProfile: createInitialAccumulatedUserProfile,
+
+    getThumbnailIndex: (profile) => profile.photos.thumbnailIndex,
+
+    setThumbnailIndex: (profile, index) => ({
+      ...profile,
+      photos: {
+        ...profile.photos,
+        thumbnailIndex: index,
+      },
+    }),
+
+    hasMinimumViableData: (profile) =>
+      profile.identity.name !== null || profile.identity.age !== null,
+
+    analyzeChunks: async (
+      frameChunks: string[][],
+      options: ChunkAnalysisOptions<AccumulatedUserProfile>
+    ): Promise<AccumulatedUserProfile> => {
+      return analyzeUserProfileStreaming(frameChunks, {
+        signal: options.signal,
+        frameQualityHints: options.frameQualityHints,
+        onChunkComplete: options.onChunkComplete,
+        onError: options.onError,
       });
+    },
 
-    } catch (error) {
-      if (error instanceof Error && error.message === 'The user aborted a request.') {
-        return;
+    saveAfterChunk1: async (profile, allFrames) => {
+      try {
+        await saveSynthesis(profile, allFrames);
+      } catch (err) {
+        const storageError = new StorageError(
+          `Auto-save failed: ${err instanceof Error ? err.message : String(err)}`,
+          'local',
+          { cause: err instanceof Error ? err : undefined }
+        );
+        console.log('useUserStreamingAnalysis: Auto-save deferred:', storageError.code);
       }
+    },
 
-      // Wrap in typed error if not already one
-      const auraError = error instanceof AuraError
-        ? error
-        : AuraError.from(error, 'USER_STREAMING_ANALYSIS_ERROR', 'media');
+    saveFinal: saveSynthesis,
 
-      console.log('useUserStreamingAnalysis: Analysis failed:', auraError.code, auraError.message);
-
-      safeSetState({
-        phase: 'error',
-        error: auraError.getUserMessage(),
-      });
-    } finally {
-      abortControllerRef.current = null;
-    }
-  }, [safeSetState, saveSynthesis]);
-
-  // Abort analysis
-  const abort = useCallback(() => {
-    console.log('useUserStreamingAnalysis: Aborting');
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-
-    safeSetState({ phase: 'aborted' });
-  }, [safeSetState]);
+    // User profiles don't generate moodboards
+    onChunk3Complete: undefined,
+  });
 
   return {
-    state,
-    startAnalysis,
-    abort,
-    reset,
-    canAbort,
-    hasMinimumViableProfile,
-    isProcessing,
+    state: core.state,
+    startAnalysis: core.startAnalysis,
+    abort: core.abort,
+    reset: core.reset,
+    canAbort: core.canAbort,
+    hasMinimumViableProfile: core.hasMinimumViableProfile,
+    isProcessing: core.isProcessing,
   };
 }
