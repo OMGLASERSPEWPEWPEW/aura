@@ -23,3 +23,8 @@ export type { ProfileTab } from './TabNavigation';
 export { OverviewTab } from './OverviewTab';
 export { AnalysisTab } from './AnalysisTab';
 export { CoachTab } from './CoachTab';
+
+// Carousel components
+export { ContextualGenerateButton } from './ContextualGenerateButton';
+export type { CarouselPosition } from './ContextualGenerateButton';
+export { SoraPlaceholder } from './SoraPlaceholder';

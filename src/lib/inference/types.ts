@@ -21,6 +21,7 @@ export type InferenceFeature =
   | 'essence_image_generation'  // DALL-E 3 image generation for essence identity
   | 'moodboard_theme_extraction'  // Claude theme extraction for mood board
   | 'moodboard_image_generation'  // DALL-E 3 image generation for mood board
+  | 'sora_motion_generation'  // OpenAI Sora video generation for motion loop
   | 'unknown';
 
 /**
@@ -43,6 +44,7 @@ export const FEATURE_LABELS: Record<InferenceFeature, string> = {
   essence_image_generation: 'Essence Portrait',
   moodboard_theme_extraction: 'Mood Board',
   moodboard_image_generation: 'Mood Board',
+  sora_motion_generation: 'Motion Portrait',
   unknown: 'AI Analysis',
 };
 
@@ -65,6 +67,7 @@ export const FEATURE_VALUE_DESCRIPTIONS: Record<InferenceFeature, string> = {
   essence_image_generation: 'Personality portrait created',
   moodboard_theme_extraction: 'Lifestyle themes identified',
   moodboard_image_generation: 'Lifestyle scene created',
+  sora_motion_generation: 'Motion portrait created',
   unknown: 'AI insights generated',
 };
 

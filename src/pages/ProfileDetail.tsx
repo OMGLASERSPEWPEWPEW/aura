@@ -8,6 +8,7 @@ import type { UserIdentity, ProfileAnalysis } from '../lib/db';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
 import { hasUserProfile as checkHasUserProfile } from '../lib/utils/userContext';
 import { generateAndSaveEssenceImage } from '../lib/essence';
+import { generateAndSaveSoraVideo } from '../lib/sora';
 
 import {
   useCopyToClipboard,
@@ -25,6 +26,7 @@ import {
   AnalysisTab,
   CoachTab,
 } from '../components/profileDetail';
+import { ContextualGenerateButton, type CarouselPosition } from '../components/profileDetail/ContextualGenerateButton';
 import type { ProfileTab } from '../components/profileDetail';
 
 export default function ProfileDetail() {
@@ -53,6 +55,9 @@ export default function ProfileDetail() {
     };
     loadUserIdentity();
   }, []);
+
+  // Carousel position tracking for contextual button
+  const [carouselPosition, setCarouselPosition] = useState<CarouselPosition>('moodboard');
 
   // Manual essence image generation (user-triggered for cost control ~$0.04)
   // Virtue sentence is generated automatically (free), but DALL-E image requires user action
@@ -85,6 +90,36 @@ export default function ProfileDetail() {
     }
   }, [profile?.id, compatibilityScores.virtues11]);
 
+  // Manual Sora video generation (user-triggered for cost control ~$0.30)
+  const [isGeneratingSora, setIsGeneratingSora] = useState(false);
+
+  const handleGenerateSora = useCallback(async () => {
+    if (!profile?.id) return;
+
+    setIsGeneratingSora(true);
+    try {
+      // Ensure virtues_11 is saved to profile first (needed for video generation)
+      if (compatibilityScores.virtues11) {
+        await db.profiles.update(profile.id, {
+          virtues_11: compatibilityScores.virtues11,
+        });
+      }
+
+      const result = await generateAndSaveSoraVideo(profile.id);
+      if (result.success) {
+        console.log('[ProfileDetail] Sora video generated successfully');
+      } else {
+        console.error('[ProfileDetail] Sora generation failed:', result.error);
+        alert(`Failed to generate motion: ${result.error}`);
+      }
+    } catch (err) {
+      console.error('[ProfileDetail] Sora generation error:', err);
+      alert('Failed to generate motion video. Please try again.');
+    } finally {
+      setIsGeneratingSora(false);
+    }
+  }, [profile?.id, compatibilityScores.virtues11]);
+
   // Loading state
   if (!profile) {
     return (
@@ -105,6 +140,7 @@ export default function ProfileDetail() {
     : undefined;
 
   const hasUserProfileFlag = checkHasUserProfile(userIdentity);
+  const hasVirtues = !!(profile.virtues_11?.scores && profile.virtues_11.scores.length > 0);
 
   return (
     <div className="pb-24 bg-white dark:bg-slate-900 min-h-screen">
@@ -112,7 +148,18 @@ export default function ProfileDetail() {
         profile={profile}
         basics={basics}
         isGeneratingEssence={isGeneratingEssence}
+        isGeneratingSora={isGeneratingSora}
+        onCarouselPositionChange={setCarouselPosition}
+      />
+
+      {/* Contextual Generate Button - appears below carousel based on position */}
+      <ContextualGenerateButton
+        carouselPosition={carouselPosition}
+        hasVirtues={hasVirtues}
+        isGeneratingEssence={isGeneratingEssence}
+        isGeneratingSora={isGeneratingSora}
         onGenerateEssence={handleGenerateEssence}
+        onGenerateSora={handleGenerateSora}
       />
 
       {/* Tab Navigation */}

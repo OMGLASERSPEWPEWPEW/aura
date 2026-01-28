@@ -1,27 +1,48 @@
 // src/components/profileDetail/ProfileHeader.tsx
 import { Link } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, MapPin, Briefcase, GraduationCap, Sparkles, Palette, Lock } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, MapPin, Briefcase, GraduationCap, Sparkles, Palette, Lock, Film } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Profile, ProfileBasics } from '../../lib/db';
 import { useThumbnailUrl } from '../../lib/utils/thumbnailUtils';
+import { SoraPlaceholder } from './SoraPlaceholder';
+import type { CarouselPosition } from './ContextualGenerateButton';
 
 interface ProfileHeaderProps {
   profile: Profile;
   basics: ProfileBasics;
   isGeneratingEssence?: boolean;
+  isGeneratingSora?: boolean;
   isGeneratingMoodboard?: boolean;
-  onGenerateEssence?: () => void;
+  onCarouselPositionChange?: (position: CarouselPosition) => void;
 }
+
+type CarouselImage = {
+  src?: string;
+  label: string;
+  type: CarouselPosition | 'moodboard-locked';
+  virtueSentence?: string;
+  hasVirtues?: boolean;
+};
 
 /**
  * Header section with swipeable image carousel and basic info.
- * Shows mood board, essence image (or locked placeholder), and thumbnail photo.
- * Order: Mood Board (lifestyle) → Essence (abstract) → Photo (original)
+ * Shows mood board, essence image (or locked placeholder), sora video (or locked placeholder), and thumbnail photo.
+ * Order: Mood Board (lifestyle) -> Essence (abstract) -> Sora (motion) -> Photo (original)
+ *
+ * Button has been moved to ContextualGenerateButton, rendered by ProfileDetail below this component.
  */
-export function ProfileHeader({ profile, basics, isGeneratingEssence = false, isGeneratingMoodboard = false, onGenerateEssence }: ProfileHeaderProps) {
+export function ProfileHeader({
+  profile,
+  basics,
+  isGeneratingEssence = false,
+  isGeneratingSora = false,
+  isGeneratingMoodboard = false,
+  onCarouselPositionChange,
+}: ProfileHeaderProps) {
   // Convert Blob images to Object URLs for display
   const [essenceImageUrl, setEssenceImageUrl] = useState<string | null>(null);
   const [moodboardImageUrl, setMoodboardImageUrl] = useState<string | null>(null);
+  const [soraVideoUrl, setSoraVideoUrl] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Touch handling for swipe
@@ -31,18 +52,29 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
   // Cache URLs in refs to prevent loss on re-render
   const essenceUrlRef = useRef<string | null>(null);
   const moodboardUrlRef = useRef<string | null>(null);
+  const soraUrlRef = useRef<string | null>(null);
+
+  // Track blob sizes to detect actual changes vs reference changes
+  const essenceBlobSizeRef = useRef<number>(0);
+  const moodboardBlobSizeRef = useRef<number>(0);
+  const soraBlobSizeRef = useRef<number>(0);
 
   // Handle essence image URL with defensive caching
   useEffect(() => {
-    // Only create new URL if we have a valid Blob
+    // Only create new URL if we have a valid Blob AND it's actually different
     if (profile.essenceImage && profile.essenceImage instanceof Blob) {
-      // Revoke old URL if exists
-      if (essenceUrlRef.current) {
-        URL.revokeObjectURL(essenceUrlRef.current);
+      const newSize = profile.essenceImage.size;
+      // Only recreate URL if blob size changed (actual new blob)
+      if (newSize !== essenceBlobSizeRef.current) {
+        // Revoke old URL if exists
+        if (essenceUrlRef.current) {
+          URL.revokeObjectURL(essenceUrlRef.current);
+        }
+        const url = URL.createObjectURL(profile.essenceImage);
+        essenceUrlRef.current = url;
+        essenceBlobSizeRef.current = newSize;
+        setEssenceImageUrl(url);
       }
-      const url = URL.createObjectURL(profile.essenceImage);
-      essenceUrlRef.current = url;
-      setEssenceImageUrl(url);
     }
     // Note: We intentionally do NOT clear the URL if blob is missing
     // This prevents flicker when profile object reference changes
@@ -50,19 +82,45 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
 
   // Handle moodboard image URL with defensive caching
   useEffect(() => {
-    // Only create new URL if we have a valid Blob
+    // Only create new URL if we have a valid Blob AND it's actually different
     if (profile.moodboardImage && profile.moodboardImage instanceof Blob) {
-      // Revoke old URL if exists
-      if (moodboardUrlRef.current) {
-        URL.revokeObjectURL(moodboardUrlRef.current);
+      const newSize = profile.moodboardImage.size;
+      // Only recreate URL if blob size changed (actual new blob)
+      if (newSize !== moodboardBlobSizeRef.current) {
+        // Revoke old URL if exists
+        if (moodboardUrlRef.current) {
+          URL.revokeObjectURL(moodboardUrlRef.current);
+        }
+        const url = URL.createObjectURL(profile.moodboardImage);
+        moodboardUrlRef.current = url;
+        moodboardBlobSizeRef.current = newSize;
+        setMoodboardImageUrl(url);
       }
-      const url = URL.createObjectURL(profile.moodboardImage);
-      moodboardUrlRef.current = url;
-      setMoodboardImageUrl(url);
     }
     // Note: We intentionally do NOT clear the URL if blob is missing
     // This prevents flicker when profile object reference changes
   }, [profile.moodboardImage]);
+
+  // Handle sora video URL with defensive caching
+  useEffect(() => {
+    // Only create new URL if we have a valid Blob AND it's actually different
+    if (profile.soraVideo && profile.soraVideo instanceof Blob) {
+      const newSize = profile.soraVideo.size;
+      // Only recreate URL if blob size changed (actual new blob)
+      if (newSize !== soraBlobSizeRef.current) {
+        // Revoke old URL if exists
+        if (soraUrlRef.current) {
+          URL.revokeObjectURL(soraUrlRef.current);
+        }
+        const url = URL.createObjectURL(profile.soraVideo);
+        soraUrlRef.current = url;
+        soraBlobSizeRef.current = newSize;
+        setSoraVideoUrl(url);
+      }
+    }
+    // Note: We intentionally do NOT clear the URL if blob is missing
+    // This prevents flicker when profile object reference changes
+  }, [profile.soraVideo]);
 
   // Cleanup URLs on unmount only (not on re-render)
   useEffect(() => {
@@ -73,37 +131,51 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
       if (moodboardUrlRef.current) {
         URL.revokeObjectURL(moodboardUrlRef.current);
       }
+      if (soraUrlRef.current) {
+        URL.revokeObjectURL(soraUrlRef.current);
+      }
     };
   }, []);
 
   // Handle thumbnail (can be string or Blob)
   const thumbnailUrl = useThumbnailUrl(profile.thumbnail);
 
-  // Build images array: [moodboard (if available), essence or locked placeholder, thumbnail]
-  // Order: Mood Board → Essence → Photo (concrete first)
-  type CarouselImage = {
-    src?: string;
-    label: string;
-    type: 'moodboard' | 'essence' | 'essence-locked' | 'photo';
-    virtueSentence?: string;
-  };
+  // Check if virtues are available (needed for generate button visibility)
+  const hasVirtues = !!(profile.virtues_11?.scores && profile.virtues_11.scores.length > 0);
+
+  // Build images array: [moodboard, essence, sora, photo]
+  // Always show placeholders for Essence and Sora (even before virtues)
   const images: CarouselImage[] = [];
 
+  // Mood Board (if exists)
   if (moodboardImageUrl) {
     images.push({ src: moodboardImageUrl, label: 'Lifestyle', type: 'moodboard' });
   }
 
+  // Essence (always show - either image or locked placeholder)
   if (essenceImageUrl) {
     images.push({ src: essenceImageUrl, label: 'Essence', type: 'essence' });
-  } else if (profile.virtueSentence) {
-    // Show locked placeholder when virtue sentence exists but image doesn't
+  } else {
     images.push({
       label: 'Essence',
       type: 'essence-locked',
       virtueSentence: profile.virtueSentence,
+      hasVirtues,
     });
   }
 
+  // Sora (always show - either video or locked placeholder)
+  if (soraVideoUrl) {
+    images.push({ src: soraVideoUrl, label: 'Motion', type: 'sora' });
+  } else {
+    images.push({
+      label: 'Motion',
+      type: 'sora-locked',
+      hasVirtues,
+    });
+  }
+
+  // Photo (if exists)
   if (thumbnailUrl) {
     images.push({ src: thumbnailUrl, label: 'Photo', type: 'photo' });
   }
@@ -114,8 +186,13 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
   const goToIndex = useCallback((index: number) => {
     if (index >= 0 && index < images.length) {
       setCurrentIndex(index);
+      // Notify parent of position change for contextual button
+      const newPosition = images[index]?.type;
+      if (newPosition && onCarouselPositionChange) {
+        onCarouselPositionChange(newPosition as CarouselPosition);
+      }
     }
-  }, [images.length]);
+  }, [images, onCarouselPositionChange]);
 
   const goNext = useCallback(() => {
     goToIndex((currentIndex + 1) % images.length);
@@ -146,6 +223,14 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
     touchStartX.current = null;
   }, [hasMultipleImages, goNext, goPrev]);
 
+  // Notify parent of initial position on mount and when images change
+  useEffect(() => {
+    const currentPosition = images[currentIndex]?.type;
+    if (currentPosition && onCarouselPositionChange) {
+      onCarouselPositionChange(currentPosition as CarouselPosition);
+    }
+  }, [images.length]); // Only when structure changes, not on every render
+
   // Current image to display
   const currentImage = images[currentIndex];
 
@@ -158,36 +243,64 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {currentImage?.type === 'essence-locked' ? (
-          // Locked essence placeholder - shows virtue sentence teaser with generate button
+        {/* Essence Locked Placeholder */}
+        {currentImage?.type === 'essence-locked' && (
           <div className="w-full h-full bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 flex flex-col items-center justify-center p-6 text-white">
-            <Lock size={40} className="mb-3 opacity-80" />
-            <p className="text-lg font-medium text-center mb-2 px-4 leading-relaxed">
-              &ldquo;{currentImage.virtueSentence}&rdquo;
-            </p>
-            <p className="text-sm opacity-70 mb-5">Generate to reveal abstract essence</p>
-            <button
-              onClick={onGenerateEssence}
-              disabled={isGeneratingEssence || !onGenerateEssence}
-              className="px-5 py-2.5 bg-white/20 hover:bg-white/30 disabled:bg-white/10 disabled:cursor-not-allowed rounded-full font-medium text-sm transition-colors backdrop-blur-sm border border-white/30"
-            >
-              {isGeneratingEssence ? (
-                <span className="flex items-center gap-2">
-                  <Sparkles size={16} className="animate-pulse" />
-                  Generating...
-                </span>
-              ) : (
-                'Generate Essence (~$0.04)'
-              )}
-            </button>
+            {currentImage.hasVirtues ? (
+              <>
+                <Lock size={40} className="mb-3 opacity-80" />
+                {currentImage.virtueSentence && (
+                  <p className="text-lg font-medium text-center mb-2 px-4 leading-relaxed">
+                    &ldquo;{currentImage.virtueSentence}&rdquo;
+                  </p>
+                )}
+                <p className="text-sm opacity-70">Generate to reveal abstract essence</p>
+              </>
+            ) : (
+              <>
+                <Lock size={40} className="mb-3 opacity-80" />
+                <p className="text-lg font-medium text-center mb-2">Essence portrait</p>
+                <p className="text-sm opacity-70">Complete analysis to unlock</p>
+              </>
+            )}
           </div>
-        ) : currentImage?.src ? (
+        )}
+
+        {/* Sora Locked Placeholder */}
+        {currentImage?.type === 'sora-locked' && (
+          <SoraPlaceholder hasVirtues={currentImage.hasVirtues ?? false} />
+        )}
+
+        {/* Sora Video Playback */}
+        {currentImage?.type === 'sora' && currentImage.src && (
+          <video
+            src={currentImage.src}
+            autoPlay
+            muted
+            loop
+            playsInline
+            controls={false}
+            className="w-full h-full object-cover"
+            aria-label="Motion portrait"
+          />
+        )}
+
+        {/* Regular Images (moodboard, essence, photo) */}
+        {currentImage?.type !== 'essence-locked' &&
+         currentImage?.type !== 'sora-locked' &&
+         currentImage?.type !== 'sora' &&
+         currentImage?.src ? (
           <img
             src={currentImage.src}
             className={`w-full h-full object-cover ${currentImage.type === 'photo' ? 'opacity-80' : ''}`}
             alt={currentImage.label}
           />
-        ) : (
+        ) : null}
+
+        {/* No Image Fallback */}
+        {!currentImage?.src &&
+         currentImage?.type !== 'essence-locked' &&
+         currentImage?.type !== 'sora-locked' && (
           <div className="w-full h-full flex items-center justify-center text-slate-500 dark:text-slate-400">
             <div className="text-center">
               <AlertTriangle className="mx-auto mb-2" />
@@ -238,6 +351,22 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
           </div>
         )}
 
+        {/* Image type indicator - Sora */}
+        {currentImage?.type === 'sora' && (
+          <div className="absolute top-6 right-6 px-3 py-1.5 bg-teal-500/90 rounded-full flex items-center gap-1.5 text-sm font-medium text-white shadow-md z-10">
+            <Film size={14} />
+            Motion
+          </div>
+        )}
+
+        {/* Image type indicator - Sora Locked */}
+        {currentImage?.type === 'sora-locked' && (
+          <div className="absolute top-6 right-6 px-3 py-1.5 bg-teal-500/60 rounded-full flex items-center gap-1.5 text-sm font-medium text-white shadow-md z-10">
+            <Lock size={14} />
+            Motion
+          </div>
+        )}
+
         {/* Loading indicator when generating moodboard */}
         {isGeneratingMoodboard && !moodboardImageUrl && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
@@ -248,12 +377,22 @@ export function ProfileHeader({ profile, basics, isGeneratingEssence = false, is
           </div>
         )}
 
-        {/* Loading indicator when generating essence (only when NOT on locked view, which has its own button state) */}
-        {isGeneratingEssence && !essenceImageUrl && !isGeneratingMoodboard && currentImage?.type !== 'essence-locked' && (
+        {/* Loading indicator when generating essence (only when NOT on locked view) */}
+        {isGeneratingEssence && !essenceImageUrl && currentImage?.type !== 'essence-locked' && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
             <div className="text-center text-white">
               <Sparkles className="mx-auto mb-2 animate-pulse" size={32} />
               <p className="text-sm font-medium">Generating Essence...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Loading indicator when generating sora (only when NOT on locked view) */}
+        {isGeneratingSora && !soraVideoUrl && currentImage?.type !== 'sora-locked' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
+            <div className="text-center text-white">
+              <Film className="mx-auto mb-2 animate-pulse" size={32} />
+              <p className="text-sm font-medium">Generating Motion...</p>
             </div>
           </div>
         )}

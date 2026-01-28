@@ -278,6 +278,10 @@ interface Profile {
   moodboardImage?: Blob;        // AI-generated lifestyle scene via DALL-E 3
   moodboardPrompt?: string;     // Prompt used for generation (debugging/regeneration)
 
+  // Sora Motion Loop: AI-generated 3-second looping video
+  soraVideo?: Blob;             // AI-generated motion loop via OpenAI Sora (~$0.30 per video)
+  soraPrompt?: string;          // Prompt used for generation (debugging/regeneration)
+
   // Sync fields - links to Supabase
   serverId?: string; // UUID from Supabase match_profiles table
   thumbnailPath?: string; // Storage path (replaces base64 thumbnail after sync)
@@ -679,6 +683,18 @@ db.version(15).stores({
 // moodboardImage: AI-generated lifestyle scene via DALL-E 3
 // moodboardPrompt: The prompt used for generation (for debugging/regeneration)
 db.version(16).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase, serverId',
+  userIdentity: '++id, lastUpdated, supabaseUserId, serverId',
+  coachingSessions: '++id, profileId, timestamp, serverId',
+  matchChats: '++id, profileId, timestamp, serverId',
+  inferenceHistory: '++id, timestamp, feature, userId, success'
+});
+// No upgrade needed - new fields start as undefined
+
+// Version 17: Add Sora Motion Loop fields for AI-generated looping videos
+// soraVideo: AI-generated 3-second motion loop via OpenAI Sora (~$0.30 per video)
+// soraPrompt: The prompt used for generation (for debugging/regeneration)
+db.version(17).stores({
   profiles: '++id, name, appName, timestamp, analysisPhase, serverId',
   userIdentity: '++id, lastUpdated, supabaseUserId, serverId',
   coachingSessions: '++id, profileId, timestamp, serverId',
