@@ -8,6 +8,7 @@ import { useTheme, type ThemePreference } from '../contexts/ThemeContext';
 import DeleteAccountModal from '../components/auth/DeleteAccountModal';
 import { SyncIndicator } from '../components/SyncIndicator';
 import AIInsightsCard from '../components/settings/AIInsightsCard';
+import { TagManagement } from '../components/settings/TagManagement';
 import { ArrowLeft, Settings as SettingsIcon, Zap, User, LogOut, Trash2, Mail, Shield, Cloud, Monitor, Sun, Moon, Palette, HelpCircle } from 'lucide-react';
 import { useOnboarding } from '../hooks/useOnboarding';
 
@@ -223,6 +224,9 @@ export default function Settings() {
             })}
           </div>
         </div>
+
+        {/* Tag Management Section */}
+        <TagManagement />
 
         {/* AI Insights - Usage tracking with value pairing */}
         <AIInsightsCard />

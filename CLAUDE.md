@@ -148,7 +148,7 @@ npm run dev       # Start dev server (localhost:5173)
 npm run build     # TypeScript check + Vite production build
 npm run lint      # ESLint check
 npm run preview   # Preview production build
-npm run test:run  # Run all unit tests (1049 tests)
+npm run test:run  # Run all unit tests (1220 tests)
 npm run test:e2e  # Run Playwright e2e tests (~460 tests)
 ```
 
@@ -273,6 +273,42 @@ Chunk 3 Complete -> Extract Lifestyle Themes -> Build DALL-E Prompt -> Generate 
 
 **Cost:** ~$0.043 per mood board (~$0.003 theme extraction + $0.04 DALL-E 3)
 
+### Search & Organization System
+
+The Home gallery includes a comprehensive search, filter, and organization system:
+
+```
+User Opens Gallery -> Load Profiles -> Apply Search -> Apply Filters -> Sort -> Display
+                                          |                |           |
+                                    [Name Match]    [App/Score/Date]  [Newest/Name/Score]
+                                                         |
+                                              [Tags + Favorites Filter]
+```
+
+**Components:**
+1. **Search Bar**: Real-time name search with 300ms debounce
+2. **Filter Panel**: Bottom sheet with app, score, date, tags, favorites filters
+3. **Sort Dropdown**: 6 sort options (newest, oldest, highest/lowest score, name A-Z/Z-A)
+4. **Tags**: User-defined labels (e.g., "Met IRL", "Second Date", "Pass")
+5. **Favorites**: Star toggle for bookmarking profiles
+
+**Key Files:**
+- `src/lib/filtering/` - Pure logic layer (types, searchEngine, filterEngine, sortEngine, persistence)
+- `src/hooks/useProfileSearch.ts` - Search state with debounce
+- `src/hooks/useProfileFilters.ts` - Filter state with localStorage persistence
+- `src/hooks/useFilteredProfiles.ts` - Orchestrates search + filters + sort
+- `src/hooks/useTags.ts` - Tag CRUD operations
+- `src/hooks/useFavorites.ts` - Favorite toggle
+- `src/components/home/` - UI components (SearchBar, FilterPanel, TagSelector, FavoriteButton)
+
+**Filter Logic:**
+- Filters combine with **AND logic** (must match all active filters)
+- Tags use **OR logic** (match any selected tag)
+- Filter preferences persist to localStorage
+- Search persists to sessionStorage (clears on tab close)
+
+**Database (v19):** Added `isFavorite?: boolean` and `tags?: string[]` to Profile schema.
+
 **Key Files:**
 - `src/hooks/useStreamingAnalysis.ts` - State machine hook, progressive thumbnail logic, mood board and essence triggers
 - `src/lib/frameQuality.ts` - Frame quality scoring (brightness, variance, edge detection)
@@ -293,12 +329,13 @@ Chunk 3 Complete -> Extract Lifestyle Themes -> Build DALL-E Prompt -> Generate 
 - `src/lib/` - Core business logic
   - `api/` - Anthropic API client (`anthropicClient.ts`, `config.ts`, `jsonExtractor.ts`)
   - `essence/` - Essence Identity generation (virtue sentences, DALL-E prompts, image generation)
+  - `filtering/` - Search, filter, sort logic (`types.ts`, `searchEngine.ts`, `filterEngine.ts`, `sortEngine.ts`, `persistence.ts`)
   - `moodboard/` - Mood Board generation (theme extraction, DALL-E prompts, lifestyle scenes)
   - `utils/` - Shared utilities (`userContext.ts`, `profileHelpers.ts`, `thumbnailUtils.ts`)
   - `streaming/` - Streaming analysis types and chunk definitions
   - `virtues/` - 11 Virtues system (scoring, compatibility, migration)
   - `ai.ts` - AI function orchestration (includes `analyzeProfileStreaming()`)
-  - `db.ts` - Dexie schema and TypeScript types
+  - `db.ts` - Dexie schema and TypeScript types (v19 with tags/favorites)
   - `prompts.ts` - AI prompt templates (includes chunk-specific prompts)
   - `frameExtraction.ts` - Video frame extraction via Canvas (chunked support)
   - `frameQuality.ts` - Frame quality scoring for thumbnail selection
@@ -309,6 +346,11 @@ Chunk 3 Complete -> Extract Lifestyle Themes -> Build DALL-E Prompt -> Generate 
 
 - `src/hooks/` - Custom React hooks for feature state management
   - `useStreamingAnalysis.ts` - State machine hook for progressive analysis
+  - `useProfileSearch.ts` - Search with 300ms debounce, sessionStorage persistence
+  - `useProfileFilters.ts` - Filter state with localStorage persistence
+  - `useFilteredProfiles.ts` - Orchestrates search + filters + sort
+  - `useTags.ts` - Tag CRUD operations (create, rename, delete, assign to profiles)
+  - `useFavorites.ts` - Favorite toggle with haptic feedback
   - `useZodiacCompatibility.ts`, `useDateIdeas.ts`, `useOpenerRefresh.ts`, `useCopyToClipboard.ts`
 
 - `src/pages/` - Route-level components
@@ -318,8 +360,10 @@ Chunk 3 Complete -> Extract Lifestyle Themes -> Build DALL-E Prompt -> Generate 
   - `MyProfile.tsx` - User's own profile management
 
 - `src/components/`
+  - `home/` - Gallery components (SearchBar, FilterPanel, TagSelector, TagChip, FavoriteButton)
   - `profileDetail/` - Section components for ProfileDetail page (includes ProfileHeader with carousel)
   - `profile/` - Tab components for MyProfile page
+  - `settings/` - Settings page components (TagManagement)
   - `upload/` - Progressive analysis UI (ProgressiveHeader, InsightCard)
   - `ui/` - Reusable UI components (Logo, buttons, cards, etc.)
 
@@ -347,6 +391,8 @@ Two tables in `AuraDB`:
   - `virtueSentence` - Generated one-line personality summary
   - `essenceImage` - DALL-E generated Blob image
   - `essencePrompt` - The prompt used to generate the essence image
+  - `isFavorite` - Boolean for bookmarked profiles (v19)
+  - `tags` - Array of tag IDs for organization (v19)
   - `moodboardImage` - DALL-E generated lifestyle scene Blob
   - `moodboardPrompt` - The prompt used for mood board generation
 - `userIdentity` - Single record (id=1) for user's own profile data

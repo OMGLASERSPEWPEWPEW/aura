@@ -3,6 +3,7 @@ import Dexie, { type EntityTable } from 'dexie';
 import type { UserAspectProfile, MatchAspectScores, UserVirtueProfile, MatchVirtueCompatibility } from './virtues/types';
 import { migrateAspectProfileToVirtues, canMigrateAspectProfile, canMigrateAspectScores } from './virtues/migration';
 import { base64ToBlob } from './utils/thumbnailUtils';
+import type { TagDefinition } from './filtering/types';
 
 // --- Profile Analysis Types ---
 
@@ -236,6 +237,8 @@ interface AppSettings {
   theme?: 'system' | 'light' | 'dark';  // User's theme preference
   hasSeenOnboarding?: boolean;  // Whether user has completed onboarding tutorial
   showTutorialRequested?: boolean;  // True when "Show tutorial again" clicked; cleared after shown
+  // Phase C: Tags stored in settings
+  tags?: TagDefinition[];  // User-created tags
 }
 
 // Analysis phase for streaming analysis
@@ -283,6 +286,10 @@ interface Profile {
   // Sora Motion Loop: AI-generated 3-second looping video
   soraVideo?: Blob;             // AI-generated motion loop via OpenAI Sora (~$0.30 per video)
   soraPrompt?: string;          // Prompt used for generation (debugging/regeneration)
+
+  // Phase C: Tags & Favorites
+  isFavorite?: boolean;         // Whether user has favorited this profile
+  tags?: string[];              // Array of tag IDs assigned to this profile
 
   // Sync fields - links to Supabase
   serverId?: string; // UUID from Supabase match_profiles table
@@ -714,6 +721,35 @@ db.version(18).stores({
   inferenceHistory: '++id, timestamp, feature, userId, success'
 });
 // No upgrade needed - hasSeenOnboarding starts as undefined (falsy = show onboarding)
+
+// Version 19: Add Tags & Favorites for Phase C Search & Organization
+// Profile.isFavorite: boolean for favoriting profiles
+// Profile.tags: string[] of tag IDs assigned to profile
+// AppSettings.tags: TagDefinition[] for user-created tags
+db.version(19).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase, serverId, isFavorite',
+  userIdentity: '++id, lastUpdated, supabaseUserId, serverId',
+  coachingSessions: '++id, profileId, timestamp, serverId',
+  matchChats: '++id, profileId, timestamp, serverId',
+  inferenceHistory: '++id, timestamp, feature, userId, success'
+}).upgrade(async tx => {
+  // Initialize isFavorite and tags for existing profiles
+  await tx.table('profiles').toCollection().modify((profile: Partial<Profile>) => {
+    if (profile.isFavorite === undefined) {
+      profile.isFavorite = false;
+    }
+    if (!profile.tags) {
+      profile.tags = [];
+    }
+  });
+
+  // Initialize tags array in settings for existing users
+  await tx.table('userIdentity').toCollection().modify((identity: Partial<UserIdentity>) => {
+    if (identity.settings && !identity.settings.tags) {
+      identity.settings.tags = [];
+    }
+  });
+});
 
 export { db };
 // Re-export aspect types for convenience (legacy)

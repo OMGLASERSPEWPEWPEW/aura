@@ -1,9 +1,10 @@
 // src/pages/Home.tsx
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
-import { User, Trash2, Zap, Star, PlusCircle } from 'lucide-react';
+import { User, Trash2, Zap, Star, PlusCircle, SlidersHorizontal, X, Tag } from 'lucide-react';
 import Logo from '../components/ui/Logo';
 import type { PartnerVirtueScore } from '../lib/db';
 import UserMenu from '../components/auth/UserMenu';
@@ -12,6 +13,25 @@ import { deleteProfileFromServer } from '../lib/sync';
 import { SyncError } from '../lib/errors';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { TutorialOverlay } from '../components/onboarding';
+import { useFilteredProfiles } from '../hooks/useFilteredProfiles';
+import { useTags } from '../hooks/useTags';
+import { useThumbnailUrl } from '../lib/utils/thumbnailUtils';
+import { SearchBar, FilterPanel, FavoriteButton, TagChipList, TagSelector } from '../components/home';
+
+// Thumbnail component to handle Blob/string conversion
+function ProfileThumbnail({ thumbnail, name }: { thumbnail?: string | Blob; name: string }) {
+  const url = useThumbnailUrl(thumbnail);
+
+  if (url) {
+    return <img src={url} alt={name} className="w-full h-full object-cover" />;
+  }
+
+  return (
+    <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-500">
+      <User />
+    </div>
+  );
+}
 
 export default function Home() {
   const profiles = useLiveQuery(() => db.profiles.orderBy('timestamp').reverse().toArray());
@@ -19,6 +39,26 @@ export default function Home() {
   // Treat undefined as empty array during initial IndexedDB load
   // This prevents blank page while query executes
   const profileList = profiles ?? [];
+
+  // Filter panel open state
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+
+  // Tag selector state
+  const [tagSelectorProfileId, setTagSelectorProfileId] = useState<number | null>(null);
+
+  // Tags hook for getting tag definitions
+  const { getTagsByIds } = useTags();
+
+  // Combined search + filter + sort
+  const {
+    filteredProfiles,
+    totalCount,
+    filteredCount,
+    search,
+    filters,
+    isFiltering,
+    hasNoResults,
+  } = useFilteredProfiles(profileList);
 
   // Onboarding state
   const {
@@ -92,10 +132,28 @@ export default function Home() {
     );
   };
 
+  // Handle clearing all filters
+  const handleClearFilters = () => {
+    search.clearSearch();
+    filters.resetFilters();
+  };
+
+  // Handle opening tag selector for a profile
+  const handleOpenTagSelector = (e: React.MouseEvent, profileId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTagSelectorProfileId(profileId);
+  };
+
+  // Get the currently selected profile for tag selector
+  const tagSelectorProfile = tagSelectorProfileId
+    ? profileList.find((p) => p.id === tagSelectorProfileId)
+    : null;
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 pb-20">
       {/* Header */}
-      <div className="max-w-md mx-auto mb-8">
+      <div className="max-w-md mx-auto mb-4">
         {/* Top row: Logo and user menu */}
         <div className="flex justify-between items-center">
           <Logo size="xl" showText={false} />
@@ -116,7 +174,64 @@ export default function Home() {
       </div>
 
       <div className="max-w-md mx-auto">
-        {/* Empty State */}
+        {/* Search Bar + Filter Button - only show when there are profiles */}
+        {profileList.length > 0 && (
+          <div className="sticky top-0 z-30 bg-slate-50 dark:bg-slate-900 pb-4 pt-2">
+            <div className="flex items-center gap-2">
+              {/* Search Bar - takes most of the width */}
+              <div className="flex-1">
+                <SearchBar
+                  value={search.searchText}
+                  onChange={search.setSearchText}
+                  onClear={search.clearSearch}
+                  isSearching={search.isSearching}
+                />
+              </div>
+
+              {/* Filter Button */}
+              <button
+                type="button"
+                onClick={() => setIsFilterPanelOpen(true)}
+                className={`
+                  relative flex items-center justify-center flex-shrink-0
+                  w-[44px] h-[44px]
+                  rounded-lg border transition-all
+                  ${filters.hasActiveFilters
+                    ? 'bg-violet-100 dark:bg-violet-900/40 border-violet-300 dark:border-violet-700 text-violet-600 dark:text-violet-400'
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                  }
+                `}
+                aria-label={`Filters${filters.activeFilterCount > 0 ? ` (${filters.activeFilterCount} active)` : ''}`}
+              >
+                <SlidersHorizontal size={18} />
+                {/* Active filter count badge */}
+                {filters.activeFilterCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-[10px] font-bold bg-violet-600 text-white rounded-full">
+                    {filters.activeFilterCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Search/Filter Results Count - only show when filtering */}
+        {isFiltering && !hasNoResults && (
+          <div className="mb-4 flex items-center justify-between text-sm">
+            <span className="text-slate-500 dark:text-slate-400">
+              Showing {filteredCount} of {totalCount} profiles
+            </span>
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-medium"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+
+        {/* Empty State - No profiles at all */}
         {profileList.length === 0 && (
           <div className="text-center py-12">
             <div className="bg-white dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100 dark:border-slate-700">
@@ -134,72 +249,155 @@ export default function Home() {
           </div>
         )}
 
-        {/* Grid of Profiles */}
-        <div className="grid grid-cols-1 gap-4" data-tutorial="match-gallery">
-          {profileList.map((profile) => (
-            <Link
-              key={profile.id}
-              to={`/profile/${profile.id}`}
-              className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-start space-x-4 hover:shadow-md transition-all active:scale-[0.98]"
+        {/* No Search/Filter Results State */}
+        {hasNoResults && (
+          <div className="text-center py-12">
+            <div className="bg-white dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100 dark:border-slate-700">
+              <User className="text-slate-400" size={32} />
+            </div>
+            <h3 className="text-slate-900 dark:text-slate-50 font-medium mb-2">
+              {search.debouncedSearchText
+                ? `No profiles match "${search.debouncedSearchText}"`
+                : 'No profiles match your filters'}
+            </h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
+              {search.debouncedSearchText
+                ? 'Try a different search term or adjust your filters.'
+                : 'Try adjusting your filter criteria.'}
+            </p>
+            <button
+              onClick={handleClearFilters}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-medium transition-colors"
             >
-              {/* Thumbnail */}
-              <div className="w-20 h-24 bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden flex-shrink-0 relative">
-                {profile.thumbnail ? (
-                  <img src={profile.thumbnail as string} alt={profile.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-500">
-                    <User />
-                  </div>
-                )}
-              </div>
+              <X size={20} />
+              Clear Filters
+            </button>
+          </div>
+        )}
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start">
-                    <div className="flex flex-col">
-                        <div className="flex items-center space-x-2 mb-1 flex-wrap gap-1">
-                             <h3 className="font-bold text-slate-900 dark:text-slate-50 truncate text-lg leading-tight">{profile.name}</h3>
-                             {getAppBadge(profile.appName)}
-                             {getAnalysisPhaseBadge(profile.analysisPhase)}
-                             {getVirtueScoreBadge(profile.virtue_scores)}
+        {/* Grid of Profiles */}
+        {filteredProfiles.length > 0 && (
+          <div className="grid grid-cols-1 gap-4" data-tutorial="match-gallery">
+            {filteredProfiles.map((profile) => {
+              // Get tag definitions for this profile
+              const profileTags = getTagsByIds(profile.tags ?? []);
+
+              return (
+                <Link
+                  key={profile.id}
+                  to={`/profile/${profile.id}`}
+                  className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-start space-x-4 hover:shadow-md transition-all active:scale-[0.98]"
+                >
+                  {/* Thumbnail with Favorite Button */}
+                  <div className="relative w-20 h-24 flex-shrink-0">
+                    <div className="w-full h-full bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden">
+                      <ProfileThumbnail thumbnail={profile.thumbnail} name={profile.name} />
+                    </div>
+                    {/* Favorite Button - top right of thumbnail */}
+                    <div className="absolute -top-2 -right-2">
+                      <FavoriteButton
+                        profileId={profile.id}
+                        isFavorite={profile.isFavorite ?? false}
+                        size="sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start">
+                        <div className="flex flex-col">
+                            <div className="flex items-center space-x-2 mb-1 flex-wrap gap-1">
+                                 <h3 className="font-bold text-slate-900 dark:text-slate-50 truncate text-lg leading-tight">{profile.name}</h3>
+                                 {getAppBadge(profile.appName)}
+                                 {getAnalysisPhaseBadge(profile.analysisPhase)}
+                                 {getVirtueScoreBadge(profile.virtue_scores)}
+                            </div>
+                            <span className="text-xs text-slate-400">{new Date(profile.timestamp).toLocaleDateString()}</span>
                         </div>
-                        <span className="text-xs text-slate-400">{new Date(profile.timestamp).toLocaleDateString()}</span>
+
+                        {/* Delete Button */}
+                        <button
+                            onClick={(e) => handleDelete(e, profile.id)}
+                            className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors -mt-2 -mr-2"
+                        >
+                            <Trash2 size={18} />
+                        </button>
                     </div>
 
-                    {/* Delete Button */}
-                    <button
-                        onClick={(e) => handleDelete(e, profile.id)}
-                        className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors -mt-2 -mr-2"
-                    >
-                        <Trash2 size={18} />
-                    </button>
-                </div>
-
-                {(() => {
-                  const { basics, overall } = extractAnalysisFields(profile.analysis);
-                  return (
-                    <>
-                      {/* Virtue Sentence (if available) */}
-                      {profile.virtueSentence && (
-                        <p className="text-sm text-slate-600 dark:text-slate-300 italic mb-1 line-clamp-1">
-                          {profile.virtueSentence}
-                        </p>
+                    {/* Tags Section */}
+                    <div className="flex items-center gap-1 mt-1 mb-1">
+                      {profileTags.length > 0 && (
+                        <TagChipList
+                          tags={profileTags}
+                          maxVisible={2}
+                          size="sm"
+                        />
                       )}
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 truncate">
-                        {profile.age ? `${profile.age} • ` : ''}
-                        {basics.location || 'Unknown Location'}
-                      </p>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 bg-slate-50 dark:bg-slate-700 p-2 rounded border border-slate-100 dark:border-slate-600">
-                        "{overall.summary}"
-                      </p>
-                    </>
-                  );
-                })()}
-              </div>
-            </Link>
-          ))}
-        </div>
+                      {/* Add Tag Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenTagSelector(e, profile.id)}
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded transition-colors"
+                        aria-label="Add tag"
+                      >
+                        <Tag size={10} />
+                        <span>+</span>
+                      </button>
+                    </div>
+
+                    {(() => {
+                      const { basics, overall } = extractAnalysisFields(profile.analysis);
+                      return (
+                        <>
+                          {/* Virtue Sentence (if available) */}
+                          {profile.virtueSentence && (
+                            <p className="text-sm text-slate-600 dark:text-slate-300 italic mb-1 line-clamp-1">
+                              {profile.virtueSentence}
+                            </p>
+                          )}
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 truncate">
+                            {profile.age ? `${profile.age} • ` : ''}
+                            {basics.location || 'Unknown Location'}
+                          </p>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 bg-slate-50 dark:bg-slate-700 p-2 rounded border border-slate-100 dark:border-slate-600">
+                            "{overall.summary}"
+                          </p>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
+
+      {/* Filter Panel (Bottom Sheet) */}
+      <FilterPanel
+        isOpen={isFilterPanelOpen}
+        onClose={() => setIsFilterPanelOpen(false)}
+        filters={filters.filters}
+        onToggleApp={filters.toggleApp}
+        onScoreChange={filters.updateScorePreset}
+        onDateChange={filters.updateDatePreset}
+        onSortChange={filters.updateSort}
+        onReset={filters.resetFilters}
+        hasActiveFilters={filters.hasActiveFilters}
+        onToggleFavoritesOnly={filters.toggleFavoritesOnly}
+        onToggleTagFilter={filters.toggleTagFilter}
+      />
+
+      {/* Tag Selector Modal */}
+      {tagSelectorProfile && (
+        <TagSelector
+          isOpen={tagSelectorProfileId !== null}
+          onClose={() => setTagSelectorProfileId(null)}
+          profileId={tagSelectorProfile.id}
+          currentTagIds={tagSelectorProfile.tags ?? []}
+        />
+      )}
 
       {/* Onboarding Tutorial */}
       {showOnboarding && (
