@@ -106,6 +106,24 @@ npm run test:e2e  # Run Playwright e2e tests (362 tests)
 - OpenAI API (DALL-E 3) for essence image generation
 - React Router for navigation
 
+### Dark Mode Support
+
+The app supports system-aware dark mode with three preferences:
+- `system` - Follow OS preference (default)
+- `light` - Force light mode
+- `dark` - Force dark mode
+
+**Key Files:**
+- `src/contexts/ThemeContext.tsx` - Theme provider with system preference detection
+- `tailwind.config.js` - `darkMode: 'class'` configuration
+- `src/pages/Settings.tsx` - Theme toggle UI (System/Light/Dark buttons)
+
+**Implementation Notes:**
+- Flash prevention script in `index.html` prevents white flash on dark theme load
+- PWA theme-color meta tag updates dynamically based on theme
+- Theme persisted in IndexedDB via Dexie (db version 15)
+- All components use Tailwind `dark:` variants for styling
+
 ## Architecture
 
 ### Core Data Flow
@@ -113,11 +131,11 @@ npm run test:e2e  # Run Playwright e2e tests (362 tests)
 ```
 Video Upload -> Frame Extraction (Canvas) -> AI Analysis -> IndexedDB -> UI
                                                     |
-                                    [Mood Board Generation] (after chunk 3)
+                                    [Mood Board Generation] (after chunk 3, auto, ~$0.04)
                                                     |
-                                    [Essence Generation] (after complete)
+                                    [Virtue Sentence] (after complete, auto, FREE)
                                                     |
-                                    Virtue Sentence + DALL-E Images
+                                    [Essence Image] (manual trigger via button, ~$0.04)
 ```
 
 ### Streaming Analysis Architecture
@@ -135,7 +153,7 @@ Video -> Extract Chunk (4 frames) -> Analyze Chunk -> Merge Results -> Update UI
 2. `extracting` - Extracting video frames
 3. `chunk-1` through `chunk-4` - Processing each frame chunk
 4. `consolidating` - Final synthesis of all chunks
-5. `complete` - Analysis finished, essence generation starts in background
+5. `complete` - Analysis finished, virtue sentence auto-generated (essence image requires manual trigger)
 
 **Chunk Strategy (4 frames per chunk):**
 - **Chunk 1**: Basic info (name, age), initial observations
@@ -157,22 +175,28 @@ This ensures fast initial display while ultimately selecting the optimal thumbna
 After analysis completes, the app generates an "Essence Identity" for each match:
 
 ```
-Analysis Complete -> Compute virtues_11 -> Generate Virtue Sentence -> Call DALL-E 3 -> Save Image
+Analysis Complete -> Compute virtues_11 -> Generate Virtue Sentence (auto, FREE)
+                                                    |
+                                    User clicks "Generate Essence" button
+                                                    |
+                                    Build DALL-E Prompt -> Call DALL-E 3 -> Save Image (~$0.04)
 ```
 
 **Components:**
-1. **Virtue Sentence**: One-line personality summary derived from 11 Virtues scores (e.g., "A curious explorer with radiant warmth")
-2. **Essence Image**: AI-generated abstract art representing the person's personality via DALL-E 3
-3. **Swipeable Carousel**: ProfileHeader displays essence image alongside profile photo with touch gestures
+1. **Virtue Sentence**: One-line personality summary derived from 11 Virtues scores (e.g., "A curious explorer with radiant warmth") - **AUTO-GENERATED, FREE**
+2. **Essence Image**: AI-generated abstract art representing the person's personality via DALL-E 3 - **MANUAL TRIGGER, ~$0.04**
+3. **Locked Placeholder**: Before generation, shows virtue sentence as teaser with "Generate Essence (~$0.04)" button
+4. **Swipeable Carousel**: ProfileHeader displays essence image alongside profile photo with touch gestures
 
 **Key Files:**
 - `src/lib/essence/virtueSentence.ts` - Generates virtue sentences from scores
 - `src/lib/essence/promptBuilder.ts` - Builds DALL-E prompts from virtue scores
 - `src/lib/essence/dalleClient.ts` - DALL-E 3 API client via Supabase proxy
 - `src/lib/essence/essenceGenerator.ts` - Orchestrates full essence generation
-- `src/components/profileDetail/ProfileHeader.tsx` - Swipeable carousel UI
+- `src/components/profileDetail/ProfileHeader.tsx` - Swipeable carousel UI with locked placeholder
+- `src/components/profileDetail/EssencePlaceholder.tsx` - Locked state UI with generate button
 
-**Cost:** ~$0.04 per essence image (DALL-E 3 standard quality)
+**Cost Control:** Essence images are expensive (~$0.04 each). By requiring manual trigger, users control costs and only generate for profiles they're genuinely interested in.
 
 ### Mood Board System
 
@@ -224,6 +248,9 @@ Chunk 3 Complete -> Extract Lifestyle Themes -> Build DALL-E Prompt -> Generate 
   - `frameExtraction.ts` - Video frame extraction via Canvas (chunked support)
   - `frameQuality.ts` - Frame quality scoring for thumbnail selection
   - `weather.ts` - Weather API integration
+
+- `src/contexts/` - React context providers
+  - `ThemeContext.tsx` - Dark mode with system preference detection
 
 - `src/hooks/` - Custom React hooks for feature state management
   - `useStreamingAnalysis.ts` - State machine hook for progressive analysis
