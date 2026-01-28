@@ -57,19 +57,72 @@ This helps the user track session progress when returning after breaks.
 
 ## Available Agents
 
+Agents are organized into **8 Star Trek-inspired divisions** (see `.claude/agents/divisions.json`):
+
+### Command (Yellow #FFD700)
 | Agent | Use For |
 |-------|---------|
-| `master-product-manager` (Zephyr) | Strategy, prioritization, coordination |
+| `zephyr` | Strategy, prioritization, agent orchestration |
+| `prd-specialist` | Feature specs, PRDs, requirements docs |
+
+### Engineering (Blue #3B82F6)
+| Agent | Use For |
+|-------|---------|
 | `frontend-developer` | React components, UI/UX implementation |
 | `backend-architect` | API design, Supabase, Edge Functions |
 | `code-architect` | Folder structure, architecture decisions |
-| `Argus` (code-reviewer) | Quality assurance, code review |
+| `devops-engineer` | CI/CD, Vercel, infrastructure |
+
+### Quality (Red #EF4444)
+| Agent | Use For |
+|-------|---------|
+| `Argus-code-reviewer` | Code review, quality assurance |
+| `test-engineer` | Test coverage, test strategy |
+| `security-engineer` | Vulnerabilities, OWASP compliance |
 | `debugger` | Errors, test failures, stuck UI |
+| `performance-engineer` | Bundle analysis, Core Web Vitals |
+
+### Design (Purple #A855F7)
+| Agent | Use For |
+|-------|---------|
+| `ui-designer` | Visual design, component systems |
+| `ux-researcher` | User research, journey maps |
 | `mobile-ux-optimizer` | Touch targets, responsive design |
-| `prd-specialist` | Feature specs, PRDs |
-| `public-relations` | Media relations, press releases, crisis comms |
-| `marketing` | Campaigns, user acquisition, growth tactics |
-| `branding` | Voice, visual identity, messaging consistency |
+| `accessibility-specialist` | WCAG, keyboard nav, screen readers |
+
+### Growth (Orange #F97316)
+| Agent | Use For |
+|-------|---------|
+| `marketing` | Campaigns, user acquisition, growth |
+| `branding` | Voice, visual identity, messaging |
+| `public-relations` | Media relations, press releases |
+
+### Operations (Cyan #06B6D4)
+| Agent | Use For |
+|-------|---------|
+| `git-manager` | Branch strategy, releases, PRs |
+| `technical-writer` | Documentation, READMEs, changelogs |
+| `montessori-guide` | Teaching Claude Code features |
+| `legal-advisor` | Compliance, contracts, RFPs |
+
+### Intelligence (Green #22C55E)
+| Agent | Use For |
+|-------|---------|
+| `analytics-engineer` | Privacy-respecting analytics, A/B tests |
+
+### Empathy (Pink #EC4899)
+| Agent | Use For |
+|-------|---------|
+| `dating-domain-expert` | Dating psychology, 11 Virtues, flags |
+| `emotional-safety-advocate` | Anxiety/shame triggers, "ick" factors |
+| `gender-dynamics-advisor` | Women's safety, gender equity |
+| `attachment-psychologist` | Anxious/avoidant dynamics |
+| `sensitivity-reader` | Copy review, tone, bias detection |
+| `ethical-dating-advocate` | Anti-manipulation, healthy patterns |
+
+### Built-in Agents
+| Agent | Use For |
+|-------|---------|
 | `Explore` | Codebase search, understanding patterns |
 | `Plan` | Multi-step implementation planning |
 
@@ -80,6 +133,7 @@ This helps the user track session progress when returning after breaks.
 | `/evolution` | **User-invoked only** | Collective agent self-improvement. Run at end of sessions or after milestones. |
 | `/new-feature` | **User-invoked only** | Guided feature development workflow |
 | `/docs-check` | **User-invoked only** | Pre-push documentation review. Analyzes git changes and suggests doc updates. |
+| `/teach-darklight` | **User-invoked only** | Teaches Darklight about Claude Code features using Montessori-inspired pedagogy. Auto-selects topics based on recent git activity and learning journal gaps. Delivers 250-word lessons with optional visual aids and tracks progress. |
 
 **Note:** Skills are NEVER auto-triggered. They must be explicitly invoked by the user with `/<skill-name>`.
 
