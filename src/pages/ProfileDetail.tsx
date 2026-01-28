@@ -143,7 +143,7 @@ export default function ProfileDetail() {
   const hasVirtues = !!(profile.virtues_11?.scores && profile.virtues_11.scores.length > 0);
 
   return (
-    <div className="pb-24 bg-white dark:bg-slate-900 min-h-screen">
+    <div className="pb-20 bg-white dark:bg-slate-900 min-h-screen">
       <ProfileHeader
         profile={profile}
         basics={basics}

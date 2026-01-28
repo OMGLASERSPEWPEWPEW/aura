@@ -8,7 +8,8 @@ import { useTheme, type ThemePreference } from '../contexts/ThemeContext';
 import DeleteAccountModal from '../components/auth/DeleteAccountModal';
 import { SyncIndicator } from '../components/SyncIndicator';
 import AIInsightsCard from '../components/settings/AIInsightsCard';
-import { ArrowLeft, Settings as SettingsIcon, Zap, User, LogOut, Trash2, Mail, Shield, Cloud, Monitor, Sun, Moon, Palette } from 'lucide-react';
+import { ArrowLeft, Settings as SettingsIcon, Zap, User, LogOut, Trash2, Mail, Shield, Cloud, Monitor, Sun, Moon, Palette, HelpCircle } from 'lucide-react';
+import { useOnboarding } from '../hooks/useOnboarding';
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -17,6 +18,9 @@ export default function Settings() {
 
   // Load user identity to get/set settings
   const userIdentity = useLiveQuery(() => db.userIdentity.get(1));
+
+  // Onboarding (for "Show tutorial again" feature)
+  const { resetOnboarding } = useOnboarding();
 
   const themeOptions: { value: ThemePreference; label: string; icon: typeof Monitor }[] = [
     { value: 'system', label: 'System', icon: Monitor },
@@ -70,7 +74,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 pb-24">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 pb-20">
       {/* Header */}
       <div className="max-w-md mx-auto mb-8">
         <Link
@@ -254,6 +258,22 @@ export default function Settings() {
               </p>
             </div>
           )}
+        </div>
+
+        {/* Help & Tutorial Section */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <HelpCircle size={18} className="text-blue-500" />
+            <h3 className="font-semibold text-slate-900 dark:text-slate-50">Help</h3>
+          </div>
+
+          <button
+            onClick={resetOnboarding}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-200 dark:border-slate-600"
+          >
+            <HelpCircle size={16} className="text-slate-400" />
+            Show tutorial again
+          </button>
         </div>
       </div>
 

@@ -49,8 +49,8 @@ setup('authenticate', async ({ page }) => {
   await expect(page).toHaveURL('/', { timeout: 10000 });
 
   // Verify we're logged in by checking for auth-protected content
-  // Look for "My Profile" button which only appears when authenticated
-  await expect(page.getByRole('link', { name: /my profile/i })).toBeVisible();
+  // Look for the bottom nav bar which only appears on authenticated routes
+  await expect(page.getByRole('link', { name: /home/i })).toBeVisible();
 
   // Save the authentication state
   await page.context().storageState({ path: authFile });

@@ -124,7 +124,7 @@ export default function Upload() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-32">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
       {/* Header */}
       <div className="p-4 max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-4">

@@ -6,6 +6,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ErrorBoundary, RouteErrorBoundary } from './components/errors';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import ProtectedLayout from './components/layout/ProtectedLayout';
 import Home from './pages/Home';
 import Upload from './pages/Upload';
 import ProfileDetail from './pages/ProfileDetail';
@@ -33,12 +34,12 @@ function App() {
                   <Route path="/reset-password" element={<RouteErrorBoundary routeName="ResetPassword"><ResetPassword /></RouteErrorBoundary>} />
 
                   {/* Protected routes - require authentication */}
-                  <Route path="/" element={<ProtectedRoute><RouteErrorBoundary routeName="Home"><Home /></RouteErrorBoundary></ProtectedRoute>} />
-                  <Route path="/profile/:id" element={<ProtectedRoute><RouteErrorBoundary routeName="ProfileDetail"><ProfileDetail /></RouteErrorBoundary></ProtectedRoute>} />
-                  <Route path="/my-profile" element={<ProtectedRoute><RouteErrorBoundary routeName="MyProfile"><MyProfile /></RouteErrorBoundary></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute><RouteErrorBoundary routeName="Settings"><Settings /></RouteErrorBoundary></ProtectedRoute>} />
-                  <Route path="/upload" element={<ProtectedRoute><RouteErrorBoundary routeName="Upload"><Upload /></RouteErrorBoundary></ProtectedRoute>} />
-                  <Route path="/mirror" element={<ProtectedRoute><RouteErrorBoundary routeName="Mirror"><MyProfile /></RouteErrorBoundary></ProtectedRoute>} />
+                  <Route path="/" element={<ProtectedRoute><ProtectedLayout><RouteErrorBoundary routeName="Home"><Home /></RouteErrorBoundary></ProtectedLayout></ProtectedRoute>} />
+                  <Route path="/profile/:id" element={<ProtectedRoute><ProtectedLayout><RouteErrorBoundary routeName="ProfileDetail"><ProfileDetail /></RouteErrorBoundary></ProtectedLayout></ProtectedRoute>} />
+                  <Route path="/my-profile" element={<ProtectedRoute><ProtectedLayout><RouteErrorBoundary routeName="MyProfile"><MyProfile /></RouteErrorBoundary></ProtectedLayout></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><ProtectedLayout><RouteErrorBoundary routeName="Settings"><Settings /></RouteErrorBoundary></ProtectedLayout></ProtectedRoute>} />
+                  <Route path="/upload" element={<ProtectedRoute><ProtectedLayout><RouteErrorBoundary routeName="Upload"><Upload /></RouteErrorBoundary></ProtectedLayout></ProtectedRoute>} />
+                  <Route path="/mirror" element={<ProtectedRoute><ProtectedLayout><RouteErrorBoundary routeName="Mirror"><MyProfile /></RouteErrorBoundary></ProtectedLayout></ProtectedRoute>} />
                 </Routes>
                 </div>
               </SyncProvider>

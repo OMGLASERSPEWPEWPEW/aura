@@ -42,7 +42,7 @@ Execute these phases IN ORDER. Do not skip phases.
 
 ## Phase 1: Strategic Analysis (Zephyr)
 
-Invoke the `master-product-manager` agent to:
+Invoke the `zephyr` agent to:
 
 1. **Validate roadmap fit**: Does this feature align with current phase goals?
 2. **Check dependencies**: What must exist before this feature?
@@ -177,7 +177,7 @@ When user says: "Build a feature to show AI usage history"
 5. Invoke Code Architect → src/lib/inference/ structure, Dexie v13 schema
 6. Invoke Frontend Developer → Builds AIInsightsCard component
 7. Invoke Code Reviewer → Reviews all new code
-8. Run tests → 933 pass
+8. Run tests → 1049 unit + ~460 E2E pass
 9. Update docs → feature_inventory.md updated
 10. Commit to main
 ```

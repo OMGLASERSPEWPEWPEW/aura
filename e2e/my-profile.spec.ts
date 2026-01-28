@@ -91,7 +91,8 @@ test.describe('My Profile Page', () => {
         return;
       }
 
-      const backLink = page.locator('a[href="/"]');
+      // Click the back arrow button (first link to "/" in header, not the nav bar)
+      const backLink = page.locator('header a[href="/"], .sticky a[href="/"]').first();
       await backLink.click();
       await expect(page).toHaveURL('/');
     });

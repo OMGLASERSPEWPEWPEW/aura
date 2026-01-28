@@ -20,8 +20,10 @@ test.describe('Home Page', () => {
       const onLogin = await isOnLoginPage(page);
       // Logo is an image with alt="Aura logo", not text
       const hasLogo = await page.getByAltText('Aura logo').isVisible().catch(() => false);
+      // Also check for bottom nav bar (indicates authenticated)
+      const hasBottomNav = await page.locator('nav.fixed.bottom-0').isVisible().catch(() => false);
 
-      expect(onLogin || hasLogo).toBeTruthy();
+      expect(onLogin || hasLogo || hasBottomNav).toBeTruthy();
     });
 
     test('shows empty state or profiles when authenticated', async ({ page }) => {
@@ -51,13 +53,21 @@ test.describe('Home Page', () => {
         return;
       }
 
-      // Should have upload FAB
-      const fab = page.locator('a[href="/upload"]');
-      await expect(fab).toBeVisible();
+      // Should have bottom navigation bar with key links
+      const bottomNav = page.locator('nav.fixed.bottom-0');
+      await expect(bottomNav).toBeVisible();
 
-      // Should have My Profile link
-      const myProfileLink = page.locator('a[href="/my-profile"]');
-      await expect(myProfileLink).toBeVisible();
+      // Should have Analyze link in nav bar
+      const analyzeLink = page.locator('nav a[href="/upload"]');
+      await expect(analyzeLink).toBeVisible();
+
+      // Should have Me (My Profile) link in nav bar
+      const meLink = page.locator('nav a[href="/my-profile"]');
+      await expect(meLink).toBeVisible();
+
+      // Should have Settings link in nav bar
+      const settingsLink = page.locator('nav a[href="/settings"]');
+      await expect(settingsLink).toBeVisible();
     });
   });
 });

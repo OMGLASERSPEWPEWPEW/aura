@@ -234,6 +234,7 @@ interface MatchChatMessage {
 interface AppSettings {
   autoCompatibility: boolean;  // Auto-run compatibility scoring when saving matches
   theme?: 'system' | 'light' | 'dark';  // User's theme preference
+  hasSeenOnboarding?: boolean;  // Whether user has completed onboarding tutorial
 }
 
 // Analysis phase for streaming analysis
@@ -702,6 +703,16 @@ db.version(17).stores({
   inferenceHistory: '++id, timestamp, feature, userId, success'
 });
 // No upgrade needed - new fields start as undefined
+
+// Version 18: Add hasSeenOnboarding setting for onboarding tutorial tracking
+db.version(18).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase, serverId',
+  userIdentity: '++id, lastUpdated, supabaseUserId, serverId',
+  coachingSessions: '++id, profileId, timestamp, serverId',
+  matchChats: '++id, profileId, timestamp, serverId',
+  inferenceHistory: '++id, timestamp, feature, userId, success'
+});
+// No upgrade needed - hasSeenOnboarding starts as undefined (falsy = show onboarding)
 
 export { db };
 // Re-export aspect types for convenience (legacy)

@@ -572,7 +572,7 @@ export default function MyProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-24">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
       {/* Header */}
       <div className="bg-white dark:bg-slate-800 shadow-sm dark:shadow-slate-900/50 p-4 sticky top-0 z-20">
         <div className="flex items-center justify-between max-w-2xl mx-auto">

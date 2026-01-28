@@ -3,13 +3,15 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
-import { Plus, User, Trash2, Brain, Zap, Star } from 'lucide-react';
+import { User, Trash2, Zap, Star, PlusCircle } from 'lucide-react';
 import Logo from '../components/ui/Logo';
 import type { PartnerVirtueScore } from '../lib/db';
 import UserMenu from '../components/auth/UserMenu';
 import { SyncIndicator } from '../components/SyncIndicator';
 import { deleteProfileFromServer } from '../lib/sync';
 import { SyncError } from '../lib/errors';
+import { useOnboarding } from '../hooks/useOnboarding';
+import { TutorialOverlay } from '../components/onboarding';
 
 export default function Home() {
   const profiles = useLiveQuery(() => db.profiles.orderBy('timestamp').reverse().toArray());
@@ -17,6 +19,15 @@ export default function Home() {
   // Treat undefined as empty array during initial IndexedDB load
   // This prevents blank page while query executes
   const profileList = profiles ?? [];
+
+  // Onboarding state
+  const {
+    showOnboarding,
+    currentStep,
+    nextStep,
+    skipOnboarding,
+    completeOnboarding,
+  } = useOnboarding();
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.preventDefault(); // Stop the link from opening
@@ -82,24 +93,14 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 pb-24">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 pb-20">
       {/* Header */}
       <div className="max-w-md mx-auto mb-8">
-        {/* Top row: Logo and buttons */}
+        {/* Top row: Logo and user menu */}
         <div className="flex justify-between items-center">
           <Logo size="xl" showText={false} />
-          <div className="flex items-center gap-3">
-            {/* My Profile Button */}
-            <Link
-              to="/my-profile"
-              className="flex items-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-            >
-              <Brain size={20} />
-              <span className="text-sm font-medium hidden sm:inline">My Profile</span>
-            </Link>
-            {/* User Menu */}
-            <UserMenu />
-          </div>
+          {/* User Menu */}
+          <UserMenu />
         </div>
 
         {/* Taglines - moved down with more spacing */}
@@ -119,10 +120,17 @@ export default function Home() {
         {profileList.length === 0 && (
           <div className="text-center py-12">
             <div className="bg-white dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100 dark:border-slate-700">
-                <Plus className="text-slate-400" size={32} />
+                <PlusCircle className="text-slate-400" size={32} />
             </div>
             <h3 className="text-slate-900 dark:text-slate-50 font-medium mb-2">No matches yet</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Upload your first screen recording to start.</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">Upload your first screen recording to start.</p>
+            <Link
+              to="/upload"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-medium transition-colors"
+            >
+              <PlusCircle size={20} />
+              Analyze a Profile
+            </Link>
           </div>
         )}
 
@@ -193,13 +201,15 @@ export default function Home() {
         </div>
       </div>
 
-      {/* FAB */}
-      <Link
-        to="/upload"
-        className="fixed bottom-8 right-8 w-14 h-14 bg-slate-900 dark:bg-slate-50 text-white dark:text-slate-900 rounded-full shadow-xl flex items-center justify-center hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors z-50"
-      >
-        <Plus size={28} />
-      </Link>
+      {/* Onboarding Tutorial */}
+      {showOnboarding && (
+        <TutorialOverlay
+          currentStep={currentStep}
+          onNext={nextStep}
+          onSkip={skipOnboarding}
+          onComplete={completeOnboarding}
+        />
+      )}
     </div>
   );
 }
