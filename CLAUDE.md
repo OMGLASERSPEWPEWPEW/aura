@@ -95,7 +95,7 @@ npm run build     # TypeScript check + Vite production build
 npm run lint      # ESLint check
 npm run preview   # Preview production build
 npm run test:run  # Run all unit tests (1049 tests)
-npm run test:e2e  # Run Playwright e2e tests (362 tests)
+npm run test:e2e  # Run Playwright e2e tests (~460 tests)
 ```
 
 ## Tech Stack
