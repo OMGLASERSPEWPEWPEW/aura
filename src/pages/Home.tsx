@@ -135,7 +135,7 @@ export default function Home() {
         )}
 
         {/* Grid of Profiles */}
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-4" data-tutorial="match-gallery">
           {profileList.map((profile) => (
             <Link
               key={profile.id}

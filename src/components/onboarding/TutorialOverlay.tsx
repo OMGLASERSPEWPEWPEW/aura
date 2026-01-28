@@ -17,21 +17,24 @@ interface TutorialOverlayProps {
 const TUTORIAL_STEPS = {
   gallery: {
     title: 'Your Match Gallery',
-    description: 'This is where all your analyzed profiles live. Tap any card to see detailed insights, flags, and compatibility scores.',
+    description: 'Think of this as your private dating diary - everything stays on your phone, never shared. Tap any card to see detailed insights, flags, and compatibility scores.',
     icon: Home,
     position: 'top' as const,
+    highlightSelector: '[data-tutorial="match-gallery"]',
   },
   analyze: {
     title: 'Analyze a Profile',
     description: 'Tap "Analyze" to upload a screen recording of a dating profile. The AI will extract insights in seconds.',
     icon: PlusCircle,
     position: 'bottom' as const,
+    highlightSelector: '[data-tutorial="nav-analyze"]',
   },
   insights: {
     title: 'See the Full Picture',
     description: 'Each profile shows psychological patterns, red/green flags, and how compatible they are with your relationship goals.',
     icon: Sparkles,
     position: 'center' as const,
+    highlightSelector: null,
   },
 };
 
@@ -68,6 +71,7 @@ export default function TutorialOverlay({
           stepNumber={stepNumber}
           totalSteps={totalSteps}
           position={stepConfig.position}
+          highlightSelector={stepConfig.highlightSelector}
           onNext={stepNumber === totalSteps ? onComplete : onNext}
           onSkip={onSkip}
         />

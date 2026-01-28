@@ -3,6 +3,7 @@
 
 import { motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
+import SpotlightOverlay from './SpotlightOverlay';
 
 interface TutorialStepProps {
   title: string;
@@ -11,7 +12,7 @@ interface TutorialStepProps {
   stepNumber: number;
   totalSteps: number;
   position: 'top' | 'bottom' | 'center';
-  highlightSelector?: string;
+  highlightSelector?: string | null;
   onNext: () => void;
   onSkip: () => void;
 }
@@ -23,6 +24,7 @@ export default function TutorialStep({
   stepNumber,
   totalSteps,
   position,
+  highlightSelector,
   onNext,
   onSkip,
 }: TutorialStepProps) {
@@ -39,8 +41,8 @@ export default function TutorialStep({
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50"
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70" onClick={onSkip} />
+      {/* Spotlight Overlay with cutout for highlighted element */}
+      <SpotlightOverlay highlightSelector={highlightSelector} onClick={onSkip} />
 
       {/* Tooltip Card */}
       <motion.div

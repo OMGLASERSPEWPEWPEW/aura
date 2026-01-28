@@ -4,3 +4,4 @@
 export { default as WelcomeModal } from './WelcomeModal';
 export { default as TutorialStep } from './TutorialStep';
 export { default as TutorialOverlay } from './TutorialOverlay';
+export { default as SpotlightOverlay } from './SpotlightOverlay';
