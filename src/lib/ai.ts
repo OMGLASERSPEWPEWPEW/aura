@@ -63,6 +63,46 @@ import type { UserAspectProfile, MatchAspectScores, UserVirtueProfile, MatchVirt
 import type { DatingGoals, DataExport, ManualEntry, DateSuggestion, ZodiacCompatibility, CoachingResponse, MatchCoachingAnalysis, PartnerVirtue, PartnerVirtueScore, ProfileAnalysis, NeurodivergenceAnalysis } from './db';
 import type { WeatherForecast } from './weather';
 import { calculateMatchCompatibility } from './virtues';
+import { aiLogger } from './logger';
+
+// Create child loggers for subsystems
+const log = aiLogger;
+const streamingLog = log.child('streaming');
+
+// --- Helper Functions ---
+
+/**
+ * Build formatted match analysis text for scoring prompts.
+ * Used by scoreMatchAspects and scoreMatchVirtues11.
+ */
+function buildMatchAnalysisText(matchAnalysis: ProfileAnalysis): string {
+  const psych = matchAnalysis.psychological_profile;
+  const photoVibes = matchAnalysis.photos?.map(p => `${p.vibe}: ${p.subtext}`).join('; ') || 'Not available';
+  const promptsText = matchAnalysis.prompts?.map(p => `Q: ${p.question}\nA: ${p.answer}\nAnalysis: ${p.analysis}`).join('\n\n') || 'Not available';
+  const agendasText = psych?.agendas?.map(a => `${a.type} (${a.priority}): ${a.evidence}`).join('; ') || 'Not analyzed';
+
+  return `
+Basics: ${matchAnalysis.basics?.name || 'Unknown'}, ${matchAnalysis.basics?.age || '?'} years old
+Location: ${matchAnalysis.basics?.location || 'Unknown'}
+Job: ${matchAnalysis.basics?.job || 'Unknown'}
+
+Archetype: ${psych?.archetype_summary || 'Not available'}
+Agendas: ${agendasText}
+Presentation Tactics: ${psych?.presentation_tactics?.join(', ') || 'Not analyzed'}
+Predicted Tactics: ${psych?.predicted_tactics?.join(', ') || 'Not analyzed'}
+
+Subtext Analysis:
+- Sexual Signaling: ${psych?.subtext_analysis?.sexual_signaling || 'Not available'}
+- Power Dynamics: ${psych?.subtext_analysis?.power_dynamics || 'Not available'}
+- Vulnerability: ${psych?.subtext_analysis?.vulnerability_indicators || 'Not available'}
+- Disconnect: ${psych?.subtext_analysis?.disconnect || 'Not available'}
+
+Photo Vibes: ${photoVibes}
+
+Prompts:
+${promptsText}
+`.trim();
+}
 
 // Date suggestions options
 export interface DateSuggestionsOptions {
@@ -1075,38 +1115,10 @@ Realm Summary:
 - Structure: ${userAspects.realm_summary?.structure || 'Not available'}
 `.trim();
 
-  // Format match analysis for the prompt
-  const psych = matchAnalysis.psychological_profile;
-  const photoVibes = matchAnalysis.photos?.map(p => `${p.vibe}: ${p.subtext}`).join('; ') || 'Not available';
-  const promptsText = matchAnalysis.prompts?.map(p => `Q: ${p.question}\nA: ${p.answer}\nAnalysis: ${p.analysis}`).join('\n\n') || 'Not available';
-  const agendasText = psych?.agendas?.map(a => `${a.type} (${a.priority}): ${a.evidence}`).join('; ') || 'Not analyzed';
-
-  const matchAnalysisText = `
-Basics: ${matchAnalysis.basics?.name || 'Unknown'}, ${matchAnalysis.basics?.age || '?'} years old
-Location: ${matchAnalysis.basics?.location || 'Unknown'}
-Job: ${matchAnalysis.basics?.job || 'Unknown'}
-
-Archetype: ${psych?.archetype_summary || 'Not available'}
-Agendas: ${agendasText}
-Presentation Tactics: ${psych?.presentation_tactics?.join(', ') || 'Not analyzed'}
-Predicted Tactics: ${psych?.predicted_tactics?.join(', ') || 'Not analyzed'}
-
-Subtext Analysis:
-- Sexual Signaling: ${psych?.subtext_analysis?.sexual_signaling || 'Not available'}
-- Power Dynamics: ${psych?.subtext_analysis?.power_dynamics || 'Not available'}
-- Vulnerability: ${psych?.subtext_analysis?.vulnerability_indicators || 'Not available'}
-- Disconnect: ${psych?.subtext_analysis?.disconnect || 'Not available'}
-
-Photo Vibes: ${photoVibes}
-
-Prompts:
-${promptsText}
-`.trim();
-
   const prompt = MATCH_ASPECTS_PROMPT
     .replace('{user_aspects}', userAspectsFormatted)
     .replace('{match_name}', matchAnalysis.basics?.name || 'Unknown')
-    .replace('{match_analysis}', matchAnalysisText);
+    .replace('{match_analysis}', buildMatchAnalysisText(matchAnalysis));
 
   return callAnthropicForObject<MatchAspectScores>({
     messages: [textContent(prompt)],
@@ -1204,38 +1216,10 @@ Realm Summary:
 - Cerebral: ${userVirtueProfile.realm_summary?.cerebral || 'Not available'}
 `.trim();
 
-  // Format match analysis for the prompt
-  const psych = matchAnalysis.psychological_profile;
-  const photoVibes = matchAnalysis.photos?.map(p => `${p.vibe}: ${p.subtext}`).join('; ') || 'Not available';
-  const promptsText = matchAnalysis.prompts?.map(p => `Q: ${p.question}\nA: ${p.answer}\nAnalysis: ${p.analysis}`).join('\n\n') || 'Not available';
-  const agendasText = psych?.agendas?.map(a => `${a.type} (${a.priority}): ${a.evidence}`).join('; ') || 'Not analyzed';
-
-  const matchAnalysisText = `
-Basics: ${matchAnalysis.basics?.name || 'Unknown'}, ${matchAnalysis.basics?.age || '?'} years old
-Location: ${matchAnalysis.basics?.location || 'Unknown'}
-Job: ${matchAnalysis.basics?.job || 'Unknown'}
-
-Archetype: ${psych?.archetype_summary || 'Not available'}
-Agendas: ${agendasText}
-Presentation Tactics: ${psych?.presentation_tactics?.join(', ') || 'Not analyzed'}
-Predicted Tactics: ${psych?.predicted_tactics?.join(', ') || 'Not analyzed'}
-
-Subtext Analysis:
-- Sexual Signaling: ${psych?.subtext_analysis?.sexual_signaling || 'Not available'}
-- Power Dynamics: ${psych?.subtext_analysis?.power_dynamics || 'Not available'}
-- Vulnerability: ${psych?.subtext_analysis?.vulnerability_indicators || 'Not available'}
-- Disconnect: ${psych?.subtext_analysis?.disconnect || 'Not available'}
-
-Photo Vibes: ${photoVibes}
-
-Prompts:
-${promptsText}
-`.trim();
-
   const prompt = MATCH_VIRTUES_11_PROMPT
     .replace('{user_virtues}', userVirtuesFormatted)
     .replace('{match_name}', matchAnalysis.basics?.name || 'Unknown')
-    .replace('{match_analysis}', matchAnalysisText);
+    .replace('{match_analysis}', buildMatchAnalysisText(matchAnalysis));
 
   // Get raw scores from AI with schema validation
   const aiResult = await callAnthropicForObjectValidated(
@@ -1285,7 +1269,7 @@ export async function analyzeProfileStreaming(
   frameChunks: string[][],
   callbacks?: StreamingAnalysisCallbacks
 ): Promise<AccumulatedProfile> {
-  console.log(`ai.ts: Starting streaming analysis with ${frameChunks.length} chunks`);
+  streamingLog.info(`Starting analysis with ${frameChunks.length} chunks`);
 
   let profile = createInitialAccumulatedProfile();
   profile.meta.totalChunks = frameChunks.length;
@@ -1294,14 +1278,14 @@ export async function analyzeProfileStreaming(
   for (let i = 0; i < frameChunks.length; i++) {
     // Check for abort
     if (callbacks?.signal?.aborted) {
-      console.log('ai.ts: Streaming analysis aborted');
+      streamingLog.info('Analysis aborted');
       break;
     }
 
     const chunkFrames = frameChunks[i];
     const startTime = Date.now();
 
-    console.log(`ai.ts: Processing chunk ${i + 1}/${frameChunks.length} with ${chunkFrames.length} frames`);
+    streamingLog.debug(`Processing chunk ${i + 1}/${frameChunks.length} with ${chunkFrames.length} frames`);
 
     try {
       switch (i) {
@@ -1321,7 +1305,7 @@ export async function analyzeProfileStreaming(
       }
 
       const latency = Date.now() - startTime;
-      console.log(`ai.ts: Chunk ${i + 1} complete in ${latency}ms`);
+      streamingLog.debug(`Chunk ${i + 1} complete in ${latency}ms`);
 
       if (callbacks?.onChunkComplete) {
         callbacks.onChunkComplete(i, profile, latency);
@@ -1330,7 +1314,7 @@ export async function analyzeProfileStreaming(
       const chunkError = new ChunkAnalysisError(i, frameChunks.length, {
         cause: error instanceof Error ? error : undefined,
       });
-      console.log('ai.ts:', chunkError.code, chunkError.message);
+      streamingLog.warn(chunkError.code, chunkError.message);
       if (callbacks?.onError) {
         callbacks.onError(chunkError, i);
       }
@@ -1594,7 +1578,7 @@ export async function analyzeUserProfileStreaming(
   frameChunks: string[][],
   callbacks?: UserStreamingCallbacks
 ): Promise<AccumulatedUserProfile> {
-  console.log(`ai.ts: Starting user streaming analysis with ${frameChunks.length} chunks`);
+  streamingLog.info(`Starting user analysis with ${frameChunks.length} chunks`);
 
   let profile = createInitialAccumulatedUserProfile();
   profile.meta.totalChunks = frameChunks.length;
@@ -1603,14 +1587,14 @@ export async function analyzeUserProfileStreaming(
   for (let i = 0; i < frameChunks.length; i++) {
     // Check for abort
     if (callbacks?.signal?.aborted) {
-      console.log('ai.ts: User streaming analysis aborted');
+      streamingLog.info('User analysis aborted');
       break;
     }
 
     const chunkFrames = frameChunks[i];
     const startTime = Date.now();
 
-    console.log(`ai.ts: Processing user chunk ${i + 1}/${frameChunks.length} with ${chunkFrames.length} frames`);
+    streamingLog.debug(`Processing user chunk ${i + 1}/${frameChunks.length} with ${chunkFrames.length} frames`);
 
     try {
       switch (i) {
@@ -1630,7 +1614,7 @@ export async function analyzeUserProfileStreaming(
       }
 
       const latency = Date.now() - startTime;
-      console.log(`ai.ts: User chunk ${i + 1} complete in ${latency}ms`);
+      streamingLog.debug(`User chunk ${i + 1} complete in ${latency}ms`);
 
       if (callbacks?.onChunkComplete) {
         callbacks.onChunkComplete(i, profile, latency);
@@ -1639,7 +1623,7 @@ export async function analyzeUserProfileStreaming(
       const chunkError = new ChunkAnalysisError(i, frameChunks.length, {
         cause: error instanceof Error ? error : undefined,
       });
-      console.log('ai.ts:', chunkError.code, chunkError.message);
+      streamingLog.warn(chunkError.code, chunkError.message);
       if (callbacks?.onError) {
         callbacks.onError(chunkError, i);
       }

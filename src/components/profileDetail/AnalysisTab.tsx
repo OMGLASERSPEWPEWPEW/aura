@@ -75,8 +75,8 @@ export function AnalysisTab({
       {/* Legacy Fallback */}
       <LegacySection overall={overall} hasArchetype={!!psych.archetype_summary} />
 
-      {/* Debug Section */}
-      <DebugSection profile={profile} basics={basics} />
+      {/* Debug Section - Development only */}
+      {import.meta.env.DEV && <DebugSection profile={profile} basics={basics} />}
     </div>
   );
 }
