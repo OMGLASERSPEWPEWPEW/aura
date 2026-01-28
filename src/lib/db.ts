@@ -235,6 +235,7 @@ interface AppSettings {
   autoCompatibility: boolean;  // Auto-run compatibility scoring when saving matches
   theme?: 'system' | 'light' | 'dark';  // User's theme preference
   hasSeenOnboarding?: boolean;  // Whether user has completed onboarding tutorial
+  showTutorialRequested?: boolean;  // True when "Show tutorial again" clicked; cleared after shown
 }
 
 // Analysis phase for streaming analysis

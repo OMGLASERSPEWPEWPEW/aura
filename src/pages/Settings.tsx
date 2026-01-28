@@ -1,6 +1,6 @@
 // src/pages/Settings.tsx
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,12 +15,18 @@ export default function Settings() {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const navigate = useNavigate();
 
   // Load user identity to get/set settings
   const userIdentity = useLiveQuery(() => db.userIdentity.get(1));
 
   // Onboarding (for "Show tutorial again" feature)
   const { resetOnboarding } = useOnboarding();
+
+  const handleShowTutorial = async () => {
+    await resetOnboarding();
+    navigate('/');
+  };
 
   const themeOptions: { value: ThemePreference; label: string; icon: typeof Monitor }[] = [
     { value: 'system', label: 'System', icon: Monitor },
@@ -268,7 +274,7 @@ export default function Settings() {
           </div>
 
           <button
-            onClick={resetOnboarding}
+            onClick={handleShowTutorial}
             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-200 dark:border-slate-600"
           >
             <HelpCircle size={16} className="text-slate-400" />

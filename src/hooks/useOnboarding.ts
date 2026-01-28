@@ -33,10 +33,14 @@ export function useOnboarding(): UseOnboardingResult {
 
   // Determine if we should show onboarding (only if not seen before)
   const hasSeenOnboarding = userIdentity?.settings?.hasSeenOnboarding ?? false;
+  const showTutorialRequested = userIdentity?.settings?.showTutorialRequested ?? false;
 
   // Auto-show onboarding for new users (when no profiles exist and hasn't seen it)
   const profiles = useLiveQuery(() => db.profiles.count());
   const shouldAutoShow = !isLoading && !hasSeenOnboarding && profiles === 0;
+
+  // Show tutorial when manually requested (from "Show tutorial again" in Settings)
+  const shouldShowFromRequest = !isLoading && showTutorialRequested;
 
   // Start onboarding manually (e.g., from "Show tutorial again" button)
   const startOnboarding = useCallback(() => {
@@ -59,13 +63,14 @@ export function useOnboarding(): UseOnboardingResult {
   const skipOnboarding = useCallback(async () => {
     setShowOnboarding(false);
 
-    // Mark as seen in database
+    // Mark as seen in database and clear any pending request
     if (userIdentity) {
       await db.userIdentity.update(1, {
         settings: {
           autoCompatibility: userIdentity.settings?.autoCompatibility ?? false,
           theme: userIdentity.settings?.theme ?? 'system',
           hasSeenOnboarding: true,
+          showTutorialRequested: false,
         },
         lastUpdated: new Date(),
       });
@@ -81,6 +86,7 @@ export function useOnboarding(): UseOnboardingResult {
           autoCompatibility: false,
           theme: 'system',
           hasSeenOnboarding: true,
+          showTutorialRequested: false,
         },
         lastUpdated: new Date(),
       });
@@ -100,6 +106,7 @@ export function useOnboarding(): UseOnboardingResult {
           autoCompatibility: userIdentity.settings?.autoCompatibility ?? false,
           theme: userIdentity.settings?.theme ?? 'system',
           hasSeenOnboarding: false,
+          showTutorialRequested: true,
         },
         lastUpdated: new Date(),
       });
@@ -108,7 +115,7 @@ export function useOnboarding(): UseOnboardingResult {
   }, [userIdentity, startOnboarding]);
 
   return {
-    showOnboarding: showOnboarding || shouldAutoShow,
+    showOnboarding: showOnboarding || shouldAutoShow || shouldShowFromRequest,
     currentStep,
     isLoading,
     startOnboarding,
