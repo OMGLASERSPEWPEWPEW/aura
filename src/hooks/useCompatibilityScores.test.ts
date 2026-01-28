@@ -18,6 +18,10 @@ vi.mock('../lib/db', () => ({
   },
 }));
 
+vi.mock('../lib/essence/essenceGenerator', () => ({
+  generateAndSaveVirtueSentence: vi.fn().mockResolvedValue('A curious explorer'),
+}));
+
 describe('useCompatibilityScores', () => {
   const mockVirtueScores: PartnerVirtueScore[] = [
     { virtue_name: 'Curiosity', score: 8, evidence: 'Shows interest', anti_virtue_detected: false },

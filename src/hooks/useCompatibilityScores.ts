@@ -244,6 +244,12 @@ export function useCompatibilityScores(
       });
 
       console.log('11 Virtues compatibility saved:', compatibility);
+
+      // Generate and save virtue sentence (free, derived from virtues_11)
+      // This enables the "Generate Essence" button to appear in ProfileHeader
+      const { generateAndSaveVirtueSentence } = await import('../lib/essence/essenceGenerator');
+      await generateAndSaveVirtueSentence(profile.id!);
+      console.log('Virtue sentence generated for profile:', profile.id);
     } catch (err) {
       const apiError = ensureAuraError(err, 'Failed to generate 11 Virtues compatibility');
       console.log('useCompatibilityScores:', apiError.code, apiError.message);
