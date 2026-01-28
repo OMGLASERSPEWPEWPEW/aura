@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "Evaluate this user request: $ARGUMENTS\n\nIs this TRIVIAL? Trivial = typo fix, simple question, reading a specific file, quick lookup, greeting, status check.\n\nIf TRIVIAL: Return {\"continue\": true}\n\nIf NOT trivial (feature, implementation, bug fix, refactoring, architecture, analysis, multi-step task, design decision): Return {\"continue\": true, \"systemMessage\": \"ZEPHYR REQUIRED: This is a non-trivial task. IMMEDIATELY invoke Zephyr (Task tool, subagent_type=zephyr) to orchestrate this work before proceeding. Do not skip this step.\"}",
+            "prompt": "Evaluate this user request: $ARGUMENTS\n\nIs this TRIVIAL? Trivial includes:\n- Typo fix, simple question, reading a specific file, quick lookup, greeting, status check\n- Conversational confirmations: \"engage\", \"make it so\", \"your orders captain\", \"go ahead\", \"do it\", \"proceed\", \"yes\", \"ok\", \"sure\", \"sounds good\", \"ship it\", \"let's go\", \"approved\"\n- Follow-up clarifications or casual conversation about ongoing work\n\nIf TRIVIAL: Return {\"continue\": true}\n\nIf NOT trivial (NEW feature, NEW implementation, bug fix, refactoring, architecture, analysis, multi-step task, design decision): Return {\"continue\": true, \"systemMessage\": \"ZEPHYR REQUIRED: This is a non-trivial task. IMMEDIATELY invoke Zephyr (Task tool, subagent_type=zephyr) to orchestrate this work before proceeding. Do not skip this step.\"}",
             "timeout": 10
           }
         ]
