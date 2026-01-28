@@ -6,7 +6,7 @@ import type { Profile, UserIdentity, CoachingSession, CoachingResponse, MatchCoa
 import { analyzeConversation, scoreUserResponse, generateDateAsk } from '../lib/ai';
 import type { CoachingAnalysisResult, DateAskSuggestion, ResponseScoreResult } from '../lib/ai';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
-import { AuraError, ApiError, ValidationError } from '../lib/errors';
+import { AuraError, ValidationError, ensureAuraError } from '../lib/errors';
 import { useErrorToast } from '../contexts/ToastContext';
 
 export interface UseConversationCoachReturn {
@@ -191,9 +191,7 @@ export function useConversationCoach(
       const sessionId = await db.coachingSessions.add(newSession);
       setCurrentSession({ ...newSession, id: sessionId });
     } catch (err) {
-      const auraError = err instanceof AuraError
-        ? err
-        : new ApiError(err instanceof Error ? err.message : 'Failed to analyze conversation', { cause: err instanceof Error ? err : undefined });
+      const auraError = ensureAuraError(err, 'Failed to analyze conversation');
       console.log('useConversationCoach:', auraError.code, auraError.message);
       setError(auraError);
       showError(auraError);
@@ -238,9 +236,7 @@ export function useConversationCoach(
         } : null);
       }
     } catch (err) {
-      const auraError = err instanceof AuraError
-        ? err
-        : new ApiError(err instanceof Error ? err.message : 'Failed to refresh responses', { cause: err instanceof Error ? err : undefined });
+      const auraError = ensureAuraError(err, 'Failed to refresh responses');
       console.log('useConversationCoach:', auraError.code, auraError.message);
       setError(auraError);
       showError(auraError);
@@ -298,9 +294,7 @@ export function useConversationCoach(
 
       return result;
     } catch (err) {
-      const auraError = err instanceof AuraError
-        ? err
-        : new ApiError(err instanceof Error ? err.message : 'Failed to score response', { cause: err instanceof Error ? err : undefined });
+      const auraError = ensureAuraError(err, 'Failed to score response');
       console.log('useConversationCoach:', auraError.code, auraError.message);
       setError(auraError);
       showError(auraError);
@@ -342,9 +336,7 @@ export function useConversationCoach(
 
       setDateAskSuggestions(suggestions);
     } catch (err) {
-      const auraError = err instanceof AuraError
-        ? err
-        : new ApiError(err instanceof Error ? err.message : 'Failed to generate date suggestions', { cause: err instanceof Error ? err : undefined });
+      const auraError = ensureAuraError(err, 'Failed to generate date suggestions');
       console.log('useConversationCoach:', auraError.code, auraError.message);
       setError(auraError);
       showError(auraError);

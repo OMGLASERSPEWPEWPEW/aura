@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useCompatibilityScores } from './useCompatibilityScores';
-import type { Profile, UserIdentity, VirtueScore, MatchAspectScores } from '../lib/db';
+import type { Profile, UserIdentity, PartnerVirtueScore, MatchAspectScores } from '../lib/db';
 
 // Mock dependencies
 vi.mock('../lib/ai', () => ({
@@ -19,7 +19,7 @@ vi.mock('../lib/db', () => ({
 }));
 
 describe('useCompatibilityScores', () => {
-  const mockVirtueScores: VirtueScore[] = [
+  const mockVirtueScores: PartnerVirtueScore[] = [
     { virtue_name: 'Curiosity', score: 8, evidence: 'Shows interest', anti_virtue_detected: false },
     { virtue_name: 'Honesty', score: 7, evidence: 'Direct communication', anti_virtue_detected: false },
   ];

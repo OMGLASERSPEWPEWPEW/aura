@@ -157,7 +157,8 @@ interface PartnerVirtue {
   anti_virtue: string;    // What the opposite looks like (red flag)
 }
 
-interface VirtueScore {
+/** @deprecated Use VirtueScore from virtues/types.ts for the 11 Virtues system */
+interface PartnerVirtueScore {
   virtue: string;         // Name of the virtue
   score: number;          // 1-10
   evidence: string;       // What in their profile suggests this score
@@ -259,8 +260,8 @@ interface Profile {
   // Date suggestions (populated on-demand)
   date_suggestions?: DateSuggestions;
 
-  // DEPRECATED: Old 5 Partner Virtues scores (keep for backwards compatibility)
-  virtue_scores?: VirtueScore[];
+  //** @deprecated Old 5 Partner Virtues scores (keep for backwards compatibility) */
+  virtue_scores?: PartnerVirtueScore[];
 
   // DEPRECATED: 23 Aspects scores (keep for backwards compatibility)
   aspect_scores?: MatchAspectScores;
@@ -724,7 +725,7 @@ export type {
   CoachingResponse,
   MatchCoachingAnalysis,
   PartnerVirtue,
-  VirtueScore,
+  PartnerVirtueScore,
   NeurodivergentTrait,
   NeurodivergenceAnalysis,
   TransactionalIndicators,

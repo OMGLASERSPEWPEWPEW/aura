@@ -5,7 +5,7 @@ import { db } from '../lib/db';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
 import { Plus, User, Trash2, Brain, Zap, Star } from 'lucide-react';
 import Logo from '../components/ui/Logo';
-import type { VirtueScore } from '../lib/db';
+import type { PartnerVirtueScore } from '../lib/db';
 import UserMenu from '../components/auth/UserMenu';
 import { SyncIndicator } from '../components/SyncIndicator';
 import { deleteProfileFromServer } from '../lib/sync';
@@ -66,7 +66,7 @@ export default function Home() {
   };
 
   // Helper to get virtue score badge
-  const getVirtueScoreBadge = (virtueScores?: VirtueScore[]) => {
+  const getVirtueScoreBadge = (virtueScores?: PartnerVirtueScore[]) => {
     if (!virtueScores || virtueScores.length === 0) return null;
     const avg = Math.round(virtueScores.reduce((sum, v) => sum + v.score, 0) / virtueScores.length);
     const colorClass = avg >= 7

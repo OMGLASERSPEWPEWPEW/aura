@@ -11,6 +11,7 @@ export {
   TimeoutError,
   AuthError,
   RateLimitError,
+  ensureAuraError,
 } from './api';
 
 // Sync errors

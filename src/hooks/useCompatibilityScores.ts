@@ -7,16 +7,16 @@ import type {
   Profile,
   ProfileAnalysis,
   UserIdentity,
-  VirtueScore,
+  PartnerVirtueScore,
   MatchAspectScores,
   UserVirtueProfile,
   MatchVirtueCompatibility,
 } from '../lib/db';
-import { ApiError, AuraError } from '../lib/errors';
+import { ApiError, ensureAuraError } from '../lib/errors';
 
 interface UseCompatibilityScoresReturn {
   // Legacy systems (deprecated but still supported)
-  virtueScores: VirtueScore[] | undefined;
+  virtueScores: PartnerVirtueScore[] | undefined;
   aspectScores: MatchAspectScores | undefined;
   isLoadingVirtues: boolean;
   isLoadingAspects: boolean;
@@ -54,7 +54,7 @@ export function useCompatibilityScores(
   userIdentity: UserIdentity | undefined
 ): UseCompatibilityScoresReturn {
   // Legacy state
-  const [virtueScores, setVirtueScores] = useState<VirtueScore[] | undefined>(undefined);
+  const [virtueScores, setPartnerVirtueScores] = useState<PartnerVirtueScore[] | undefined>(undefined);
   const [aspectScores, setAspectScores] = useState<MatchAspectScores | undefined>(undefined);
   const [isLoadingVirtues, setIsLoadingVirtues] = useState(false);
   const [isLoadingAspects, setIsLoadingAspects] = useState(false);
@@ -147,7 +147,7 @@ export function useCompatibilityScores(
   // Load existing scores from profile
   useEffect(() => {
     if (profile?.virtue_scores) {
-      setVirtueScores(profile.virtue_scores);
+      setPartnerVirtueScores(profile.virtue_scores);
     }
     if (profile?.aspect_scores) {
       setAspectScores(profile.aspect_scores);
@@ -171,7 +171,7 @@ export function useCompatibilityScores(
         userIdentity.synthesis.partner_virtues
       );
 
-      setVirtueScores(scores);
+      setPartnerVirtueScores(scores);
 
       // Save to database
       await db.profiles.update(profile.id!, {
@@ -180,9 +180,7 @@ export function useCompatibilityScores(
 
       console.log('Virtue scores saved:', scores);
     } catch (err) {
-      const apiError = err instanceof AuraError
-        ? err
-        : new ApiError(err instanceof Error ? err.message : 'Failed to generate virtue scores', { cause: err instanceof Error ? err : undefined });
+      const apiError = ensureAuraError(err, 'Failed to generate virtue scores');
       console.log('useCompatibilityScores:', apiError.code, apiError.message);
       setVirtueError(apiError.getUserMessage());
     } finally {
@@ -213,9 +211,7 @@ export function useCompatibilityScores(
 
       console.log('Aspect scores saved:', scores);
     } catch (err) {
-      const apiError = err instanceof AuraError
-        ? err
-        : new ApiError(err instanceof Error ? err.message : 'Failed to generate aspect scores', { cause: err instanceof Error ? err : undefined });
+      const apiError = ensureAuraError(err, 'Failed to generate aspect scores');
       console.log('useCompatibilityScores:', apiError.code, apiError.message);
       setAspectError(apiError.getUserMessage());
     } finally {
@@ -249,9 +245,7 @@ export function useCompatibilityScores(
 
       console.log('11 Virtues compatibility saved:', compatibility);
     } catch (err) {
-      const apiError = err instanceof AuraError
-        ? err
-        : new ApiError(err instanceof Error ? err.message : 'Failed to generate 11 Virtues compatibility', { cause: err instanceof Error ? err : undefined });
+      const apiError = ensureAuraError(err, 'Failed to generate 11 Virtues compatibility');
       console.log('useCompatibilityScores:', apiError.code, apiError.message);
       setVirtues11Error(apiError.getUserMessage());
     } finally {

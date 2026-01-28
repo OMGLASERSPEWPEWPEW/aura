@@ -3,9 +3,7 @@
 
 export { ProfileHeader } from './ProfileHeader';
 export { CompatibilityCard } from './CompatibilityCard';
-export { VirtueScoresCard } from './VirtueScoresCard';
 export { TransactionalIndicatorsCard } from './TransactionalIndicatorsCard';
-export { AspectMatchCard } from './AspectMatchCard';
 export { AskAboutMatch } from './AskAboutMatch';
 export { ZodiacSection } from './ZodiacSection';
 export { DateIdeasSection } from './DateIdeasSection';

@@ -5,7 +5,7 @@ import { db } from '../lib/db';
 import type { Profile, UserIdentity } from '../lib/db';
 import { buildUserContextForMatch } from '../lib/utils';
 import { extractAnalysisFields, getProfileContextForOpeners } from '../lib/utils/profileHelpers';
-import { AuraError, ApiError } from '../lib/errors';
+import { AuraError, ensureAuraError } from '../lib/errors';
 import { useErrorToast } from '../contexts/ToastContext';
 
 interface UseOpenerRefreshReturn {
@@ -54,9 +54,7 @@ export function useOpenerRefresh(
 
       await db.profiles.update(profile.id, { analysis: updatedAnalysis });
     } catch (err) {
-      const auraError = err instanceof AuraError
-        ? err
-        : new ApiError(err instanceof Error ? err.message : 'Failed to refresh openers', { cause: err instanceof Error ? err : undefined });
+      const auraError = ensureAuraError(err, 'Failed to refresh openers');
       console.log('useOpenerRefresh:', auraError.code, auraError.message);
       setError(auraError);
       showError(auraError);
@@ -96,9 +94,7 @@ export function useOpenerRefresh(
 
         await db.profiles.update(profile.id, { analysis: updatedAnalysis });
       } catch (err) {
-        const auraError = err instanceof AuraError
-          ? err
-          : new ApiError(err instanceof Error ? err.message : 'Failed to refresh opener', { cause: err instanceof Error ? err : undefined });
+        const auraError = ensureAuraError(err, 'Failed to refresh opener');
         console.log('useOpenerRefresh:', auraError.code, auraError.message);
         setError(auraError);
         showError(auraError);

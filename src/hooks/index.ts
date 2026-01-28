@@ -8,3 +8,7 @@ export { useOpenerRefresh } from './useOpenerRefresh';
 export { useConversationCoach } from './useConversationCoach';
 export { useCompatibilityScores } from './useCompatibilityScores';
 export { useAskAboutMatch } from './useAskAboutMatch';
+export { useStreamingAnalysis } from './useStreamingAnalysis';
+export { useUserStreamingAnalysis } from './useUserStreamingAnalysis';
+export { useRequireAuth } from './useRequireAuth';
+export { useSyncStatus } from './useSyncStatus';

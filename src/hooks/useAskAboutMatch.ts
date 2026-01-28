@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type ProfileAnalysis, type ProfileCompatibility } from '../lib/db';
 import { askAboutMatch } from '../lib/ai';
-import { ApiError, StorageError, AuraError } from '../lib/errors';
+import { StorageError, ensureAuraError } from '../lib/errors';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -75,9 +75,7 @@ export function useAskAboutMatch(
         content: response,
       });
     } catch (err) {
-      const auraError = err instanceof AuraError
-        ? err
-        : new ApiError(err instanceof Error ? err.message : 'Failed to process question', { cause: err instanceof Error ? err : undefined });
+      const auraError = ensureAuraError(err, 'Failed to process question');
       console.log('useAskAboutMatch:', auraError.code, auraError.message);
 
       const errorMessage = auraError.getUserMessage();

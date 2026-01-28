@@ -4,6 +4,35 @@
 import { AuraError } from './base';
 
 /**
+ * Ensures an unknown error is wrapped as an AuraError, using ApiError as the fallback type.
+ * This is the common pattern used across hooks for error handling.
+ *
+ * @param err - The unknown error to wrap
+ * @param defaultMessage - Message to use if err is not an Error instance
+ * @returns An AuraError (either the original if it was already one, or a new ApiError wrapping it)
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   await someApiCall();
+ * } catch (err) {
+ *   const auraError = ensureAuraError(err, 'Failed to fetch data');
+ *   console.log(auraError.code, auraError.message);
+ *   throw auraError;
+ * }
+ * ```
+ */
+export function ensureAuraError(err: unknown, defaultMessage: string): AuraError {
+  if (err instanceof AuraError) {
+    return err;
+  }
+  return new ApiError(
+    err instanceof Error ? err.message : defaultMessage,
+    { cause: err instanceof Error ? err : undefined }
+  );
+}
+
+/**
  * Base class for API errors
  */
 export class ApiError extends AuraError {

@@ -60,7 +60,7 @@ import {
   createInitialAccumulatedProfile,
 } from './streaming/types';
 import type { UserAspectProfile, MatchAspectScores, UserVirtueProfile, MatchVirtueCompatibility, VirtueScore as VirtueScore11 } from './virtues/types';
-import type { DatingGoals, DataExport, ManualEntry, DateSuggestion, ZodiacCompatibility, CoachingResponse, MatchCoachingAnalysis, PartnerVirtue, VirtueScore, ProfileAnalysis, NeurodivergenceAnalysis } from './db';
+import type { DatingGoals, DataExport, ManualEntry, DateSuggestion, ZodiacCompatibility, CoachingResponse, MatchCoachingAnalysis, PartnerVirtue, PartnerVirtueScore, ProfileAnalysis, NeurodivergenceAnalysis } from './db';
 import type { WeatherForecast } from './weather';
 import { calculateMatchCompatibility } from './virtues';
 
@@ -844,7 +844,7 @@ export async function extractPartnerVirtues(input: PartnerVirtuesInput): Promise
 export async function scoreMatchVirtues(
   matchAnalysis: ProfileAnalysis,
   userVirtues: PartnerVirtue[]
-): Promise<VirtueScore[]> {
+): Promise<PartnerVirtueScore[]> {
   if (!userVirtues || userVirtues.length === 0) {
     console.log('src/lib/ai.ts: No user virtues provided, skipping virtue scoring');
     return [];

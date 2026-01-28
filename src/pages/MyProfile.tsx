@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 import { db, type UserIdentity, type DatingGoals, type TextInput, type VideoAnalysis, type PhotoEntry, type ManualEntry, type UserSynthesis } from '../lib/db';
-import { analyzeUserSelf, extractPartnerVirtues, analyzeNeurodivergence, extractUserAspects } from '../lib/ai';
+import { analyzeUserSelf, extractPartnerVirtues, analyzeNeurodivergence, extractUserAspects, extractUserVirtues11 } from '../lib/ai';
 import { useUserStreamingAnalysis } from '../hooks/useUserStreamingAnalysis';
 import { useAuth } from '../contexts/AuthContext';
 import { saveUserIdentityWithSync } from '../lib/sync';
@@ -377,6 +377,34 @@ export default function MyProfile() {
 
       if (!isMounted.current) return;
 
+      // Extract 11 Virtues profile (NEW system - primary)
+      console.log("MyProfile: Extracting virtues profile (11 Virtues)...");
+      let virtueProfile = undefined;
+      try {
+        virtueProfile = await extractUserVirtues11({
+          archetype_summary: result.psychological_profile?.archetype_summary,
+          communication_style: result.behavioral_insights?.communication_style,
+          attachment_patterns: result.behavioral_insights?.attachment_patterns,
+          dating_goal: localGoals?.type,
+          what_to_look_for: result.dating_strategy?.what_to_look_for,
+          what_to_avoid: result.dating_strategy?.what_to_avoid,
+          growth_areas: result.behavioral_insights?.growth_areas,
+          strengths: result.behavioral_insights?.strengths,
+          photo_analysis: photoAnalysis,
+          behavioral_data: undefined
+        });
+        console.log("MyProfile: Virtues profile extracted:", virtueProfile?.scores?.length || 0, "virtues scored");
+      } catch (error) {
+        // Non-critical: virtue extraction failed, continue with synthesis
+        const apiError = new ApiError(
+          `Failed to extract virtues profile: ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error instanceof Error ? error : undefined }
+        );
+        console.log("MyProfile:", apiError.code, apiError.message);
+      }
+
+      if (!isMounted.current) return;
+
       const synthesis: UserSynthesis = {
         meta: {
           lastUpdated: new Date(),
@@ -411,7 +439,8 @@ export default function MyProfile() {
         },
         partner_virtues: partnerVirtues,
         neurodivergence: neurodivergence,
-        aspect_profile: aspectProfile
+        aspect_profile: aspectProfile,
+        virtue_profile: virtueProfile
       };
 
       // Auto-populate manual entry from synthesis basics if fields are empty

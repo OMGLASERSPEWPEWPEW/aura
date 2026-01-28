@@ -6,7 +6,7 @@ import { db } from '../lib/db';
 import type { Profile, DateSuggestion, UserIdentity } from '../lib/db';
 import { getUserLocation, getUserInterests, getUserDatingGoal } from '../lib/utils';
 import { getMatchLocation, getMatchInterests, extractAnalysisFields } from '../lib/utils/profileHelpers';
-import { AuraError, ApiError } from '../lib/errors';
+import { AuraError, ensureAuraError } from '../lib/errors';
 import { useErrorToast } from '../contexts/ToastContext';
 
 interface UseDateIdeasReturn {
@@ -128,9 +128,7 @@ export function useDateIdeas(
         },
       });
     } catch (err) {
-      const auraError = err instanceof AuraError
-        ? err
-        : new ApiError(err instanceof Error ? err.message : 'Failed to get date ideas', { cause: err instanceof Error ? err : undefined });
+      const auraError = ensureAuraError(err, 'Failed to get date ideas');
       console.log('useDateIdeas:', auraError.code, auraError.message);
       setError(auraError);
       showError(auraError);
