@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, PlusCircle, User, Settings, HelpCircle } from 'lucide-react';
+import { Home, PlusCircle, User, Settings } from 'lucide-react';
 import { HelpDeskPopup } from '../help';
 
 interface NavItem {
@@ -30,13 +30,19 @@ export default function BottomNavBar() {
     <>
       <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 z-40 safe-area-pb">
         <div className="max-w-md mx-auto h-full flex items-center justify-around px-2">
-          {/* Help/Sorry Button - leftmost position */}
+          {/* Sorry Button - character avatar with pulse glow */}
           <button
             onClick={() => setIsHelpOpen(true)}
-            className="flex flex-col items-center justify-center gap-1 px-3 py-2 min-w-[56px] rounded-lg transition-colors text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 active:bg-slate-100 dark:active:bg-slate-700"
+            className="flex flex-col items-center justify-center gap-1 px-3 py-2 min-w-[56px] rounded-lg transition-colors"
           >
-            <HelpCircle size={22} className="stroke-[1.5px]" />
-            <span className="text-[10px] font-medium">Sorry</span>
+            <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-purple-400 dark:border-purple-500 animate-pulse-glow">
+              <img
+                src="/helpdesk-agent.png"
+                alt="Sorry"
+                className="w-full h-full object-cover object-top"
+              />
+            </div>
+            <span className="text-[10px] font-medium text-purple-600 dark:text-purple-400">Sorry</span>
           </button>
 
           {NAV_ITEMS.map((item) => {
