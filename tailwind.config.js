@@ -28,8 +28,9 @@ export default {
           '50%': { boxShadow: '0 0 12px 4px rgba(168, 85, 247, 0.6)' },
         },
         expandIn: {
-          '0%': { opacity: '0', transform: 'scale(0.3) translateY(40px)' },
-          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+          '0%': { opacity: '0', transform: 'scale(0.15)' },
+          '60%': { opacity: '1', transform: 'scale(1.03)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
         },
       },
     },

@@ -135,6 +135,8 @@ export function HelpDeskPopup({ isOpen, onClose }: HelpDeskPopupProps) {
 
   // Video state
   const [videoError, setVideoError] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Scroll to bottom of chat
   useEffect(() => {
@@ -284,12 +286,12 @@ export function HelpDeskPopup({ isOpen, onClose }: HelpDeskPopupProps) {
         onClick={handleClose}
       />
 
-      {/* Popup */}
-      <div className="fixed bottom-20 left-4 right-4 max-w-sm mx-auto z-50 animate-expand-in">
+      {/* Popup - grows from bottom-left where Sorry's avatar sits */}
+      <div className="fixed bottom-20 left-4 right-4 max-w-sm mx-auto z-50 animate-expand-in origin-bottom-left">
         <div className="bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl overflow-hidden max-h-[70vh] flex flex-col">
 
-          {/* Header with character video/image */}
-          <div className="relative bg-gradient-to-br from-purple-900/50 to-slate-900 p-4 flex-shrink-0">
+          {/* Header — Sorry's portrait expands here */}
+          <div className="relative bg-gradient-to-br from-purple-900/50 to-slate-900 flex-shrink-0">
             <button
               onClick={handleClose}
               className="absolute top-3 right-3 p-1.5 rounded-full bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors z-10"
@@ -297,29 +299,33 @@ export function HelpDeskPopup({ isOpen, onClose }: HelpDeskPopupProps) {
               <X size={16} />
             </button>
 
-            <div className="flex items-start gap-3">
-              {/* Character video/image - expands on popup open */}
-              <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-purple-500/30 flex-shrink-0">
-                {!videoError ? (
-                  <video
-                    src="/helpdesk-agent-animated.mp4"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover object-top"
-                    onError={() => setVideoError(true)}
-                  />
-                ) : (
-                  <img
-                    src="/helpdesk-agent.png"
-                    alt="Sorry - Help Desk"
-                    className="w-full h-full object-cover object-top"
-                  />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-white font-bold text-sm">...what.</h3>
+            {/* Full-width video/image — the "expanded avatar" */}
+            <div className="relative w-full aspect-[9/10] overflow-hidden">
+              {/* Static image always renders underneath */}
+              <img
+                src="/helpdesk-agent.png"
+                alt="Sorry - Help Desk"
+                className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-700 ${videoReady ? 'opacity-0' : 'opacity-100'}`}
+              />
+              {/* Video crossfades in on top when ready */}
+              {!videoError && (
+                <video
+                  ref={videoRef}
+                  src="/helpdesk-agent-animated.mp4"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-700 ${videoReady ? 'opacity-100' : 'opacity-0'}`}
+                  onCanPlay={() => setVideoReady(true)}
+                  onError={() => setVideoError(true)}
+                />
+              )}
+              {/* Gradient overlay for text legibility */}
+              <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-slate-900 to-transparent" />
+              {/* Name + subtitle overlay */}
+              <div className="absolute bottom-3 left-4 right-4">
+                <h3 className="text-white font-bold text-base">...what.</h3>
                 <p className="text-slate-400 text-xs mt-0.5">
                   {tab === 'chat'
                     ? '...ask me something. *sigh*'
@@ -327,7 +333,6 @@ export function HelpDeskPopup({ isOpen, onClose }: HelpDeskPopupProps) {
                       ? "this is anonymous btw. I don't even know who you are."
                       : 'I guess I can help or whatever.'}
                 </p>
-                {/* Anonymity badge for feedback */}
                 {tab === 'feedback' && (
                   <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] text-emerald-400 bg-emerald-900/30 px-2 py-0.5 rounded-full">
                     anonymous
