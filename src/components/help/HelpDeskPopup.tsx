@@ -7,6 +7,8 @@ import { X, MessageCircle, Send, AlertTriangle, Heart } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { ANTHROPIC_CONFIG, TIMEOUTS } from '../../lib/api/config';
 import { getAccessToken } from '../../lib/supabase';
+import { ComicBubble } from './ComicBubble';
+import { AslWhatAvatar } from './AslWhatAvatar';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -522,38 +524,44 @@ export function HelpDeskPopup({ isOpen, onClose }: HelpDeskPopupProps) {
                     </p>
                   )}
 
-                  {chatMessages.map((msg, i) => (
-                    <div
-                      key={i}
-                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
+                  {chatMessages.map((msg, i) => {
+                    const isUser = msg.role === 'user';
+                    const isFirstSorryMessage = !isUser && chatMessages.findIndex((m) => m.role === 'assistant') === i;
+
+                    return (
                       <div
-                        className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${
-                          msg.role === 'user'
-                            ? 'bg-purple-600 text-white rounded-br-sm'
-                            : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-bl-sm'
-                        }`}
+                        key={i}
+                        className={`flex items-end gap-2 ${isUser ? 'justify-start' : 'justify-end'}`}
                       >
-                        {msg.content}
+                        {/* ASL avatar on first Sorry message only */}
+                        {isFirstSorryMessage && <AslWhatAvatar />}
+
+                        <div className="max-w-[75%]">
+                          <ComicBubble side={isUser ? 'left' : 'right'}>
+                            {msg.content}
+                          </ComicBubble>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {/* Typing indicator */}
                   {chatLoading && !chatStreaming && (
-                    <div className="flex justify-start">
-                      <div className="bg-slate-800 border border-slate-700 rounded-xl rounded-bl-sm px-3 py-2">
-                        <span className="text-slate-400 text-sm animate-pulse">...</span>
-                      </div>
+                    <div className="flex justify-end">
+                      <ComicBubble side="right">
+                        <span className="text-slate-400 animate-pulse">...</span>
+                      </ComicBubble>
                     </div>
                   )}
 
                   {/* Streaming text */}
                   {chatStreaming && (
-                    <div className="flex justify-start">
-                      <div className="max-w-[80%] bg-slate-800 text-slate-200 border border-slate-700 rounded-xl rounded-bl-sm px-3 py-2 text-sm">
-                        {chatStreaming}
-                        <span className="animate-pulse">|</span>
+                    <div className="flex justify-end">
+                      <div className="max-w-[75%]">
+                        <ComicBubble side="right">
+                          {chatStreaming}
+                          <span className="animate-pulse">|</span>
+                        </ComicBubble>
                       </div>
                     </div>
                   )}
