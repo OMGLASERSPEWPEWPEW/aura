@@ -1,49 +1,50 @@
 // src/components/profileDetail/CompatibilityCard.tsx
-import { Star, Check, AlertCircle } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
 import type { ProfileCompatibility } from '../../lib/db';
+import { getResonanceDisplay } from '../../lib/virtues';
 
 interface CompatibilityCardProps {
   compatibility: ProfileCompatibility;
 }
 
 /**
- * Displays compatibility score and breakdown.
+ * Displays compatibility using mystical resonance vocabulary.
+ * Replaces numeric scores with psychologically-safe language.
  */
 export function CompatibilityCard({ compatibility }: CompatibilityCardProps) {
+  const { label, gradient, Icon, iconColors, description } = getResonanceDisplay(compatibility.score);
+
   return (
-    <section className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 p-5 rounded-xl border border-emerald-200 dark:border-emerald-700">
+    <section className={`bg-gradient-to-br ${gradient} p-5 rounded-xl border`}>
       <div className="flex items-start justify-between mb-4">
         <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
-          <Star size={18} className="text-emerald-600 dark:text-emerald-400" /> Compatibility
+          <Icon size={18} className={iconColors} /> Resonance
         </h2>
-        <div
-          className={`flex items-center gap-1 px-3 py-1.5 rounded-full font-bold text-lg ${
-            compatibility.score >= 7
-              ? 'bg-emerald-200 dark:bg-emerald-700 text-emerald-800 dark:text-emerald-100'
-              : compatibility.score >= 4
-              ? 'bg-amber-200 dark:bg-amber-700 text-amber-800 dark:text-amber-100'
-              : 'bg-red-200 dark:bg-red-700 text-red-800 dark:text-red-100'
-          }`}
-        >
-          {compatibility.score}/10
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-sm bg-white/60 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 border border-slate-200/50 dark:border-slate-600/50">
+          <Icon size={14} className={iconColors} />
+          {label}
         </div>
       </div>
 
-      <p className="text-emerald-900 dark:text-emerald-100 font-medium mb-4">{compatibility.summary}</p>
+      {/* Mystical description */}
+      <p className="text-slate-700 dark:text-slate-200 font-medium mb-2 italic">{description}</p>
+
+      {/* Original summary from analysis */}
+      <p className="text-slate-600 dark:text-slate-300 mb-4">{compatibility.summary}</p>
 
       {compatibility.goal_alignment && (
-        <p className="text-sm text-emerald-700 dark:text-emerald-300 mb-4 italic">{compatibility.goal_alignment}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 italic">{compatibility.goal_alignment}</p>
       )}
 
       {compatibility.strengths && compatibility.strengths.length > 0 && (
         <div className="mb-3">
-          <h4 className="text-sm font-bold text-emerald-800 dark:text-emerald-200 mb-2 flex items-center gap-1">
-            <Check size={14} /> Why this works for you:
+          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1">
+            <Check size={14} className="text-violet-500 dark:text-violet-400" /> Points of connection:
           </h4>
           <ul className="space-y-1">
             {compatibility.strengths.map((s, i) => (
-              <li key={i} className="text-sm text-emerald-700 dark:text-emerald-300 flex items-start gap-2">
-                <span className="text-emerald-500 dark:text-emerald-400 mt-1">*</span>
+              <li key={i} className="text-sm text-slate-700 dark:text-slate-300 flex items-start gap-2">
+                <span className="text-violet-400 dark:text-violet-500 mt-1">+</span>
                 {s}
               </li>
             ))}
@@ -52,14 +53,14 @@ export function CompatibilityCard({ compatibility }: CompatibilityCardProps) {
       )}
 
       {compatibility.concerns && compatibility.concerns.length > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-900/30 p-3 rounded-lg border border-amber-200 dark:border-amber-700">
-          <h4 className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 flex items-center gap-1">
-            <AlertCircle size={14} /> Watch out for:
+        <div className="bg-slate-100/50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-600">
+          <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-1">
+            <AlertCircle size={14} className="text-amber-500 dark:text-amber-400" /> Navigate with awareness:
           </h4>
           <ul className="space-y-1">
             {compatibility.concerns.map((c, i) => (
-              <li key={i} className="text-sm text-amber-700 dark:text-amber-300 flex items-start gap-2">
-                <span className="text-amber-500 dark:text-amber-400 mt-1">*</span>
+              <li key={i} className="text-sm text-slate-600 dark:text-slate-400 flex items-start gap-2">
+                <span className="text-amber-400 dark:text-amber-500 mt-1">~</span>
                 {c}
               </li>
             ))}

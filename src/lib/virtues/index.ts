@@ -80,3 +80,22 @@ export {
   canMigrateAspectScores,
   getMigrationStatus,
 } from './migration';
+
+// =============================================================================
+// DISPLAY EXPORTS: Resonance vocabulary for score display
+// =============================================================================
+
+export type { ResonanceLevel } from './resonanceDisplay';
+
+export {
+  getResonanceLevel,
+  getResonanceDisplay,
+  RESONANCE_LABELS,
+  RESONANCE_SHORT_LABELS,
+  RESONANCE_COLORS,
+  RESONANCE_ICON_COLORS,
+  RESONANCE_GRADIENTS,
+  RESONANCE_ICONS,
+  RESONANCE_DESCRIPTIONS,
+  RESONANCE_TOOLTIPS,
+} from './resonanceDisplay';

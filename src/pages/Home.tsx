@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
 import { extractAnalysisFields } from '../lib/utils/profileHelpers';
-import { User, Trash2, Zap, Star, PlusCircle, SlidersHorizontal, X, Tag } from 'lucide-react';
+import { User, Trash2, Zap, PlusCircle, SlidersHorizontal, X, Tag } from 'lucide-react';
 import Logo from '../components/ui/Logo';
 import type { PartnerVirtueScore } from '../lib/db';
 import UserMenu from '../components/auth/UserMenu';
@@ -17,6 +17,7 @@ import { useFilteredProfiles } from '../hooks/useFilteredProfiles';
 import { useTags } from '../hooks/useTags';
 import { useThumbnailUrl } from '../lib/utils/thumbnailUtils';
 import { SearchBar, FilterPanel, FavoriteButton, TagChipList, TagSelector } from '../components/home';
+import { getResonanceDisplay } from '../lib/virtues';
 
 // Thumbnail component to handle Blob/string conversion
 function ProfileThumbnail({ thumbnail, name }: { thumbnail?: string | Blob; name: string }) {
@@ -116,18 +117,14 @@ export default function Home() {
     return null;
   };
 
-  // Helper to get virtue score badge
+  // Helper to get virtue score badge using mystical resonance vocabulary
   const getVirtueScoreBadge = (virtueScores?: PartnerVirtueScore[]) => {
     if (!virtueScores || virtueScores.length === 0) return null;
     const avg = Math.round(virtueScores.reduce((sum, v) => sum + v.score, 0) / virtueScores.length);
-    const colorClass = avg >= 7
-      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-      : avg >= 5
-        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
-        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600';
+    const { shortLabel, colors, Icon } = getResonanceDisplay(avg);
     return (
-      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${colorClass}`}>
-        <Star size={10} /> {avg}/10
+      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${colors}`}>
+        <Icon size={10} /> {shortLabel}
       </span>
     );
   };
