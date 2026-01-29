@@ -45,3 +45,6 @@ playwright/.cache/
 
 # Test video fixtures (too large for git)
 e2e/fixtures/videos/
+
+# Claude Code local memory (conversation logs)
+.claude/memory/
