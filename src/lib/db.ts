@@ -473,6 +473,16 @@ interface UserIdentity {
   lastUpdated: Date;
 }
 
+// --- Sorry Chat Types (Help Desk persistent memory) ---
+
+interface SorryChatMessage {
+  id?: number;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  sessionId: string; // Groups messages by conversation session
+}
+
 // Import inference types for the table
 import type { InferenceRecord } from './inference/types';
 
@@ -482,6 +492,7 @@ const db = new Dexie('AuraDB') as Dexie & {
   coachingSessions: EntityTable<CoachingSession, 'id'>;
   matchChats: EntityTable<MatchChatMessage, 'id'>;
   inferenceHistory: EntityTable<InferenceRecord, 'id'>;
+  sorryChats: EntityTable<SorryChatMessage, 'id'>;
 };
 
 // Schema definition with migration
@@ -751,6 +762,18 @@ db.version(19).stores({
   });
 });
 
+// Version 20: Add sorryChats table for persistent Sorry Help Desk conversation memory
+// SorryChatMessage stores each user/assistant exchange with sessionId for grouping
+db.version(20).stores({
+  profiles: '++id, name, appName, timestamp, analysisPhase, serverId, isFavorite',
+  userIdentity: '++id, lastUpdated, supabaseUserId, serverId',
+  coachingSessions: '++id, profileId, timestamp, serverId',
+  matchChats: '++id, profileId, timestamp, serverId',
+  inferenceHistory: '++id, timestamp, feature, userId, success',
+  sorryChats: '++id, timestamp, sessionId'
+});
+// No upgrade needed - new table starts empty
+
 export { db };
 // Re-export aspect types for convenience (legacy)
 export type { UserAspectProfile, MatchAspectScores, AspectScore } from './virtues/types';
@@ -761,6 +784,7 @@ export type { UserVirtueProfile, MatchVirtueCompatibility, VirtueScore as Virtue
 export type { InferenceRecord, InferenceFeature } from './inference/types';
 
 export type {
+  SorryChatMessage,
   Profile,
   ProfileAnalysis,
   AnalysisData,
