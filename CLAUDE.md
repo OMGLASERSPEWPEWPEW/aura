@@ -148,7 +148,7 @@ npm run dev       # Start dev server (localhost:5173)
 npm run build     # TypeScript check + Vite production build
 npm run lint      # ESLint check
 npm run preview   # Preview production build
-npm run test:run  # Run all unit tests (1220 tests)
+npm run test:run  # Run all unit tests (1237 tests)
 npm run test:e2e  # Run Playwright e2e tests (~460 tests)
 ```
 
@@ -159,6 +159,7 @@ npm run test:e2e  # Run Playwright e2e tests (~460 tests)
 - Dexie.js (IndexedDB wrapper) for local storage
 - Anthropic API (Claude) called directly from browser
 - OpenAI API (DALL-E 3) for essence image generation
+- OpenAI API (Sora) for video generation (motion portraits, character animation)
 - React Router for navigation
 
 ### Dark Mode Support
@@ -273,6 +274,81 @@ Chunk 3 Complete -> Extract Lifestyle Themes -> Build DALL-E Prompt -> Generate 
 
 **Cost:** ~$0.043 per mood board (~$0.003 theme extraction + $0.04 DALL-E 3)
 
+### Resonance Display System
+
+Compatibility scores use mystical vocabulary instead of dehumanizing numbers (see ADR-0012):
+
+| Score | Display | Icon | Color |
+|-------|---------|------|-------|
+| 7-10 | **Strong Resonance** | Sparkles | `violet-400` |
+| 5-6 | **Paths Converging** | Moon | `amber-400` |
+| 1-4 | **Different Frequencies** | Waves | `slate-400` |
+
+**No red anywhere.** Red = danger/bad person. We never say someone is bad.
+
+**Key Files:**
+- `src/lib/virtues/resonanceDisplay.ts` - Centralized display helper (single source of truth)
+- `src/lib/virtues/resonanceDisplay.test.ts` - 17 tests covering all tiers
+- `src/pages/Home.tsx` - Gallery badge display
+- `src/components/profileDetail/CompatibilityCard.tsx` - Detail view display
+
+### Sorry Help Desk System
+
+In-app help desk with an emo goth zombie girl character ("Sorry") accessible from the bottom nav bar:
+
+```
+User taps Sorry avatar -> Popup expands (spring animation) -> Sora video plays in header
+                                |
+                    ┌───────────┼───────────┐──────────────┐
+                    │           │           │              │
+                  [Home]      [FAQ]    [Feedback]       [Chat]
+                                        │                 │
+                                   Supabase insert    Claude API
+                                   (anonymous)       (Sorry's personality)
+```
+
+**Components:**
+1. **Animated Avatar**: Sorry's face in nav bar with purple pulse glow (`animate-pulse-glow`)
+2. **Video Header**: Sora-generated 4-second loop with static PNG crossfade fallback
+3. **FAQ**: Static help topics about app features
+4. **Feedback**: Anonymous complaint/feedback submission to Supabase (see ADR-0011)
+5. **Chat**: Claude-powered conversational support with Sorry's personality, scoped to app help only (no dating advice)
+
+**Key Files:**
+- `src/components/help/HelpDeskPopup.tsx` - Full help desk UI (tabs, feedback form, chatbot)
+- `src/components/help/index.ts` - Barrel export
+- `src/components/layout/BottomNavBar.tsx` - Sorry avatar button with pulse glow
+- `public/helpdesk-agent.png` - Static character image (DALL-E generated)
+- `public/helpdesk-agent-animated.mp4` - Sora-generated 4-second loop (459KB)
+
+**Chatbot Architecture:**
+- Multi-turn conversation via Anthropic proxy with `system` prompt
+- Sorry's personality enforced via system prompt (lowercase, ellipses, reluctant but helpful)
+- Scope: app functionality, privacy, mission, troubleshooting only
+- Out of scope: dating advice, profile analysis, feature requests
+- History: sessionStorage (max 10 messages), clears on tab close
+
+**Feedback Pipeline:**
+- Two types: `complaint` and `feedback` (equal visual weight)
+- Anonymous Supabase insert (no PII, no user_id)
+- RLS policy: anon insert allowed, no client reads
+- Client-side: 2000 char limit, 5-second cooldown
+- Sorry's responses: "...that sucks. writing it down." / "noted. writing it down."
+
+### Sora Video Generation System
+
+OpenAI Sora integration for video generation (motion portraits, character animation):
+
+**Key Files:**
+- `src/lib/sora/soraClient.ts` - Sora API client via Supabase Edge Function
+- `src/lib/sora/promptBuilder.ts` - Builds prompts from virtue scores (for profile motion portraits)
+- `src/lib/sora/soraGenerator.ts` - Orchestrates generation and saves to profile
+- `src/lib/sora/index.ts` - Barrel export
+
+**API:** `POST ${SUPABASE_URL}/functions/v1/sora-proxy` → Creates job, polls for completion, downloads video as base64.
+
+**Cost:** ~$0.30 per 4-second video generation.
+
 ### Search & Organization System
 
 The Home gallery includes a comprehensive search, filter, and organization system:
@@ -325,15 +401,18 @@ User Opens Gallery -> Load Profiles -> Apply Search -> Apply Filters -> Sort -> 
   - `apple-touch-icon.png` - iOS home screen icon (180x180)
   - `icon-192.png`, `icon-512.png` - PWA icons
   - `og-image.png` - Open Graph social sharing image (1200x630)
+  - `helpdesk-agent.png` - Sorry character portrait (DALL-E generated)
+  - `helpdesk-agent-animated.mp4` - Sorry animation loop (Sora generated, 459KB)
 
 - `src/lib/` - Core business logic
   - `api/` - Anthropic API client (`anthropicClient.ts`, `config.ts`, `jsonExtractor.ts`)
   - `essence/` - Essence Identity generation (virtue sentences, DALL-E prompts, image generation)
   - `filtering/` - Search, filter, sort logic (`types.ts`, `searchEngine.ts`, `filterEngine.ts`, `sortEngine.ts`, `persistence.ts`)
   - `moodboard/` - Mood Board generation (theme extraction, DALL-E prompts, lifestyle scenes)
+  - `sora/` - Sora video generation (client, prompt builder, generator)
   - `utils/` - Shared utilities (`userContext.ts`, `profileHelpers.ts`, `thumbnailUtils.ts`)
   - `streaming/` - Streaming analysis types and chunk definitions
-  - `virtues/` - 11 Virtues system (scoring, compatibility, migration)
+  - `virtues/` - 11 Virtues system (scoring, compatibility, migration, resonance display)
   - `ai.ts` - AI function orchestration (includes `analyzeProfileStreaming()`)
   - `db.ts` - Dexie schema and TypeScript types (v19 with tags/favorites)
   - `prompts.ts` - AI prompt templates (includes chunk-specific prompts)
@@ -360,6 +439,7 @@ User Opens Gallery -> Load Profiles -> Apply Search -> Apply Filters -> Sort -> 
   - `MyProfile.tsx` - User's own profile management
 
 - `src/components/`
+  - `help/` - Sorry Help Desk (HelpDeskPopup with FAQ, feedback, chatbot, video)
   - `home/` - Gallery components (SearchBar, FilterPanel, TagSelector, TagChip, FavoriteButton)
   - `profileDetail/` - Section components for ProfileDetail page (includes ProfileHeader with carousel)
   - `profile/` - Tab components for MyProfile page
@@ -412,8 +492,8 @@ When planning multi-step tasks, create a todo list to track progress. Update tas
 
 ### Test Maintenance
 Tests live alongside the code they cover:
-- **Unit tests** (`*.test.ts` files) - 1049 tests via Vitest
-- **E2E tests** (`e2e/*.spec.ts` files) - 362 tests via Playwright
+- **Unit tests** (`*.test.ts` files) - 1237 tests via Vitest
+- **E2E tests** (`e2e/*.spec.ts` files) - ~460 tests via Playwright
 
 When making code changes:
 - **Adding a feature**: Add corresponding unit tests
@@ -444,9 +524,25 @@ Triggers for documentation review:
 ## Important Constraints
 
 1. **Privacy**: User data never leaves device except anonymous frames sent to LLM
-2. **No Backend**: All storage is client-side IndexedDB
+2. **Local-First**: All user-facing storage is client-side IndexedDB. Server-side storage limited to anonymous feedback (ADR-0011)
 3. **Video Handling**: Videos processed locally via Canvas, never uploaded
 4. **iOS Safari**: Videos must be muted and playsinline for frame extraction
+
+## Hooks System
+
+Claude Code hooks in `.claude/hooks/` automate workflow behaviors:
+
+| Hook | Trigger | Purpose |
+|------|---------|---------|
+| `git-push-gate.sh` | PreToolUse (Bash) | Star Trek roleplay: reminds to ask "Shall I engage?" before git push |
+| `conversation-logger.sh` | Stop | Logs conversation snippets to `.claude/memory/` conceptual heaps |
+| `zephyr-init.sh` | SessionStart | Initializes Zephyr orchestration context |
+| `teach-darklight-init.sh` | SessionStart | Initializes teaching context |
+
+**Conversation logging** writes to:
+- `.claude/memory/daily/` - Daily conversation logs
+- `.claude/memory/heaps/` - Conceptual heaps (Sorry, Resonance, Empathy, Architecture, Character)
+- `.claude/memory/` is gitignored
 
 ## Infrastructure
 
@@ -456,13 +552,19 @@ Triggers for documentation review:
 - **Auto-deploy:** Every push to `main` triggers deploy
 - **CLI:** `vercel` commands available for logs/debugging
 
-### API Proxy (Supabase Edge Function)
+### API Proxy (Supabase Edge Functions)
 - **Project:** qaueoxubnifmtdirnxgz
 - **Edge Functions:**
   - `anthropic-proxy` at `/functions/v1/anthropic-proxy` - Claude API proxy
   - `dalle-proxy` at `/functions/v1/dalle-proxy` - DALL-E 3 image generation
+  - `sora-proxy` at `/functions/v1/sora-proxy` - OpenAI Sora video generation (async: creates job, polls, downloads)
 - **Purpose:** Keeps API keys server-side (not in browser bundle)
 - **Tier:** Pro (150-second timeout). Free tier has 60-second timeout.
+
+### Supabase Database Tables
+- **`feedback`** - Anonymous user feedback/complaints (see ADR-0011)
+  - RLS: Anonymous inserts allowed, no client reads
+  - Columns: `id`, `type` (complaint/feedback), `message`, `app_version`, `user_agent`, `created_at`
 
 ### Environment Variables
 
@@ -488,6 +590,7 @@ Design documents in `.claude/docs/` informed the implementation but are NOT runt
 |----------|---------------|---------|
 | `virtue_system.md` | `src/lib/virtues/virtues.ts` | **11 Virtues** system (3 realms, compatibility scoring) |
 | `12152025 - Scene & Dialogue Basics 2025 - With Agendas & Tactics.md` | `src/lib/prompts.ts` | Agendas & Tactics framework for psychological analysis |
+| `prd/sorry_help_desk.md` | `src/components/help/HelpDeskPopup.tsx` | Sorry Help Desk expansion (feedback, chatbot, Sora animation) |
 
 **Note:** The old "23 Aspects" system (`aspects.ts`) is deprecated. New code should use the **11 Virtues** system. Legacy profiles auto-migrate via `src/lib/virtues/migration.ts`.
 
@@ -509,5 +612,7 @@ Major architectural decisions are documented in `docs/adr/`. Each ADR captures t
 | [0008](docs/adr/0008-authentication-and-sync.md) | Authentication & Cross-Device Sync | Accepted |
 | [0009](docs/adr/0009-typed-error-infrastructure.md) | Typed Error Infrastructure | Accepted |
 | [0010](docs/adr/0010-testing-strategy.md) | Testing Strategy | Accepted |
+| [0011](docs/adr/0011-anonymous-feedback-pipeline.md) | Anonymous Feedback Pipeline | Accepted |
+| [0012](docs/adr/0012-resonance-vocabulary-system.md) | Resonance Vocabulary System | Accepted |
 
 See `docs/adr/README.md` for the full index and ADR template.

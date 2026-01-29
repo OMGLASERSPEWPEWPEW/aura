@@ -20,6 +20,8 @@ An ADR captures a single architectural decision along with its context and conse
 | [0008](0008-authentication-and-sync.md) | Authentication & Cross-Device Sync | Accepted | 2025-01-25 |
 | [0009](0009-typed-error-infrastructure.md) | Typed Error Infrastructure | Accepted | 2025-01-25 |
 | [0010](0010-testing-strategy.md) | Testing Strategy | Accepted | 2025-01-24 |
+| [0011](0011-anonymous-feedback-pipeline.md) | Anonymous Feedback Pipeline | Accepted | 2026-01-28 |
+| [0012](0012-resonance-vocabulary-system.md) | Resonance Vocabulary System | Accepted | 2026-01-28 |
 
 ## ADR Template
 
@@ -82,4 +84,8 @@ Jan 25 - Scale & Reliability
 ├── ADR-0007: Eleven Virtues System
 ├── ADR-0008: Authentication & Sync
 └── ADR-0009: Typed Error Infrastructure
+
+Jan 28 - Help Desk & Display
+├── ADR-0011: Anonymous Feedback Pipeline
+└── ADR-0012: Resonance Vocabulary System
 ```
